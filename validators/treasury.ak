@@ -1,11 +1,12 @@
+use aiken/collection/list
+use aiken/collection/pairs
 use cardano/address.{Credential}
 use cardano/assets.{lovelace_of}
 use cardano/transaction.{Transaction}
-use aiken/collection/pairs
-use aiken/collection/list
 
 validator treasury {
   spend(_d, _r, _i, _t) {
+    // TODO
     False
   }
 
@@ -20,19 +21,25 @@ validator treasury {
     // the withdrawal, we assert that `account` never occurs in the inputs
     // This is slightly less flexible than ensuring the totals carry through, but
     // also simpler to reason about
-    expect None = self.inputs
-        |> list.find(fn(input) { input.output.address.payment_credential == account })
+    expect None =
+      self.inputs
+        |> list.find(
+            fn(input) { input.output.address.payment_credential == account },
+          )
 
     // Sum up the amounts of the withdrawal paid to `account`
     // This lets us split the funds across multiple UTxOs for accounting purposes
     // but still ensures that the total amount is correct
-    let output_sum = self.outputs
+    let output_sum =
+      self.outputs
         |> list.filter(fn(output) { output.address.payment_credential == account })
-        |> list.map(fn(output) {
-            // Treasury funds must not be staked
-            expect None = output.address.stake_credential
-            lovelace_of(output.value)
-        })
+        |> list.map(
+            fn(output) {
+              // Treasury funds must not be staked
+              expect None = output.address.stake_credential
+              lovelace_of(output.value)
+            },
+          )
         |> list.reduce(0, +)
 
     // Ensure that the output sum is *at least* the amount

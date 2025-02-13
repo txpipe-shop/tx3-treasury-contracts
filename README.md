@@ -1,65 +1,19 @@
 # treasury-funds
 
-Write validators in the `validators` folder, and supporting functions in the `lib` folder using `.ak` as a file extension.
+These contracts provide a simple but robust way to manage funds withdrawn from the treasury.
 
-```aiken
-validator my_first_validator {
-  spend(_datum: Option<Data>, _redeemer: Data, _output_reference: Data, _context: Data) {
-    True
-  }
-}
-```
+They ensure that the funds cannot be delegated, and cannot be used in governance voting.
 
-## Building
+Additionally, the require approval from a set of independent "auditors" for any disbursments,
+with the intention that requests for disbursement include a durable link to off-chain invoices
+and proof of work completion.
 
-```sh
-aiken build
-```
+Disbursals require a high threshold of consent (ex: unanimous) from the auditors.
+However, to minimize the impact of a lost key, funds can be withdrawn with a lower
+threshold requirement after a long timeout.
 
-## Configuring
+After a longer timeout, or with unanimous consent of the auditors, the funds can be
+sent back to the treasury.
 
-**aiken.toml**
-```toml
-[config.default]
-network_id = 41
-```
-
-Or, alternatively, write conditional environment modules under `env`.
-
-## Testing
-
-You can write tests in any module using the `test` keyword. For example:
-
-```aiken
-use config
-
-test foo() {
-  config.network_id + 1 == 42
-}
-```
-
-To run all tests, simply do:
-
-```sh
-aiken check
-```
-
-To run only tests matching the string `foo`, do:
-
-```sh
-aiken check -m foo
-```
-
-## Documentation
-
-If you're writing a library, you might want to generate an HTML documentation for it.
-
-Use:
-
-```sh
-aiken docs
-```
-
-## Resources
-
-Find more on the [Aiken's user manual](https://aiken-lang.org).
+The contract can optionally support an initial OTC deal, where the initially withdrawn funds
+can be swapped for a stablecoin at an agreed upon price.
