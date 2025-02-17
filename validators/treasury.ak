@@ -44,9 +44,8 @@ validator treasury {
 
     // Ensure that the output sum is *at least* the amount
     // This allows some flexibility in case of minUTxO issues, which are unlikely
-    // We also let the transaction fee be deducted from this withdrawal,
-    // Which is likely to be small, but still shouldn't be imposed on the administrator
-    expect output_sum >= amount - self.fee
+    // NOTE: We do *not* let the fee be deducted here, because that would allow someone to set the fee very large!
+    expect output_sum >= amount
 
     // If all the above is true, allow the withdrawal
     True
