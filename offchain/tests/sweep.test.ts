@@ -7,7 +7,7 @@ import { sweep } from '../sweep';
 import { TreasuryTreasurySpend } from '../types/contracts';
 import { Slot } from '@blaze-cardano/core';
 
-describe("sweep", () => {
+describe("When sweeping", () => {
     const amount = 340_000_000_000_000n
     const { rewardAccount, scriptAddress, treasuryScript } = loadScript(Core.NetworkId.Testnet, sampleConfig())
     
@@ -48,119 +48,123 @@ describe("sweep", () => {
         refInput = (await blaze.provider.resolveScriptRef(treasuryScript))!
     })
 
+    describe("after the timeout", () => {
+        beforeEach(() => {
+            for(let i = 0; i < 1000 / 20; i++) {
+                emulator.stepForwardBlock();
+            }
+        }) 
 
-    test("Can sweep funds after timeout", async () => {
-        // Advance time by enough blocks to reach slot 1000
-        for(let i = 0; i < 1000 / 20; i++) {
-            emulator.stepForwardBlock();
-        }
-        expectTxValid(await sweep(sampleConfig(), scriptInput, blaze))
+        describe("anyone", () => {
+            test("can sweep funds back to the treasury", async () => {  
+                expectTxValid(await sweep(sampleConfig(), scriptInput, blaze))
+            })
+
+            test("can partially sweep, so long as the remainder stays locked", async () => {
+                expectTxValid(await sweep(sampleConfig(), scriptInput, blaze, 5_000_000n))
+            })
+
+            test("can donate additional funds", async () => {
+                expectTxValid(
+                    blaze.newTransaction()
+                        .addInput(scriptInput, Data.to("Sweep", TreasuryTreasurySpend.redeemer))
+                        .setValidFrom(Slot(Number(sampleConfig().expiration)))
+                        .addReferenceInput(refInput)
+                        .setDonation(scriptInput.output().amount().coin() + 1_000_000n)
+                )
+            })
+
+            test("can sweep multiple inputs at once", async () => {
+                expectTxValid(
+                    blaze.newTransaction()
+                        .addInput(scriptInput, Data.to("Sweep", TreasuryTreasurySpend.redeemer))
+                        .addInput(secondScriptInput, Data.to("Sweep", TreasuryTreasurySpend.redeemer))
+                        .setValidFrom(Slot(Number(sampleConfig().expiration)))
+                        .addReferenceInput(refInput)
+                        .setDonation(scriptInput.output().amount().coin() + secondScriptInput.output().amount().coin())
+                )
+            })
+
+            test("can sweep so long as native assets stay locked", async () => {
+                expectTxValid(
+                    blaze.newTransaction()
+                        .addInput(withAssetScriptInput, Data.to("Sweep", TreasuryTreasurySpend.redeemer))
+                        .lockAssets(scriptAddress, makeValue(2_000_000n, ["a".repeat(64), 1n]), Data.void())
+                        .setValidFrom(Slot(Number(sampleConfig().expiration)))
+                        .addReferenceInput(refInput)
+                        .setDonation(withAssetScriptInput.output().amount().coin())
+                )
+            })
+
+            test("must donate all funds not re-locked at the script address", async () => {
+                expectScriptFailure(
+                    blaze.newTransaction()
+                        .addInput(scriptInput, Data.to("Sweep", TreasuryTreasurySpend.redeemer))
+                        .setValidFrom(Slot(Number(sampleConfig().expiration)))
+                        .addReferenceInput(refInput)
+                        .setDonation(scriptInput.output().amount().coin() / 2n)
+                )
+            })
+        })
+
+        describe("a malicious user", () => {
+            test("cannot steal from second input", async () => {
+                expectScriptFailure(
+                    blaze.newTransaction()
+                        .addInput(scriptInput, Data.to("Sweep", TreasuryTreasurySpend.redeemer))
+                        .addInput(secondScriptInput, Data.to("Sweep", TreasuryTreasurySpend.redeemer))
+                        .setValidFrom(Slot(Number(sampleConfig().expiration)))
+                        .addReferenceInput(refInput)
+                        .setDonation(scriptInput.output().amount().coin() + secondScriptInput.output().amount().coin() - 1n)
+                )
+            })
+
+            test("cannot steal native assets", async () => {
+                expectScriptFailure(
+                    blaze.newTransaction()
+                        .addInput(withAssetScriptInput, Data.to("Sweep", TreasuryTreasurySpend.redeemer))
+                        .setValidFrom(Slot(Number(sampleConfig().expiration)))
+                        .addReferenceInput(refInput)
+                        .setDonation(withAssetScriptInput.output().amount().coin())
+                )
+            })
+
+            test("cannot attach their own staking address", async () => {
+                let fullAddress = new Core.Address({
+                    type: Core.AddressType.BasePaymentScriptStakeKey,
+                    networkId: Core.NetworkId.Testnet,
+                    paymentPart: {
+                        type: Core.CredentialType.ScriptHash,
+                        hash: treasuryScript.hash(),
+                    },
+                    delegationPart: {
+                        type: Core.CredentialType.KeyHash,
+                        hash: treasuryScript.hash(), // Just use an arbitrary hash
+                    }
+                })
+                expectScriptFailure(
+                    blaze.newTransaction()
+                        .addInput(withAssetScriptInput, Data.to("Sweep", TreasuryTreasurySpend.redeemer))
+                        .lockAssets(fullAddress, makeValue(2_000_000n, ["a".repeat(64), 1n]), Data.void())
+                        .setValidFrom(Slot(Number(sampleConfig().expiration)))
+                        .addReferenceInput(refInput)
+                        .setDonation(withAssetScriptInput.output().amount().coin())
+                )
+            })
+        })
     })
-    test("Can't sweep funds before timeout", async () => {
-        // Advance time by just shy of what is needed
-        for(let i = 0; i < (1000 / 20) - 1; i++) {
-            emulator.stepForwardBlock();
-        }
-        expectTxInvalid(await sweep(sampleConfig(), scriptInput, blaze))
-    })
-    test("Must sweep all funds after timeout", async () => {
-        for(let i = 0; i < 1000 / 20; i++) {
-            emulator.stepForwardBlock();
-        }
-        expectScriptFailure(
-            blaze.newTransaction()
-                .addInput(scriptInput, Data.to("Sweep", TreasuryTreasurySpend.redeemer))
-                .setValidFrom(Slot(Number(sampleConfig().expiration)))
-                .addReferenceInput(refInput)
-                .setDonation(scriptInput.output().amount().coin() / 2n)
-        )
-    })
-    test("Can sweep additional funds", async () => {
-        for(let i = 0; i < 1000 / 20; i++) {
-            emulator.stepForwardBlock();
-        }
-        expectTxValid(
-            blaze.newTransaction()
-                .addInput(scriptInput, Data.to("Sweep", TreasuryTreasurySpend.redeemer))
-                .setValidFrom(Slot(Number(sampleConfig().expiration)))
-                .addReferenceInput(refInput)
-                .setDonation(scriptInput.output().amount().coin() + 1_000_000n)
-        )
-    })
-    test("Can sweep multiple inputs", async () => {
-        for(let i = 0; i < 1000 / 20; i++) {
-            emulator.stepForwardBlock();
-        }
-        expectTxValid(
-            blaze.newTransaction()
-                .addInput(scriptInput, Data.to("Sweep", TreasuryTreasurySpend.redeemer))
-                .addInput(secondScriptInput, Data.to("Sweep", TreasuryTreasurySpend.redeemer))
-                .setValidFrom(Slot(Number(sampleConfig().expiration)))
-                .addReferenceInput(refInput)
-                .setDonation(scriptInput.output().amount().coin() + secondScriptInput.output().amount().coin())
-        )
-    })
-    test("Can't steal from second input", async () => {
-        for(let i = 0; i < 1000 / 20; i++) {
-            emulator.stepForwardBlock();
-        }
-        expectScriptFailure(
-            blaze.newTransaction()
-                .addInput(scriptInput, Data.to("Sweep", TreasuryTreasurySpend.redeemer))
-                .addInput(secondScriptInput, Data.to("Sweep", TreasuryTreasurySpend.redeemer))
-                .setValidFrom(Slot(Number(sampleConfig().expiration)))
-                .addReferenceInput(refInput)
-                .setDonation(scriptInput.output().amount().coin() + secondScriptInput.output().amount().coin() - 1n)
-        )
-    })
-    test("Can't steal native assets", async () => {
-        for(let i = 0; i < 1000 / 20; i++) {
-            emulator.stepForwardBlock();
-        }
-        expectScriptFailure(
-            blaze.newTransaction()
-                .addInput(withAssetScriptInput, Data.to("Sweep", TreasuryTreasurySpend.redeemer))
-                .setValidFrom(Slot(Number(sampleConfig().expiration)))
-                .addReferenceInput(refInput)
-                .setDonation(withAssetScriptInput.output().amount().coin())
-        )
-    })
-    test("Can sweep if native assets kept locked", async () => {
-        for(let i = 0; i < 1000 / 20; i++) {
-            emulator.stepForwardBlock();
-        }
-        expectTxValid(
-            blaze.newTransaction()
-                .addInput(withAssetScriptInput, Data.to("Sweep", TreasuryTreasurySpend.redeemer))
-                .lockAssets(scriptAddress, makeValue(2_000_000n, ["a".repeat(64), 1n]), Data.void())
-                .setValidFrom(Slot(Number(sampleConfig().expiration)))
-                .addReferenceInput(refInput)
-                .setDonation(withAssetScriptInput.output().amount().coin())
-        )
-    })
-    test("Can't attach staking address", async () => {
-        for(let i = 0; i < 1000 / 20; i++) {
-            emulator.stepForwardBlock();
-        }
-        let fullAddress = new Core.Address({
-            type: Core.AddressType.BasePaymentScriptStakeKey,
-            networkId: Core.NetworkId.Testnet,
-            paymentPart: {
-                type: Core.CredentialType.ScriptHash,
-                hash: treasuryScript.hash(),
-            },
-            delegationPart: {
-                type: Core.CredentialType.KeyHash,
-                hash: treasuryScript.hash(), // Just use an arbitrary hash
+
+    describe("before the timeout", () => {
+        beforeEach(() => {
+            for(let i = 0; i < (1000 / 20) - 1; i++) {
+                emulator.stepForwardBlock();
             }
         })
-        expectScriptFailure(
-            blaze.newTransaction()
-                .addInput(withAssetScriptInput, Data.to("Sweep", TreasuryTreasurySpend.redeemer))
-                .lockAssets(fullAddress, makeValue(2_000_000n, ["a".repeat(64), 1n]), Data.void())
-                .setValidFrom(Slot(Number(sampleConfig().expiration)))
-                .addReferenceInput(refInput)
-                .setDonation(withAssetScriptInput.output().amount().coin())
-        )
+
+        describe("a malicious user", () => {
+            test("cannot sweep funds", async () => {
+                expectTxInvalid(await sweep(sampleConfig(), scriptInput, blaze))
+            })
+        })
     })
 })

@@ -6,7 +6,7 @@ import { withdraw } from '../withdraw';
 import { expectScriptFailure, makeExpectTxValid, sampleConfig, setupBlaze } from './utilities.test';
 import { loadScript } from '../shared';
 
-describe("withdrawal", () => {
+describe("When withdrawing", () => {
     const amount = 340_000_000_000_000n
     const { rewardAccount, scriptAddress, treasuryScript } = loadScript(Core.NetworkId.Testnet, sampleConfig())
     
@@ -24,75 +24,80 @@ describe("withdrawal", () => {
     })
 
 
-    test("Can withdraw funds to script address", async () => {
-        expectTxValid(await withdraw(sampleConfig(), amount, blaze))
-    })
-    test("Cannot steal funds", async () => {
-        expectScriptFailure(
-            blaze.newTransaction()
-                .addWithdrawal(rewardAccount, amount, Data.void())
-                .addReferenceInput(refInput!)
-                .payLovelace(blaze.wallet.address, amount, Data.void())
-        )
-    })
-    test("Cannot steal funds with splitting", async () => {
-        expectScriptFailure(
-            blaze.newTransaction()
-                .addWithdrawal(rewardAccount, amount, Data.void())
-                .addReferenceInput(refInput!)
-                .lockLovelace(scriptAddress, amount/2n, Data.void())
-                .payLovelace(blaze.wallet.address, amount/2n, Data.void())
-        )
-    })
-    test("Can split funds", async () => {
-        expectTxValid(
-            blaze.newTransaction()
-                .addWithdrawal(rewardAccount, amount, Data.void())
-                .addReferenceInput(refInput!)
-                .lockLovelace(scriptAddress, amount/2n, Data.void())
-                .lockLovelace(scriptAddress, amount/2n, Data.void())
-        )
-    })
-    test("Allow any datum", async () => {
-        expectTxValid(
-            blaze.newTransaction()
-                .addWithdrawal(rewardAccount, amount, Data.void())
-                .addReferenceInput(refInput!)
-                .lockLovelace(scriptAddress, amount, Data.from(Core.PlutusData.fromCbor(HexBlob("01"))))
-        )
-    })
-    test("Cannot attach staking address", async () => {
-        let fullAddress = new Core.Address({
-            type: Core.AddressType.BasePaymentScriptStakeKey,
-            networkId: Core.NetworkId.Testnet,
-            paymentPart: {
-                type: Core.CredentialType.ScriptHash,
-                hash: treasuryScript.hash(),
-            },
-            delegationPart: {
-                type: Core.CredentialType.KeyHash,
-                hash: treasuryScript.hash(), // Just use an arbitrary hash
-            }
+    describe("anyone", () => {
+        test("can withdraw and lock funds at the script address", async () => {
+            expectTxValid(await withdraw(sampleConfig(), amount, blaze))
         })
-        expectScriptFailure(
-            blaze.newTransaction()
-                .addWithdrawal(rewardAccount, amount, Data.void())
-                .addReferenceInput(refInput!)
-                .lockLovelace(fullAddress, amount, Data.from(Core.PlutusData.fromCbor(HexBlob("01"))))
-        )
+        test("can split funds across multiple script outputs", async () => {
+            expectTxValid(
+                blaze.newTransaction()
+                    .addWithdrawal(rewardAccount, amount, Data.void())
+                    .addReferenceInput(refInput!)
+                    .lockLovelace(scriptAddress, amount/2n, Data.void())
+                    .lockLovelace(scriptAddress, amount/2n, Data.void())
+            )
+        })
+        test("can attach any datum", async () => {
+            expectTxValid(
+                blaze.newTransaction()
+                    .addWithdrawal(rewardAccount, amount, Data.void())
+                    .addReferenceInput(refInput!)
+                    .lockLovelace(scriptAddress, amount, Data.from(Core.PlutusData.fromCbor(HexBlob("01"))))
+            )
+        })
     })
-    test("Cannot spend from treasury script while withdrawing", async () => {
-        const scriptUtxo = new Core.TransactionUnspentOutput(
-            new Core.TransactionInput(Core.TransactionId("0".repeat(64)), 0n),
-            new Core.TransactionOutput(scriptAddress, makeValue(5_000_000_000n))
-        )
-        emulator.addUtxo(scriptUtxo)
-        expectScriptFailure(
-            blaze.newTransaction()
-                .addWithdrawal(rewardAccount, amount, Data.void())
-                .addReferenceInput(refInput!)
-                .addInput(scriptUtxo)
-                .lockLovelace(scriptAddress, amount, Data.void())
-        )
+    
+    describe("a malicious user", () => {
+        test("cannot withdraw funds to some other address", async () => {
+            expectScriptFailure(
+                blaze.newTransaction()
+                    .addWithdrawal(rewardAccount, amount, Data.void())
+                    .addReferenceInput(refInput!)
+                    .payLovelace(blaze.wallet.address, amount, Data.void())
+            )
+        })
+        test("cannot steal funds by splitting them between destinations", async () => {
+            expectScriptFailure(
+                blaze.newTransaction()
+                    .addWithdrawal(rewardAccount, amount, Data.void())
+                    .addReferenceInput(refInput!)
+                    .lockLovelace(scriptAddress, amount/2n, Data.void())
+                    .payLovelace(blaze.wallet.address, amount/2n, Data.void())
+            )
+        })
+        test("cannot attach a staking address", async () => {
+            let fullAddress = new Core.Address({
+                type: Core.AddressType.BasePaymentScriptStakeKey,
+                networkId: Core.NetworkId.Testnet,
+                paymentPart: {
+                    type: Core.CredentialType.ScriptHash,
+                    hash: treasuryScript.hash(),
+                },
+                delegationPart: {
+                    type: Core.CredentialType.KeyHash,
+                    hash: treasuryScript.hash(), // Just use an arbitrary hash
+                }
+            })
+            expectScriptFailure(
+                blaze.newTransaction()
+                    .addWithdrawal(rewardAccount, amount, Data.void())
+                    .addReferenceInput(refInput!)
+                    .lockLovelace(fullAddress, amount, Data.from(Core.PlutusData.fromCbor(HexBlob("01"))))
+            )
+        })
+        test("cannot spend from treasury script while withdrawing", async () => {
+            const scriptUtxo = new Core.TransactionUnspentOutput(
+                new Core.TransactionInput(Core.TransactionId("0".repeat(64)), 0n),
+                new Core.TransactionOutput(scriptAddress, makeValue(5_000_000_000n))
+            )
+            emulator.addUtxo(scriptUtxo)
+            expectScriptFailure(
+                blaze.newTransaction()
+                    .addWithdrawal(rewardAccount, amount, Data.void())
+                    .addReferenceInput(refInput!)
+                    .addInput(scriptUtxo)
+                    .lockLovelace(scriptAddress, amount, Data.void())
+            )
+        })
     })
 })
