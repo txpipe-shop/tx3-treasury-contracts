@@ -1,13 +1,48 @@
 use aiken/collection/list
 use aiken/collection/pairs
+use aiken/interval.{is_entirely_after}
 use cardano/address.{Credential}
 use cardano/assets.{lovelace_of}
-use cardano/transaction.{Transaction}
+use cardano/transaction.{OutputReference, Transaction, find_input}
+use types.{Configuration, SpendRedeemer, Sweep}
 
-validator treasury {
-  spend(_d, _r, _i, _t) {
-    // TODO
-    False
+validator treasury(config: Configuration) {
+  spend(_d, redeemer: SpendRedeemer, utxo: OutputReference, self: Transaction) {
+    let Configuration { expiration } = config
+    // TODO: blaze recursive type support
+    // expect sweep: MultisigScript = sweep_permissions
+    let Transaction { validity_range, .. } = self
+
+    expect Some(spent_input) = find_input(self.inputs, utxo)
+    let account = spent_input.output.address.payment_credential
+
+    when redeemer is {
+      // Funds can be swept back to the treasury if signed by a threshold of the auditing parties, or after an expiration
+      Sweep -> {
+        // First, check the authorization
+        expect is_entirely_after(validity_range, expiration)
+        // satisfied(sweep, extra_signatories, validity_range, withdrawals),
+        // Then check that the full balance is paid to the treasury
+        let input_sum =
+          self.inputs
+            |> list.filter(
+                fn(input) { input.output.address.payment_credential == account },
+              )
+            |> list.map(
+                fn(input) {
+                  // Treasury funds must not be staked
+                  lovelace_of(input.output.value)
+                },
+              )
+            |> list.reduce(0, +)
+
+        expect Some(donation) = self.treasury_donation
+        expect donation >= input_sum
+      }
+      _ -> fail
+    }
+
+    True
   }
 
   // Funds can be withdrawn only if they are paid to the spending portion of this script

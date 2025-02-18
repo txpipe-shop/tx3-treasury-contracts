@@ -3,12 +3,12 @@ import { Blaze, Core, Data, HotWallet, makeValue, Provider, TxBuilder, Wallet } 
 import { HexBlob } from '@blaze-cardano/core';
 import { Emulator, EmulatorProvider } from "@blaze-cardano/emulator";
 import { withdraw } from '../withdraw';
-import { expectScriptFailure, makeExpectTxValid, setupBlaze } from './utilities.test';
+import { expectScriptFailure, makeExpectTxValid, sampleConfig, setupBlaze } from './utilities.test';
 import { loadScript } from '../shared';
 
 describe("withdrawal", () => {
     const amount = 340_000_000_000_000n
-    const { rewardAccount, scriptAddress, treasuryScript } = loadScript(Core.NetworkId.Testnet)
+    const { rewardAccount, scriptAddress, treasuryScript } = loadScript(Core.NetworkId.Testnet, sampleConfig())
     
     let emulator: Emulator
     let blaze: Blaze<EmulatorProvider, HotWallet>
@@ -25,7 +25,7 @@ describe("withdrawal", () => {
 
 
     test("Can withdraw funds to script address", async () => {
-        expectTxValid(await withdraw(amount, blaze))
+        expectTxValid(await withdraw(sampleConfig(), amount, blaze))
     })
     test("Cannot steal funds", async () => {
         expectScriptFailure(

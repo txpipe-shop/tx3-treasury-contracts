@@ -2,13 +2,13 @@ import { beforeEach, describe, test } from 'bun:test';
 import { Blaze, Core, Data, HotWallet, TxBuilder } from '@blaze-cardano/sdk';
 import { Credential } from '@blaze-cardano/core';
 import { Emulator, EmulatorProvider } from "@blaze-cardano/emulator";
-import { expectScriptFailure, makeExpectTxInvalid, makeExpectTxValid, setupBlaze } from './utilities.test';
+import { expectScriptFailure, makeExpectTxInvalid, makeExpectTxValid, sampleConfig, setupBlaze } from './utilities.test';
 import { loadScript } from '../shared';
 
 // NOTE: these test are disabled for now, while we wait for blaze to add support for them
 describe("miscellaneous", () => {
     const amount = 340_000_000_000_000n
-    const { rewardAccount, credential, treasuryScript } = loadScript(Core.NetworkId.Testnet)
+    const { rewardAccount, credential, treasuryScript } = loadScript(Core.NetworkId.Testnet, sampleConfig())
     
     let emulator: Emulator
     let blaze: Blaze<EmulatorProvider, HotWallet>
@@ -33,11 +33,6 @@ describe("miscellaneous", () => {
     })
 
     test.skip("Cannot delegate stake address", async () => {
-        console.log(refInput.output().scriptRef()?.hash());
-        await blaze.newTransaction()
-                .addReferenceInput(refInput!)
-                .addDelegation(Credential.fromCore(credential), Core.PoolId("pool1x9q4jf3zwftwygeeulku8xtlywmtmzwxjk2g3fz3j5mlwjqnr3p"), Data.void())
-                .complete();
         expectScriptFailure(
             blaze.newTransaction()
                 .addReferenceInput(refInput!)

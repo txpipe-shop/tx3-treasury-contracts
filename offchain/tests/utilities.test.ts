@@ -2,10 +2,16 @@ import { expect } from 'bun:test';
 import { Blaze, Core, HotWallet, makeValue, Provider, TxBuilder, Wallet } from '@blaze-cardano/sdk';
 import { Bip32PrivateKey, getBurnAddress, mnemonicToEntropy, wordlist } from '@blaze-cardano/core';
 import { Emulator, EmulatorProvider } from "@blaze-cardano/emulator";
-import { loadScript } from '../shared';
+import { loadScript, type Configuration } from '../shared';
+
+export function sampleConfig(): Configuration {
+    return {
+        expiration: 1000n,
+    }
+}
 
 export async function setupBlaze(txOuts: Core.TransactionOutput[] = []) {
-    const { treasuryScript } = loadScript(Core.NetworkId.Testnet)
+    const { treasuryScript } = loadScript(Core.NetworkId.Testnet, sampleConfig())
     txOuts.push(new Core.TransactionOutput(Core.Address.fromBech32("addr_test1qryvgass5dsrf2kxl3vgfz76uhp83kv5lagzcp29tcana68ca5aqa6swlq6llfamln09tal7n5kvt4275ckwedpt4v7q48uhex"), makeValue(1_000_000_000n)))
     txOuts.push(new Core.TransactionOutput(Core.Address.fromBech32("addr_test1qryvgass5dsrf2kxl3vgfz76uhp83kv5lagzcp29tcana68ca5aqa6swlq6llfamln09tal7n5kvt4275ckwedpt4v7q48uhex"), makeValue(5_000_000n)))
     const scriptRef = new Core.TransactionOutput(
