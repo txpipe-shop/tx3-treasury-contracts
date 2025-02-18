@@ -2,7 +2,7 @@ use aiken/collection/list
 use aiken/collection/pairs
 use aiken/interval.{is_entirely_after}
 use cardano/address.{Credential}
-use cardano/assets.{lovelace_of}
+use cardano/assets.{lovelace_of, without_lovelace}
 use cardano/transaction.{OutputReference, Transaction, find_input}
 use types.{Configuration, SpendRedeemer, Sweep}
 
@@ -31,13 +31,31 @@ validator treasury(config: Configuration) {
             |> list.map(
                 fn(input) {
                   // Treasury funds must not be staked
-                  lovelace_of(input.output.value)
+                  input.output.value
                 },
               )
-            |> list.reduce(0, +)
+            |> list.reduce(assets.zero, assets.merge)
+        let output_sum =
+          self.outputs
+            |> list.filter(
+                fn(output) { output.address.payment_credential == account },
+              )
+            |> list.map(
+                fn(output) {
+                  // Treasury funds must not be staked
+                  expect None = output.address.stake_credential
+                  output.value
+                },
+              )
+            |> list.reduce(assets.zero, assets.merge)
 
         expect Some(donation) = self.treasury_donation
-        expect donation >= input_sum
+        expect donation >= lovelace_of(input_sum)
+
+        expect or {
+            assets.is_zero(without_lovelace(input_sum)),
+            without_lovelace(input_sum) == without_lovelace(output_sum),
+          }
       }
       _ -> fail
     }

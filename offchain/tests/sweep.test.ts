@@ -14,6 +14,8 @@ describe("sweep", () => {
     let emulator: Emulator
     let blaze: Blaze<EmulatorProvider, HotWallet>
     let scriptInput: Core.TransactionUnspentOutput
+    let secondScriptInput: Core.TransactionUnspentOutput
+    let withAssetScriptInput: Core.TransactionUnspentOutput
     let refInput: Core.TransactionUnspentOutput
     let expectTxValid: (tx: TxBuilder) => Promise<void>
     let expectTxInvalid: (tx: TxBuilder) => Promise<void>
@@ -31,6 +33,18 @@ describe("sweep", () => {
         )
         scriptInput.output().setDatum(Core.Datum.newInlineData(Core.PlutusData.fromCbor(Core.HexBlob("00"))));
         emulator.addUtxo(scriptInput)
+        secondScriptInput = new Core.TransactionUnspentOutput(
+            new Core.TransactionInput(Core.TransactionId("1".repeat(64)), 1n),
+            new Core.TransactionOutput(scriptAddress, makeValue(1_000_000_000n))
+        )
+        secondScriptInput.output().setDatum(Core.Datum.newInlineData(Core.PlutusData.fromCbor(Core.HexBlob("00"))));
+        emulator.addUtxo(secondScriptInput)
+        withAssetScriptInput = new Core.TransactionUnspentOutput(
+            new Core.TransactionInput(Core.TransactionId("1".repeat(64)), 2n),
+            new Core.TransactionOutput(scriptAddress, makeValue(1_000_000_000n, ["a".repeat(64), 1n]))
+        )
+        withAssetScriptInput.output().setDatum(Core.Datum.newInlineData(Core.PlutusData.fromCbor(Core.HexBlob("00"))));
+        emulator.addUtxo(withAssetScriptInput)
         refInput = (await blaze.provider.resolveScriptRef(treasuryScript))!
     })
 
@@ -74,12 +88,6 @@ describe("sweep", () => {
         )
     })
     test("Can sweep multiple inputs", async () => {
-        const secondScriptInput = new Core.TransactionUnspentOutput(
-            new Core.TransactionInput(Core.TransactionId("2".repeat(64)), 0n),
-            new Core.TransactionOutput(scriptAddress, makeValue(1_000_000_000n))
-        )
-        secondScriptInput.output().setDatum(Core.Datum.newInlineData(Core.PlutusData.fromCbor(Core.HexBlob("00"))));
-        emulator.addUtxo(secondScriptInput)
         for(let i = 0; i < 1000 / 20; i++) {
             emulator.stepForwardBlock();
         }
@@ -93,12 +101,6 @@ describe("sweep", () => {
         )
     })
     test("Can't steal from second input", async () => {
-        const secondScriptInput = new Core.TransactionUnspentOutput(
-            new Core.TransactionInput(Core.TransactionId("2".repeat(64)), 0n),
-            new Core.TransactionOutput(scriptAddress, makeValue(1_000_000_000n))
-        )
-        secondScriptInput.output().setDatum(Core.Datum.newInlineData(Core.PlutusData.fromCbor(Core.HexBlob("00"))));
-        emulator.addUtxo(secondScriptInput)
         for(let i = 0; i < 1000 / 20; i++) {
             emulator.stepForwardBlock();
         }
@@ -109,6 +111,56 @@ describe("sweep", () => {
                 .setValidFrom(Slot(Number(sampleConfig().expiration)))
                 .addReferenceInput(refInput)
                 .setDonation(scriptInput.output().amount().coin() + secondScriptInput.output().amount().coin() - 1n)
+        )
+    })
+    test("Can't steal native assets", async () => {
+        for(let i = 0; i < 1000 / 20; i++) {
+            emulator.stepForwardBlock();
+        }
+        expectScriptFailure(
+            blaze.newTransaction()
+                .addInput(withAssetScriptInput, Data.to("Sweep", TreasuryTreasurySpend.redeemer))
+                .setValidFrom(Slot(Number(sampleConfig().expiration)))
+                .addReferenceInput(refInput)
+                .setDonation(withAssetScriptInput.output().amount().coin())
+        )
+    })
+    test("Can sweep if native assets kept locked", async () => {
+        for(let i = 0; i < 1000 / 20; i++) {
+            emulator.stepForwardBlock();
+        }
+        expectTxValid(
+            blaze.newTransaction()
+                .addInput(withAssetScriptInput, Data.to("Sweep", TreasuryTreasurySpend.redeemer))
+                .lockAssets(scriptAddress, makeValue(2_000_000n, ["a".repeat(64), 1n]), Data.void())
+                .setValidFrom(Slot(Number(sampleConfig().expiration)))
+                .addReferenceInput(refInput)
+                .setDonation(withAssetScriptInput.output().amount().coin())
+        )
+    })
+    test("Can't attach staking address", async () => {
+        for(let i = 0; i < 1000 / 20; i++) {
+            emulator.stepForwardBlock();
+        }
+        let fullAddress = new Core.Address({
+            type: Core.AddressType.BasePaymentScriptStakeKey,
+            networkId: Core.NetworkId.Testnet,
+            paymentPart: {
+                type: Core.CredentialType.ScriptHash,
+                hash: treasuryScript.hash(),
+            },
+            delegationPart: {
+                type: Core.CredentialType.KeyHash,
+                hash: treasuryScript.hash(), // Just use an arbitrary hash
+            }
+        })
+        expectScriptFailure(
+            blaze.newTransaction()
+                .addInput(withAssetScriptInput, Data.to("Sweep", TreasuryTreasurySpend.redeemer))
+                .lockAssets(fullAddress, makeValue(2_000_000n, ["a".repeat(64), 1n]), Data.void())
+                .setValidFrom(Slot(Number(sampleConfig().expiration)))
+                .addReferenceInput(refInput)
+                .setDonation(withAssetScriptInput.output().amount().coin())
         )
     })
 })
