@@ -5,6 +5,7 @@ use cardano/address.{Credential}
 use cardano/assets.{lovelace_of, without_lovelace}
 use cardano/transaction.{OutputReference, Transaction, find_input}
 use types.{Configuration, SpendRedeemer, Sweep}
+use utilities.{input_sum, output_sum}
 
 validator treasury(config: Configuration) {
   spend(_d, redeemer: SpendRedeemer, utxo: OutputReference, self: Transaction) {
@@ -23,31 +24,8 @@ validator treasury(config: Configuration) {
         expect is_entirely_after(validity_range, expiration)
         // satisfied(sweep, extra_signatories, validity_range, withdrawals),
         // Then check that the full balance is paid to the treasury
-        let input_sum =
-          self.inputs
-            |> list.filter(
-                fn(input) { input.output.address.payment_credential == account },
-              )
-            |> list.map(
-                fn(input) {
-                  // Treasury funds must not be staked
-                  input.output.value
-                },
-              )
-            |> list.reduce(assets.zero, assets.merge)
-        let output_sum =
-          self.outputs
-            |> list.filter(
-                fn(output) { output.address.payment_credential == account },
-              )
-            |> list.map(
-                fn(output) {
-                  // Treasury funds must not be staked
-                  expect None = output.address.stake_credential
-                  output.value
-                },
-              )
-            |> list.reduce(assets.zero, assets.merge)
+        let input_sum = input_sum(self.inputs, account)
+        let output_sum = output_sum(self.outputs, account)
 
         expect Some(donation) = self.treasury_donation
         expect donation >= lovelace_of(input_sum)
@@ -83,22 +61,12 @@ validator treasury(config: Configuration) {
     // Sum up the amounts of the withdrawal paid to `account`
     // This lets us split the funds across multiple UTxOs for accounting purposes
     // but still ensures that the total amount is correct
-    let output_sum =
-      self.outputs
-        |> list.filter(fn(output) { output.address.payment_credential == account })
-        |> list.map(
-            fn(output) {
-              // Treasury funds must not be staked
-              expect None = output.address.stake_credential
-              lovelace_of(output.value)
-            },
-          )
-        |> list.reduce(0, +)
+    let output_sum = output_sum(self.outputs, account)
 
     // Ensure that the output sum is *at least* the amount
     // This allows some flexibility in case of minUTxO issues, which are unlikely
     // NOTE: We do *not* let the fee be deducted here, because that would allow someone to set the fee very large!
-    expect output_sum >= amount
+    expect lovelace_of(output_sum) >= amount
 
     // If all the above is true, allow the withdrawal
     True
