@@ -6,7 +6,8 @@ on:
   pull_request:
 
 jobs:
-  build:
+  build-onchain:
+    name: build-onchain
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -16,3 +17,12 @@ jobs:
       - run: aiken fmt --check
       - run: aiken check -D
       - run: aiken build
+  build-offchain:
+    name: build-offchain
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install
+        working-directory: offchain
+      - run: bun test
