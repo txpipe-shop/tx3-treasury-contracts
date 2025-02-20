@@ -1,11 +1,11 @@
 use aiken/collection/list
 use aiken/collection/pairs
-use aiken/interval.{is_entirely_after}
 use cardano/address.{Credential}
-use cardano/assets.{lovelace_of, without_lovelace}
+use cardano/assets.{lovelace_of}
 use cardano/transaction.{OutputReference, Transaction, find_input}
+use sweep
 use types.{Configuration, SpendRedeemer, Sweep}
-use utilities.{input_sum, output_sum}
+use utilities.{output_sum}
 
 validator treasury(config: Configuration) {
   spend(_d, redeemer: SpendRedeemer, utxo: OutputReference, self: Transaction) {
@@ -19,23 +19,15 @@ validator treasury(config: Configuration) {
 
     when redeemer is {
       // Funds can be swept back to the treasury if signed by a threshold of the auditing parties, or after an expiration
-      Sweep -> {
-        // First, check the authorization
-        expect is_entirely_after(validity_range, expiration)
-        // satisfied(sweep, extra_signatories, validity_range, withdrawals),
-        let input_sum = input_sum(self.inputs, account)
-        let output_sum = output_sum(self.outputs, account)
-
-        // Any ADA from the inputs that *isn't* retained in the outputs, must be donated to the treasury
-        expect Some(donation) = self.treasury_donation
-        expect donation >= lovelace_of(input_sum) - lovelace_of(output_sum)
-
-        // And any native assets must be retained at the script address
-        expect or {
-            assets.is_zero(without_lovelace(input_sum)),
-            without_lovelace(input_sum) == without_lovelace(output_sum),
-          }
-      }
+      Sweep ->
+        sweep.logic(
+          validity_range,
+          expiration,
+          self.inputs,
+          self.outputs,
+          account,
+          self.treasury_donation,
+        )
       _ -> fail
     }
 
