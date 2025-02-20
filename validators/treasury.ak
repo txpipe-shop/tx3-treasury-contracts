@@ -7,24 +7,13 @@ use withdraw
 validator treasury(config: Configuration) {
   spend(_d, redeemer: SpendRedeemer, utxo: OutputReference, self: Transaction) {
     let Configuration { expiration } = config
-    // TODO: blaze recursive type support
-    // expect sweep: MultisigScript = sweep_permissions
-    let Transaction { validity_range, .. } = self
 
     expect Some(spent_input) = find_input(self.inputs, utxo)
     let account = spent_input.output.address.payment_credential
 
     when redeemer is {
       // Funds can be swept back to the treasury after the expiration
-      Sweep ->
-        sweep.logic(
-          validity_range,
-          expiration,
-          self.inputs,
-          self.outputs,
-          account,
-          self.treasury_donation,
-        )
+      Sweep -> sweep.logic(expiration, account, self)
       _ -> fail
     }
 
