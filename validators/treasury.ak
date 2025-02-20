@@ -1,11 +1,8 @@
-use aiken/collection/list
-use aiken/collection/pairs
 use cardano/address.{Credential}
-use cardano/assets.{lovelace_of}
 use cardano/transaction.{OutputReference, Transaction, find_input}
 use sweep
 use types.{Configuration, SpendRedeemer, Sweep}
-use utilities.{output_sum}
+use withdraw
 
 validator treasury(config: Configuration) {
   spend(_d, redeemer: SpendRedeemer, utxo: OutputReference, self: Transaction) {
@@ -18,7 +15,7 @@ validator treasury(config: Configuration) {
     let account = spent_input.output.address.payment_credential
 
     when redeemer is {
-      // Funds can be swept back to the treasury if signed by a threshold of the auditing parties, or after an expiration
+      // Funds can be swept back to the treasury after the expiration
       Sweep ->
         sweep.logic(
           validity_range,
@@ -38,31 +35,7 @@ validator treasury(config: Configuration) {
   // without a staking address; this is how the funds are moved out of the reward account
   // after a treasury withdrawal
   withdraw(_, account: Credential, self: Transaction) {
-    // There must be only one withdrawal from this credential
-    expect [amount] = self.withdrawals |> pairs.get_all(account)
-
-    // To prevent shenanigans where a disbursement equal to the amount is used to trick
-    // the withdrawal, we assert that `account` never occurs in the inputs
-    // This is slightly less flexible than ensuring the totals carry through, but
-    // also simpler to reason about
-    expect None =
-      self.inputs
-        |> list.find(
-            fn(input) { input.output.address.payment_credential == account },
-          )
-
-    // Sum up the amounts of the withdrawal paid to `account`
-    // This lets us split the funds across multiple UTxOs for accounting purposes
-    // but still ensures that the total amount is correct
-    let output_sum = output_sum(self.outputs, account)
-
-    // Ensure that the output sum is *at least* the amount
-    // This allows some flexibility in case of minUTxO issues, which are unlikely
-    // NOTE: We do *not* let the fee be deducted here, because that would allow someone to set the fee very large!
-    expect lovelace_of(output_sum) >= amount
-
-    // If all the above is true, allow the withdrawal
-    True
+    withdraw.logic(self.withdrawals, account, self.inputs, self.outputs)
   }
 
   // (n.b. We could just use `else` for these, but it's clearer to make things explicit)
