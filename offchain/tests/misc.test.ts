@@ -6,7 +6,7 @@ import { expectScriptFailure, makeExpectTxInvalid, makeExpectTxValid, sampleConf
 import { loadScript } from '../shared';
 
 // NOTE: these test are disabled for now, while we wait for blaze to add support for them
-describe("miscellaneous", () => {
+describe("A malicious user", () => {
     const amount = 340_000_000_000_000n
     const { rewardAccount, credential, treasuryScript } = loadScript(Core.NetworkId.Testnet, sampleConfig())
     
@@ -25,14 +25,15 @@ describe("miscellaneous", () => {
         expectTxInvalid = makeExpectTxInvalid(blaze, emulator)
     })
 
-    test.skip("Cannot deregister stake address", async () => {
+    test("cannot deregister stake address", async () => {
         expectScriptFailure(
             blaze.newTransaction()
                 .addReferenceInput(refInput!)
+                .addDeregisterStake(Credential.fromCore(credential), Data.void())
         )
     })
 
-    test.skip("Cannot delegate stake address", async () => {
+    test("cannot delegate to a pool", async () => {
         expectScriptFailure(
             blaze.newTransaction()
                 .addReferenceInput(refInput!)

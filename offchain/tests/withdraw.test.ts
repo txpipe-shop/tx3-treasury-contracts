@@ -37,6 +37,14 @@ describe("When withdrawing", () => {
                     .lockLovelace(scriptAddress, amount/2n, Data.void())
             )
         })
+        test("can attach native assets while locking", async () => {
+            expectTxValid(
+                blaze.newTransaction()
+                    .addWithdrawal(rewardAccount, amount, Data.void())
+                    .addReferenceInput(refInput!)
+                    .lockAssets(scriptAddress, makeValue(amount, ["a".repeat(64), 1n]), Data.void())
+            )
+        })
         test("can attach any datum", async () => {
             expectTxValid(
                 blaze.newTransaction()
