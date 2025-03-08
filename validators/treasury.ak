@@ -1,19 +1,21 @@
+use aiken/cbor
 use cardano/address.{Credential}
-use cardano/transaction.{OutputReference, Transaction, find_input}
+use cardano/transaction.{Input,
+  Output, OutputReference, Transaction, find_input}
 use sweep
 use types.{Configuration, SpendRedeemer, Sweep}
 use withdraw
 
 validator treasury(config: Configuration) {
   spend(_d, redeemer: SpendRedeemer, utxo: OutputReference, self: Transaction) {
-    let Configuration { expiration } = config
+    let Configuration { expiration, .. } = config
 
     expect Some(spent_input) = find_input(self.inputs, utxo)
     let account = spent_input.output.address.payment_credential
 
     when redeemer is {
       // Funds can be swept back to the treasury after the expiration
-      Sweep -> sweep.logic(expiration, account, self)
+      Sweep { .. } -> sweep.logic(expiration, account, self)
       _ -> fail
     }
 
@@ -44,4 +46,9 @@ validator treasury(config: Configuration) {
   else(_) {
     False
   }
+}
+
+test sample() {
+  trace cbor.serialise([(1740418745, 123456000000)])
+  True
 }

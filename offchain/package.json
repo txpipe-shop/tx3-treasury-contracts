@@ -3,13 +3,16 @@
   "module": "index.ts",
   "type": "module",
   "devDependencies": {
-    "@types/bun": "latest",
-    "@blaze-cardano/emulator": "^0.3.19"
+    "@blaze-cardano/emulator": "^0.3.19",
+    "@types/bun": "latest"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "@blaze-cardano/sdk": "^0.2.25"
+    "@blaze-cardano/sdk": "link:@blaze-cardano/sdk",
+    "@blaze-cardano/uplc": "link:@blaze-cardano/uplc",
+    "@blaze-cardano/data": "link:@blaze-cardano/data",
+    "@blaze-cardano/query": "link:@blaze-cardano/query"
   }
 }
