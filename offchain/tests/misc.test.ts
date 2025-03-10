@@ -2,6 +2,7 @@ import { beforeEach, describe, test } from "bun:test";
 import { Blaze, Core, HotWallet, TxBuilder } from "@blaze-cardano/sdk";
 import { Credential, HexBlob, PlutusData } from "@blaze-cardano/core";
 import { Emulator, EmulatorProvider } from "@blaze-cardano/emulator";
+import * as Data from "@blaze-cardano/data";
 import {
   expectScriptFailure,
   makeExpectTxInvalid,
@@ -11,7 +12,6 @@ import {
 } from "./utilities.test";
 import { loadScript } from "../shared";
 
-// NOTE: these test are disabled for now, while we wait for blaze to add support for them
 describe("A malicious user", () => {
   const amount = 340_000_000_000_000n;
   const { rewardAccount, credential, treasuryScript } = loadScript(
@@ -39,10 +39,7 @@ describe("A malicious user", () => {
       blaze
         .newTransaction()
         .addReferenceInput(refInput!)
-        .addDeregisterStake(
-          Credential.fromCore(credential),
-          PlutusData.fromCbor(HexBlob("00")),
-        ),
+        .addDeregisterStake(Credential.fromCore(credential), Data.Void()),
     );
   });
 
@@ -56,7 +53,7 @@ describe("A malicious user", () => {
           Core.PoolId(
             "pool1x9q4jf3zwftwygeeulku8xtlywmtmzwxjk2g3fz3j5mlwjqnr3p",
           ),
-          PlutusData.fromCbor(HexBlob("00")),
+          Data.Void(),
         ),
     );
   });

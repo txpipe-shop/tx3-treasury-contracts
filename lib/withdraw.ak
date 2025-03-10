@@ -5,6 +5,15 @@ use cardano/assets.{Lovelace, lovelace_of}
 use cardano/transaction.{Input, Output}
 use utilities.{output_sum}
 
+// Check whether a withdraw from the reward account is done correctly.
+// In particular:
+//  - All funds must stay under control of `account`, the script in question
+//  - A staking address must not be attached to the output, to prevent earning staking rewards or voting
+//
+// This also checks some subtle edge cases, such as:
+//  - To prevent someone from spending existing funds controlled by the contract, `account` must not occur in the inputs
+//  - To allow subtle issues around minUTxO, the funds locked at `account` must be *at least* the amount withdrawn
+//  - The funds can be split across multiple UTxOs for organizational purposes
 pub fn logic(
   withdrawals: Pairs<Credential, Lovelace>,
   account: Credential,

@@ -1,22 +1,43 @@
-use aiken/cbor
 use cardano/address.{Credential}
+use cardano/assets.{from_asset_list}
 use cardano/transaction.{Input,
   Output, OutputReference, Transaction, find_input}
+use disburse
+use fund
+use reorganize
 use sweep
-use types.{Configuration, SpendRedeemer, Sweep}
+use types.{
+  Disburse, Fund, Reorganize, Sweep, TreasuryConfiguration,
+  TreasurySpendRedeemer,
+}
 use withdraw
 
-validator treasury(config: Configuration) {
-  spend(_d, redeemer: SpendRedeemer, utxo: OutputReference, self: Transaction) {
-    let Configuration { expiration, .. } = config
-
+/// A treasury script to hold funds withdrawn from the Cardano treasury
+validator treasury(config: TreasuryConfiguration) {
+  // Funds can be spent to:
+  //  - Sweep them back to the treasury
+  //  - Set up a new vendor project
+  //  - Disburse funds for arbitrary spending
+  //  - Reorganize the treasury UTxOs
+  spend(
+    _d,
+    redeemer: TreasurySpendRedeemer,
+    utxo: OutputReference,
+    self: Transaction,
+  ) {
     expect Some(spent_input) = find_input(self.inputs, utxo)
     let account = spent_input.output.address.payment_credential
 
     when redeemer is {
       // Funds can be swept back to the treasury after the expiration
-      Sweep { .. } -> sweep.logic(expiration, account, self)
-      _ -> fail
+      Sweep { .. } -> sweep.logic(config, account, self)
+      // UTxOs at the treasury address can be reorganized, such as splitting or merging them
+      Reorganize { .. } -> reorganize.logic(config, account, self)
+      Fund { amount } ->
+        fund.logic(config, account, from_asset_list(amount), self)
+      // Funds can be disbursed to arbitrary destinations
+      Disburse { amount } ->
+        disburse.logic(config, account, from_asset_list(amount), self)
     }
 
     True
@@ -46,9 +67,4 @@ validator treasury(config: Configuration) {
   else(_) {
     False
   }
-}
-
-test sample() {
-  trace cbor.serialise([(1740418745, 123456000000)])
-  True
 }

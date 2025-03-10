@@ -3,6 +3,7 @@ use cardano/address.{Credential}
 use cardano/assets
 use cardano/transaction.{Input, Output}
 
+// Sum up all assets on the `inputs` held at `account`
 pub fn input_sum(inputs: List<Input>, account: Credential) -> assets.Value {
   inputs
     |> list.filter(
@@ -17,6 +18,7 @@ pub fn input_sum(inputs: List<Input>, account: Credential) -> assets.Value {
     |> list.reduce(assets.zero, assets.merge)
 }
 
+// Sum up all assets on the `outputs` held at `account` and ensure there is no staking address attached
 pub fn output_sum(outputs: List<Output>, account: Credential) -> assets.Value {
   outputs
     |> list.filter(fn(output) { output.address.payment_credential == account })
