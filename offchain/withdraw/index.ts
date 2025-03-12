@@ -4,12 +4,13 @@ import {
   type Provider,
   type Wallet,
 } from "@blaze-cardano/sdk";
+import * as Data from "@blaze-cardano/data";
 import { loadScript } from "../shared";
-import type { Configuration } from "../types/contracts";
+import type { TreasuryConfiguration } from "../types/contracts";
 import { HexBlob, PlutusData } from "@blaze-cardano/core";
 
 export async function withdraw<P extends Provider, W extends Wallet>(
-  config: Configuration,
+  config: TreasuryConfiguration,
   amount: bigint,
   blaze: Blaze<P, W>,
 ): Promise<TxBuilder> {
@@ -22,7 +23,7 @@ export async function withdraw<P extends Provider, W extends Wallet>(
     throw new Error("Could not find treasury script reference on-chain");
   return blaze
     .newTransaction()
-    .addWithdrawal(rewardAccount, amount, PlutusData.fromCbor(HexBlob("00")))
+    .addWithdrawal(rewardAccount, amount, Data.Void())
     .addReferenceInput(refInput)
-    .lockLovelace(scriptAddress, amount, PlutusData.fromCbor(HexBlob("00")));
+    .lockLovelace(scriptAddress, amount, Data.Void());
 }

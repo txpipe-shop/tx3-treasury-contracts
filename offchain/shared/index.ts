@@ -1,7 +1,7 @@
 import { Core } from "@blaze-cardano/sdk";
-import { Configuration, TreasuryTreasuryWithdraw } from "../types/contracts";
+import { TreasuryConfiguration, TreasuryTreasuryWithdraw } from "../types/contracts";
 
-export function loadScript(network: Core.NetworkId, config: Configuration) {
+export function loadScript(network: Core.NetworkId, config: TreasuryConfiguration) {
   const treasuryScript = new TreasuryTreasuryWithdraw(config);
   const credential = {
     type: Core.CredentialType.ScriptHash,

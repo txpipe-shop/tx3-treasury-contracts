@@ -1,6 +1,6 @@
 import { beforeEach, describe, test } from "bun:test";
 import { Blaze, Core, HotWallet, TxBuilder } from "@blaze-cardano/sdk";
-import { Credential, HexBlob, PlutusData } from "@blaze-cardano/core";
+import { Credential } from "@blaze-cardano/core";
 import { Emulator, EmulatorProvider } from "@blaze-cardano/emulator";
 import * as Data from "@blaze-cardano/data";
 import {

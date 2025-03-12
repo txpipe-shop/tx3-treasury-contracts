@@ -17,7 +17,7 @@ import {
 } from "./utilities.test";
 import { loadScript } from "../shared";
 import { sweep } from "../sweep";
-import { SpendRedeemer } from "../types/contracts";
+import { TreasurySpendRedeemer } from "../types/contracts";
 import { Slot } from "@blaze-cardano/core";
 
 describe("When sweeping", () => {
@@ -50,7 +50,7 @@ describe("When sweeping", () => {
     scriptInput
       .output()
       .setDatum(
-        Core.Datum.newInlineData(Core.PlutusData.fromCbor(Core.HexBlob("00"))),
+        Core.Datum.newInlineData(Data.Void()),
       );
     emulator.addUtxo(scriptInput);
     secondScriptInput = new Core.TransactionUnspentOutput(
@@ -60,7 +60,7 @@ describe("When sweeping", () => {
     secondScriptInput
       .output()
       .setDatum(
-        Core.Datum.newInlineData(Core.PlutusData.fromCbor(Core.HexBlob("00"))),
+        Core.Datum.newInlineData(Data.Void()),
       );
     emulator.addUtxo(secondScriptInput);
     withAssetScriptInput = new Core.TransactionUnspentOutput(
@@ -73,7 +73,7 @@ describe("When sweeping", () => {
     withAssetScriptInput
       .output()
       .setDatum(
-        Core.Datum.newInlineData(Core.PlutusData.fromCbor(Core.HexBlob("00"))),
+        Core.Datum.newInlineData(Data.Void()),
       );
     emulator.addUtxo(withAssetScriptInput);
     refInput = (await blaze.provider.resolveScriptRef(treasuryScript.Script))!;
@@ -101,7 +101,7 @@ describe("When sweeping", () => {
         expectTxValid(
           blaze
             .newTransaction()
-            .addInput(scriptInput, Data.serialize(SpendRedeemer, "Sweep"))
+            .addInput(scriptInput, Data.serialize(TreasurySpendRedeemer, "SweepTreasury"))
             .setValidFrom(Slot(Number(sampleConfig().expiration)))
             .addReferenceInput(refInput)
             .setDonation(scriptInput.output().amount().coin() + 1_000_000n),
@@ -112,8 +112,8 @@ describe("When sweeping", () => {
         expectTxValid(
           blaze
             .newTransaction()
-            .addInput(scriptInput, Data.serialize(SpendRedeemer, "Sweep"))
-            .addInput(secondScriptInput, Data.serialize(SpendRedeemer, "Sweep"))
+            .addInput(scriptInput, Data.serialize(TreasurySpendRedeemer, "SweepTreasury"))
+            .addInput(secondScriptInput, Data.serialize(TreasurySpendRedeemer, "SweepTreasury"))
             .setValidFrom(Slot(Number(sampleConfig().expiration)))
             .addReferenceInput(refInput)
             .setDonation(
@@ -129,7 +129,7 @@ describe("When sweeping", () => {
             .newTransaction()
             .addInput(
               withAssetScriptInput,
-              Data.serialize(SpendRedeemer, "Sweep"),
+              Data.serialize(TreasurySpendRedeemer, "SweepTreasury"),
             )
             .lockAssets(
               scriptAddress,
@@ -146,7 +146,7 @@ describe("When sweeping", () => {
         expectScriptFailure(
           blaze
             .newTransaction()
-            .addInput(scriptInput, Data.serialize(SpendRedeemer, "Sweep"))
+            .addInput(scriptInput, Data.serialize(TreasurySpendRedeemer, "SweepTreasury"))
             .setValidFrom(Slot(Number(sampleConfig().expiration)))
             .addReferenceInput(refInput)
             .setDonation(scriptInput.output().amount().coin() / 2n),
@@ -159,8 +159,8 @@ describe("When sweeping", () => {
         expectScriptFailure(
           blaze
             .newTransaction()
-            .addInput(scriptInput, Data.serialize(SpendRedeemer, "Sweep"))
-            .addInput(secondScriptInput, Data.serialize(SpendRedeemer, "Sweep"))
+            .addInput(scriptInput, Data.serialize(TreasurySpendRedeemer, "SweepTreasury"))
+            .addInput(secondScriptInput, Data.serialize(TreasurySpendRedeemer, "SweepTreasury"))
             .setValidFrom(Slot(Number(sampleConfig().expiration)))
             .addReferenceInput(refInput)
             .setDonation(
@@ -177,7 +177,7 @@ describe("When sweeping", () => {
             .newTransaction()
             .addInput(
               withAssetScriptInput,
-              Data.serialize(SpendRedeemer, "Sweep"),
+              Data.serialize(TreasurySpendRedeemer, "SweepTreasury"),
             )
             .setValidFrom(Slot(Number(sampleConfig().expiration)))
             .addReferenceInput(refInput)
@@ -203,7 +203,7 @@ describe("When sweeping", () => {
             .newTransaction()
             .addInput(
               withAssetScriptInput,
-              Data.serialize(SpendRedeemer, "Sweep"),
+              Data.serialize(TreasurySpendRedeemer, "SweepTreasury"),
             )
             .lockAssets(
               fullAddress,

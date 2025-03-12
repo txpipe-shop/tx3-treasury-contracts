@@ -16,14 +16,34 @@ import {
 } from "@blaze-cardano/core";
 import { Emulator, EmulatorProvider } from "@blaze-cardano/emulator";
 import { loadScript } from "../shared";
-import type { Configuration } from "../types/contracts";
+import type { TreasuryConfiguration } from "../types/contracts";
 
-export function sampleConfig(): Configuration {
+export function sampleConfig(): TreasuryConfiguration {
   return {
     expiration: 1000n,
-    sweep_permissions: {
-      Signature: {
-        key_hash: "ab",
+    vendor_script: {
+      Script: [""],
+    },
+    permissions: {
+      sweep: {
+        Signature: {
+          key_hash: "ab",
+        },
+      },
+      disburse: {
+        Signature: {
+          key_hash: "ab",
+        },
+      },
+      fund: {
+        Signature: {
+          key_hash: "ab",
+        },
+      },
+      reorganize: {
+        Signature: {
+          key_hash: "ab",
+        },
       },
     },
   };
