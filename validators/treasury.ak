@@ -7,7 +7,7 @@ use fund
 use reorganize
 use sweep
 use types.{
-  Disburse, Fund, Reorganize, Sweep, TreasuryConfiguration,
+  Disburse, Fund, Reorganize, SweepTreasury, TreasuryConfiguration,
   TreasurySpendRedeemer,
 }
 use withdraw
@@ -30,7 +30,7 @@ validator treasury(config: TreasuryConfiguration) {
 
     when redeemer is {
       // Funds can be swept back to the treasury after the expiration
-      Sweep { .. } -> sweep.logic(config, account, self)
+      SweepTreasury { .. } -> sweep.logic(config, account, self)
       // UTxOs at the treasury address can be reorganized, such as splitting or merging them
       Reorganize { .. } -> reorganize.logic(config, account, self)
       Fund { amount } ->

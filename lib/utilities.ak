@@ -9,12 +9,7 @@ pub fn input_sum(inputs: List<Input>, account: Credential) -> assets.Value {
     |> list.filter(
         fn(input) { input.output.address.payment_credential == account },
       )
-    |> list.map(
-        fn(input) {
-          // Treasury funds must not be staked
-          input.output.value
-        },
-      )
+    |> list.map(fn(input) { input.output.value })
     |> list.reduce(assets.zero, assets.merge)
 }
 
