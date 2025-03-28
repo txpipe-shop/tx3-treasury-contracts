@@ -1,7 +1,7 @@
 use aiken/collection/list
 use aiken/interval.{is_entirely_before}
 use cardano/address.{Credential}
-use cardano/assets.{Value, merge, negate}
+use cardano/assets.{Value, merge, negate, without_lovelace, lovelace_of}
 use cardano/transaction.{InlineDatum, Transaction}
 use sundae/multisig.{satisfied}
 use types.{TreasuryConfiguration, VendorDatum}
@@ -49,14 +49,15 @@ pub fn logic(
       |> list.foldl(
           assets.zero,
           fn(output, total) {
+            // The datum must be well formed
             expect InlineDatum(datum) = output.datum
             expect datum: VendorDatum = datum
-            // Cannot create payouts that are after the upperbound
             let this_payout_sum =
               datum.payouts
                 |> list.foldl(
                     assets.zero,
                     fn(payout, acc) {
+                      // Cannot create payouts that are after the upperbound
                       expect payout.maturation <= payout_upperbound
                       assets.merge(acc, assets.from_asset_list(payout.value))
                     },
@@ -66,11 +67,14 @@ pub fn logic(
         )
 
   // TODO: do we need to check that the redeemer used for all other inputs at `account` is Fund?
-  //
+  // TODO: do we need amount? can we just compare the difference between inputs and outputs against the sum of the payouts?
+  // might be helpful if we switch to intent-based signing, which would help us avoid cases when the tx gets invalidated
   expect and {
       payout_sum == amount,
-      vendor_sum == amount,
-      output_sum == merge(input_sum, negate(vendor_sum)),
+      // We allow the lovelace at the vendor contract to be greater, to deal with minUTxO restrictions
+      without_lovelace(vendor_sum) == without_lovelace(amount),
+      lovelace_of(vendor_sum) >= lovelace_of(amount),
+      output_sum == merge(input_sum, negate(amount)),
       is_entirely_before(validity_range, expiration),
       satisfied(
         permissions.fund,
