@@ -22,6 +22,8 @@ pub type TreasuryConfiguration {
   permissions: TreasuryPermissions,
   // The time after which the funds can be swept back to the treasury
   expiration: Int,
+  // The upper bound for any payouts created by the oversight committee
+  payout_upperbound: Int,
   // The payment credential of the vendor script for new projects
   vendor_script: Credential,
 }
@@ -32,7 +34,7 @@ pub type VendorPermissions {
   // The permissions required to resume the vendor script
   resume: MultisigScript,
   // The permissions required for the oversight committee to approve a modification
-  // NOTE: the vendor must also approve the modification 
+  // NOTE: the vendor must also approve the modification
   modify: MultisigScript,
 }
 
@@ -62,17 +64,18 @@ pub type VendorSpendRedeemer {
   SweepVendor
 }
 
-pub type Payout =
-  (Int, Pairs<PolicyId, Pairs<AssetName, Int>>)
-
-pub type ProjectStatus {
+pub type PayoutStatus {
   Active
   Paused
 }
 
+pub type Payout {
+  maturation: Int,
+  value: Pairs<PolicyId, Pairs<AssetName, Int>>,
+  status: PayoutStatus,
+}
+
 pub type VendorDatum {
   vendor: MultisigScript,
-  matured: Int,
   payouts: List<Payout>,
-  status: ProjectStatus,
 }
