@@ -1,15 +1,38 @@
 use cardano/transaction.{OutputReference, Transaction}
-use types.{VendorConfiguration, VendorDatum, VendorSpendRedeemer}
+use types.{VendorConfiguration, VendorDatum, VendorSpendRedeemer, Withdraw, Pause, Resume, Modify, SweepVendor}
+use logic/vendor/malformed
+use logic/vendor/withdraw
+use logic/vendor/pause
+use logic/vendor/resume
+use logic/vendor/modify
+use logic/vendor/sweep
 
 /// A vendor script, for an ongoing project with an owner
 validator vendor(_config: VendorConfiguration) {
   spend(
-    _datum: Option<VendorDatum>,
-    _redeemer: VendorSpendRedeemer,
+    datum: Option<Data>,
+    redeemer: VendorSpendRedeemer,
     _utxo: OutputReference,
-    _self: Transaction,
+    self: Transaction,
   ) {
-    True
+    when datum is {
+      None -> {
+        malformed.logic(self)
+      }
+      Some(datum) -> {
+        if datum is VendorDatum {
+          when redeemer is {
+            Withdraw -> withdraw.logic(self)
+            Pause { .. } -> pause.logic(self)
+            Resume { .. } -> resume.logic(self)
+            Modify -> modify.logic(self)
+            SweepVendor -> sweep.logic(self)
+          }
+        } else {
+          malformed.logic(self)
+        }
+      }
+    }
   }
 
   // No other actions (withdrawing, minting, publishing certificates, voting, etc.) are valid
