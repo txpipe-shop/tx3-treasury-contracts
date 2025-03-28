@@ -4,7 +4,7 @@ use cardano/address.{Credential}
 use cardano/assets.{Value, merge, negate}
 use cardano/transaction.{InlineDatum, Transaction}
 use sundae/multisig.{satisfied}
-use types.{ProjectDatum, TreasuryConfiguration}
+use types.{TreasuryConfiguration, VendorDatum}
 use utilities.{input_sum, output_sum}
 
 // Pay out funds to the vendor script, to fund a new project
@@ -40,7 +40,7 @@ pub fn logic(
       |> list.all(
           fn(output) {
             expect InlineDatum(datum) = output.datum
-            expect _: ProjectDatum = datum
+            expect _: VendorDatum = datum
             True
           },
         )

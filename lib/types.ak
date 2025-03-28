@@ -26,7 +26,7 @@ pub type TreasuryConfiguration {
   vendor_script: Credential,
 }
 
-pub type ProjectPermissions {
+pub type VendorPermissions {
   // The permissions required to pause the vendor script
   pause: MultisigScript,
   // The permissions required to resume the vendor script
@@ -36,10 +36,10 @@ pub type ProjectPermissions {
   modify: MultisigScript,
 }
 
-pub type ProjectConfiguration {
+pub type VendorConfiguration {
   // The permissions required for different actions
-  permissions: ProjectPermissions,
-  // The time after which the funds can be swept back to the treasury
+  permissions: VendorPermissions,
+  // The time after which unmatured funds can be swept back to the treasury
   expiration: Int,
 }
 
@@ -54,7 +54,7 @@ pub type TreasurySpendRedeemer {
   Disburse { amount: Pairs<PolicyId, Pairs<AssetName, Int>> }
 }
 
-pub type ProjectSpendRedeemer {
+pub type VendorSpendRedeemer {
   Withdraw
   Pause
   Resume
@@ -70,7 +70,7 @@ pub type ProjectStatus {
   Paused
 }
 
-pub type ProjectDatum {
+pub type VendorDatum {
   vendor: MultisigScript,
   matured: Int,
   payouts: List<Payout>,

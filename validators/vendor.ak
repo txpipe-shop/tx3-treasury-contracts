@@ -1,11 +1,11 @@
 use cardano/transaction.{OutputReference, Transaction}
-use types.{ProjectConfiguration, ProjectDatum, ProjectSpendRedeemer}
+use types.{VendorConfiguration, VendorDatum, VendorSpendRedeemer}
 
 /// A vendor script, for an ongoing project with an owner
-validator project(_config: ProjectConfiguration) {
+validator vendor(_config: VendorConfiguration) {
   spend(
-    _datum: Option<ProjectDatum>,
-    _redeemer: ProjectSpendRedeemer,
+    _datum: Option<VendorDatum>,
+    _redeemer: VendorSpendRedeemer,
     _utxo: OutputReference,
     _self: Transaction,
   ) {

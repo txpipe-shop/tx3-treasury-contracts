@@ -33,6 +33,7 @@ validator treasury(config: TreasuryConfiguration) {
       SweepTreasury { .. } -> sweep.logic(config, account, self)
       // UTxOs at the treasury address can be reorganized, such as splitting or merging them
       Reorganize { .. } -> reorganize.logic(config, account, self)
+      // Funds can be used to fund a new vendor project
       Fund { amount } ->
         fund.logic(config, account, from_asset_list(amount), self)
       // Funds can be disbursed to arbitrary destinations
