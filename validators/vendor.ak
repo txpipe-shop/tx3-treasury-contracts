@@ -1,11 +1,14 @@
 use cardano/transaction.{OutputReference, Transaction}
-use types.{VendorConfiguration, VendorDatum, VendorSpendRedeemer, Withdraw, Pause, Resume, Modify, SweepVendor}
 use logic/vendor/malformed
-use logic/vendor/withdraw
+use logic/vendor/modify
 use logic/vendor/pause
 use logic/vendor/resume
-use logic/vendor/modify
 use logic/vendor/sweep
+use logic/vendor/withdraw
+use types.{
+  Modify, Pause, Resume, SweepVendor, VendorConfiguration, VendorDatum,
+  VendorSpendRedeemer, Withdraw,
+}
 
 /// A vendor script, for an ongoing project with an owner
 validator vendor(_config: VendorConfiguration) {
@@ -16,10 +19,8 @@ validator vendor(_config: VendorConfiguration) {
     self: Transaction,
   ) {
     when datum is {
-      None -> {
-        malformed.logic(self)
-      }
-      Some(datum) -> {
+      None -> malformed.logic(self)
+      Some(datum) ->
         if datum is VendorDatum {
           when redeemer is {
             Withdraw -> withdraw.logic(self)
@@ -31,7 +32,6 @@ validator vendor(_config: VendorConfiguration) {
         } else {
           malformed.logic(self)
         }
-      }
     }
   }
 

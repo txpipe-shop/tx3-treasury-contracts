@@ -1,7 +1,7 @@
 use aiken/collection/list
 use aiken/interval.{is_entirely_before}
 use cardano/address.{Credential}
-use cardano/assets.{Value, merge, negate, without_lovelace, lovelace_of}
+use cardano/assets.{Value, lovelace_of, merge, negate, without_lovelace}
 use cardano/transaction.{InlineDatum, Transaction}
 use sundae/multisig.{satisfied}
 use types.{TreasuryConfiguration, VendorDatum}
@@ -44,8 +44,8 @@ pub fn logic(
   let payout_sum =
     outputs
       |> list.filter(
-        fn(output) { output.address.payment_credential == registry.vendor },
-      )
+          fn(output) { output.address.payment_credential == registry.vendor },
+        )
       |> list.foldl(
           assets.zero,
           fn(output, total) {

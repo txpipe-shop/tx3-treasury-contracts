@@ -1,12 +1,24 @@
 use aiken/collection/list
 use cardano/address.{Credential}
 use cardano/assets.{PolicyId, Value}
-use cardano/transaction.{Input, Output, InlineDatum}
+use cardano/transaction.{InlineDatum, Input, Output}
 use types.{ScriptHashRegistry, registry_token_name}
 
-pub fn find_script_hash_registry(reference_inputs: List<Input>, registry_token: PolicyId) -> ScriptHashRegistry {
-  expect Some(input) = reference_inputs
-    |> list.find(fn(input) { assets.quantity_of(input.output.value, registry_token, registry_token_name()) > 0 })
+pub fn find_script_hash_registry(
+  reference_inputs: List<Input>,
+  registry_token: PolicyId,
+) -> ScriptHashRegistry {
+  expect Some(input) =
+    reference_inputs
+      |> list.find(
+          fn(input) {
+            assets.quantity_of(
+              input.output.value,
+              registry_token,
+              registry_token_name(),
+            ) > 0
+          },
+        )
   expect InlineDatum(datum) = input.output.datum
   expect registry: ScriptHashRegistry = datum
   registry

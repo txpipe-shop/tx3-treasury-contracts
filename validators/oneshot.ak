@@ -1,5 +1,5 @@
-use cardano/transaction.{OutputReference, Transaction}
 use aiken/collection/list
+use cardano/transaction.{OutputReference, Transaction}
 
 validator oneshot(utxo_ref: OutputReference) {
   mint(_r: Void, _policy_id: ByteArray, self: Transaction) {

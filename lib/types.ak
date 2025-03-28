@@ -8,6 +8,7 @@ pub type ScriptHashRegistry {
   treasury: Credential,
   vendor: Credential,
 }
+
 pub fn registry_token_name() -> AssetName {
   "REGISTRY"
 }

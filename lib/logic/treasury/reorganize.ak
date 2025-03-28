@@ -1,6 +1,6 @@
 use aiken/interval.{is_entirely_before}
 use cardano/address.{Credential}
-use cardano/assets.{without_lovelace, lovelace_of}
+use cardano/assets.{lovelace_of, without_lovelace}
 use cardano/transaction.{Transaction}
 use sundae/multisig.{satisfied}
 use types.{TreasuryConfiguration}
