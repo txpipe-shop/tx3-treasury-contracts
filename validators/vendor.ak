@@ -1,4 +1,4 @@
-use cardano/transaction.{OutputReference, Transaction}
+use cardano/transaction.{OutputReference, Transaction, find_input}
 use logic/vendor/malformed
 use logic/vendor/modify
 use logic/vendor/pause
@@ -11,15 +11,18 @@ use types.{
 }
 
 /// A vendor script, for an ongoing project with an owner
-validator vendor(_config: VendorConfiguration) {
+validator vendor(config: VendorConfiguration) {
   spend(
     datum: Option<Data>,
     redeemer: VendorSpendRedeemer,
-    _utxo: OutputReference,
+    utxo: OutputReference,
     self: Transaction,
   ) {
+    expect Some(spent_input) = find_input(self.inputs, utxo)
+    let account = spent_input.output.address.payment_credential
+
     when datum is {
-      None -> malformed.logic(self)
+      None -> malformed.logic(config, account, self)
       Some(datum) ->
         if datum is VendorDatum {
           when redeemer is {
@@ -30,7 +33,7 @@ validator vendor(_config: VendorConfiguration) {
             SweepVendor -> sweep.logic(self)
           }
         } else {
-          malformed.logic(self)
+          malformed.logic(config, account, self)
         }
     }
   }
