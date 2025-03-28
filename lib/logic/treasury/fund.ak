@@ -5,7 +5,7 @@ use cardano/assets.{Value, merge, negate}
 use cardano/transaction.{InlineDatum, Transaction}
 use sundae/multisig.{satisfied}
 use types.{TreasuryConfiguration, VendorDatum}
-use utilities.{input_sum, output_sum}
+use utilities.{find_script_hash_registry, input_sum, output_sum}
 
 // Pay out funds to the vendor script, to fund a new project
 pub fn logic(
@@ -15,24 +15,28 @@ pub fn logic(
   transaction: Transaction,
 ) {
   let TreasuryConfiguration {
+    registry_token,
     expiration,
-    vendor_script,
     payout_upperbound,
     permissions,
   } = config
   let Transaction {
     inputs,
+    reference_inputs,
     outputs,
     validity_range,
     extra_signatories,
     withdrawals,
     ..
   } = transaction
+
+  // Find the script hash registry, so we know the vendor script hash
+  let registry = find_script_hash_registry(reference_inputs, registry_token)
   // We need to make sure that the expected amount leaves the control of the treasury script
   // This means summing up the inputs held at the treasury script, then the outputs at both the vendor script
   // and the treasury script.  Since we're iterating over the outputs anyway,
   let input_sum = input_sum(inputs, account)
-  let vendor_sum = output_sum(outputs, vendor_script)
+  let vendor_sum = output_sum(outputs, registry.vendor)
   let output_sum = output_sum(outputs, account)
 
   // Sum up all of the payouts on all of the vendor outputs
@@ -40,8 +44,8 @@ pub fn logic(
   let payout_sum =
     outputs
       |> list.filter(
-          fn(output) { output.address.payment_credential == vendor_script },
-        )
+        fn(output) { output.address.payment_credential == registry.vendor },
+      )
       |> list.foldl(
           assets.zero,
           fn(output, total) {

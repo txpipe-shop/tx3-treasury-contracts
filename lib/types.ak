@@ -2,6 +2,16 @@ use cardano/address.{Credential}
 use cardano/assets.{AssetName, PolicyId}
 use sundae/multisig.{MultisigScript}
 
+/// We store the script hashes at a specific datum at an always fails script
+/// so we can "tie the knot" and resolve circular references
+pub type ScriptHashRegistry {
+  treasury: Credential,
+  vendor: Credential,
+}
+pub fn registry_token_name() -> AssetName {
+  "REGISTRY"
+}
+
 /// The different permission thresholds for the treasury
 pub type TreasuryPermissions {
   // The permissions required to reorganize the UTxOs in the wallet
@@ -18,14 +28,14 @@ pub type TreasuryPermissions {
 
 /// Treasury script configuration
 pub type TreasuryConfiguration {
+  // The token used to authenticate the script hash registry
+  registry_token: PolicyId,
   // The permissions required for different options
   permissions: TreasuryPermissions,
   // The time after which the funds can be swept back to the treasury
   expiration: Int,
   // The upper bound for any payouts created by the oversight committee
   payout_upperbound: Int,
-  // The payment credential of the vendor script for new projects
-  vendor_script: Credential,
 }
 
 pub type VendorPermissions {
@@ -39,6 +49,8 @@ pub type VendorPermissions {
 }
 
 pub type VendorConfiguration {
+  // The token used to authenticate the script hash registry
+  registry_token: PolicyId,
   // The permissions required for different actions
   permissions: VendorPermissions,
   // The time after which unmatured funds can be swept back to the treasury

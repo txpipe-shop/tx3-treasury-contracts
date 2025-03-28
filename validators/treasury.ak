@@ -2,15 +2,15 @@ use cardano/address.{Credential}
 use cardano/assets.{from_asset_list}
 use cardano/transaction.{Input,
   Output, OutputReference, Transaction, find_input}
-use disburse
-use fund
-use reorganize
-use sweep
+use logic/treasury/disburse
+use logic/treasury/fund
+use logic/treasury/reorganize
+use logic/treasury/sweep
+use logic/treasury/withdraw
 use types.{
   Disburse, Fund, Reorganize, SweepTreasury, TreasuryConfiguration,
   TreasurySpendRedeemer,
 }
-use withdraw
 
 /// A treasury script to hold funds withdrawn from the Cardano treasury
 validator treasury(config: TreasuryConfiguration) {
