@@ -22,7 +22,7 @@ validator vendor(config: VendorConfiguration) {
 
     when redeemer is {
       Withdraw -> withdraw.logic(account, self)
-      Adjudicate { .. } -> adjudicate.logic(config, account, self)
+      Adjudicate { statuses } -> adjudicate.logic(statuses, config, account, self)
       Modify -> modify.logic(config, account, self)
       SweepVendor -> sweep.logic(config, account, self)
       Malformed -> malformed.logic(config, account, self)

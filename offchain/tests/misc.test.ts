@@ -7,16 +7,16 @@ import {
   expectScriptFailure,
   makeExpectTxInvalid,
   makeExpectTxValid,
-  sampleConfig,
+  sampleTreasuryConfig,
   setupBlaze,
 } from "./utilities.test";
-import { loadScript } from "../shared";
+import { loadTreasuryScript } from "../shared";
 
 describe("A malicious user", () => {
   const amount = 340_000_000_000_000n;
-  const { rewardAccount, credential, treasuryScript } = loadScript(
+  const { rewardAccount, credential, script: treasuryScript } = loadTreasuryScript(
     Core.NetworkId.Testnet,
-    sampleConfig(),
+    sampleTreasuryConfig(),
   );
 
   let emulator: Emulator;

@@ -15,15 +15,19 @@ import {
   wordlist,
 } from "@blaze-cardano/core";
 import { Emulator, EmulatorProvider } from "@blaze-cardano/emulator";
-import { loadScript } from "../shared";
-import type { TreasuryConfiguration } from "../types/contracts";
+import { loadScripts } from "../shared";
+import type { TreasuryConfiguration, VendorConfiguration } from "../types/contracts";
 
-export function sampleConfig(): TreasuryConfiguration {
+export function registryToken(): [string, string] {
+  return ["00000000000000000000000000000000", "REGISTRY"];
+}
+
+export function sampleTreasuryConfig(): TreasuryConfiguration {
+  const [policyId, _] = registryToken();
   return {
+    registry_token: policyId,
     expiration: 1000n,
-    vendor_script: {
-      Script: [""],
-    },
+    payout_upperbound: 1500n,
     permissions: {
       sweep: {
         Signature: {
@@ -49,8 +53,33 @@ export function sampleConfig(): TreasuryConfiguration {
   };
 }
 
+export function sampleVendorConfig(): VendorConfiguration {
+  const [policyId, _] = registryToken();
+  return {
+    registry_token: policyId,
+    expiration: 1500n,
+    permissions: {
+      pause: {
+        Signature: {
+          key_hash: "ab",
+        },
+      },
+      resume: {
+        Signature: {
+          key_hash: "ab",
+        },
+      },
+      modify: {
+        Signature: {
+          key_hash: "ab",
+        },
+      },
+    },
+  };
+}
+
 export async function setupBlaze(txOuts: Core.TransactionOutput[] = []) {
-  const { treasuryScript } = loadScript(Core.NetworkId.Testnet, sampleConfig());
+  const { treasuryScript, vendorScript } = loadScripts(Core.NetworkId.Testnet, sampleTreasuryConfig(), sampleVendorConfig());
   txOuts.push(
     new Core.TransactionOutput(
       Core.Address.fromBech32(
@@ -75,12 +104,21 @@ export async function setupBlaze(txOuts: Core.TransactionOutput[] = []) {
       makeValue(3_000_000n, ["a".repeat(64), 1n]),
     ),
   );
-  const scriptRef = new Core.TransactionOutput(
+
+  const treasuryScriptRef = new Core.TransactionOutput(
     getBurnAddress(Core.NetworkId.Testnet),
     makeValue(5_000_000n),
   );
-  scriptRef.setScriptRef(treasuryScript.Script);
-  txOuts.push(scriptRef);
+  treasuryScriptRef.setScriptRef(treasuryScript.script.Script);
+  txOuts.push(treasuryScriptRef);
+
+  const vendorScriptRef = new Core.TransactionOutput(
+    getBurnAddress(Core.NetworkId.Testnet),
+    makeValue(5_000_000n),
+  );
+  vendorScriptRef.setScriptRef(vendorScript.script.Script);
+  txOuts.push(vendorScriptRef);
+
   const protocolParameters = {
     coinsPerUtxoByte: 4310,
     minFeeReferenceScripts: { base: 15, range: 25600, multiplier: 1.2 },

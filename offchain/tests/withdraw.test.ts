@@ -12,16 +12,16 @@ import { withdraw } from "../withdraw";
 import {
   expectScriptFailure,
   makeExpectTxValid,
-  sampleConfig,
+  sampleTreasuryConfig,
   setupBlaze,
 } from "./utilities.test";
-import { loadScript } from "../shared";
+import { loadTreasuryScript } from "../shared";
 
 describe("When withdrawing", () => {
   const amount = 340_000_000_000_000n;
-  const { rewardAccount, scriptAddress, treasuryScript } = loadScript(
+  const { rewardAccount, scriptAddress, script: treasuryScript } = loadTreasuryScript(
     Core.NetworkId.Testnet,
-    sampleConfig(),
+    sampleTreasuryConfig(),
   );
 
   let emulator: Emulator;
@@ -39,7 +39,7 @@ describe("When withdrawing", () => {
 
   describe("anyone", () => {
     test("can withdraw and lock funds at the script address", async () => {
-      expectTxValid(await withdraw(sampleConfig(), amount, blaze));
+      expectTxValid(await withdraw(sampleTreasuryConfig(), amount, blaze));
     });
     test("can split funds across multiple script outputs", async () => {
       expectTxValid(

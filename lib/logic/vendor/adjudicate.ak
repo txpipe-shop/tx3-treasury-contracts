@@ -3,7 +3,7 @@ use aiken/interval.{is_entirely_after}
 use cardano/address.{Credential}
 use cardano/transaction.{InlineDatum, Transaction}
 use sundae/multisig.{satisfied}
-use types.{Active, Paused, VendorConfiguration, VendorDatum}
+use types.{Active, Paused, VendorConfiguration, VendorDatum, PayoutStatus}
 use utilities.{equal_plus_min_ada, outputs_of}
 
 // The oversight committee can pause a specific payouts during a dispute
@@ -18,6 +18,7 @@ use utilities.{equal_plus_min_ada, outputs_of}
 //  - If at least one payout flips from Inactive to Active, the `resume` permission is satisfied
 //  - At least one payout changes
 pub fn logic(
+  statuses: List<PayoutStatus>,
   config: VendorConfiguration,
   account: Credential,
   transaction: Transaction,
@@ -56,9 +57,11 @@ pub fn logic(
   let (pause_permission_needed, resume_permission_needed) =
     input_vendor_datum.payouts
       |> list.zip(output_vendor_datum.payouts)
+      |> list.zip(statuses)
       |> list.foldl(
           (False, False),
-          fn((ip, op), (pause, resume)) {
+          fn(((ip, op), status), (pause, resume)) {
+            expect status == op.status
             expect ip.maturation == op.maturation
             expect ip.value == op.value
             expect
