@@ -1,8 +1,9 @@
 use aiken/collection/list
+use aiken/option
 use cardano/address.{Credential}
 use cardano/assets.{PolicyId, Value, without_lovelace, lovelace_of}
 use cardano/transaction.{InlineDatum, Input, Output}
-use types.{ScriptHashRegistry, registry_token_name}
+use types.{ScriptHashRegistry, registry_token_name, VendorDatum, Payout}
 
 pub fn find_script_hash_registry(
   reference_inputs: List<Input>,
@@ -24,6 +25,10 @@ pub fn find_script_hash_registry(
   registry
 }
 
+// Get the output of each input
+pub fn outputs_of(inputs: List<Input>) -> List<Output> {
+  list.map(inputs, fn(input) { input.output })
+}
 
 pub fn equal_plus_min_ada(expected: Value, actual: Value) -> Bool {
   and {
@@ -31,25 +36,48 @@ pub fn equal_plus_min_ada(expected: Value, actual: Value) -> Bool {
     lovelace_of(expected) <= lovelace_of(actual),
   }
 }
-pub fn input_sum(inputs: List<Input>, account: Credential) -> Value {
-  inputs
+
+// Sum up all assets on the `outputs` held at `account`
+// Note: can also be used to traverse the inputs by mapping over them first
+pub fn value_sum(outputs: List<Output>, account: Credential, allow_stake: Bool) -> Value {
+  outputs
     |> list.filter(
-        fn(input) { input.output.address.payment_credential == account },
+        fn(output) { output.address.payment_credential == account },
       )
-    |> list.map(fn(input) { input.output.value })
+    |> list.map(fn(output) {
+      expect or {
+        allow_stake,
+        option.is_none(output.address.stake_credential)
+      }
+      output.value
+    })
     |> list.reduce(assets.zero, assets.merge)
 }
 
-// Sum up all assets on the `outputs` held at `account` and ensure there is no staking address attached
-pub fn output_sum(outputs: List<Output>, account: Credential) -> Value {
+pub fn payout_sum(outputs: List<Output>, vendor: Credential, filter: fn(VendorDatum, Payout) -> Bool) -> Value {
   outputs
-    |> list.filter(fn(output) { output.address.payment_credential == account })
-    |> list.map(
-        fn(output) {
-          // Treasury funds must not be staked
-          expect None = output.address.stake_credential
-          output.value
+    |> list.filter(
+        fn(output) { output.address.payment_credential == vendor },
+      )
+    |> list.foldl(
+        assets.zero,
+        fn(output, total) {
+          // The datum must be well formed
+          expect InlineDatum(datum) = output.datum
+          expect datum: VendorDatum = datum
+          let this_payout_sum =
+            datum.payouts
+              |> list.foldl(
+                  assets.zero,
+                  fn(payout, acc) {
+                    if filter(datum, payout) {
+                      assets.merge(acc, assets.from_asset_list(payout.value))
+                    } else {
+                      acc
+                    }
+                  },
+                )
+          assets.merge(total, this_payout_sum)
         },
       )
-    |> list.reduce(assets.zero, assets.merge)
 }
