@@ -3,7 +3,7 @@ use aiken/interval.{is_entirely_after}
 use cardano/address.{Credential}
 use cardano/transaction.{InlineDatum, Transaction}
 use sundae/multisig.{satisfied}
-use types.{Active, Paused, VendorConfiguration, VendorDatum, PayoutStatus}
+use types.{Active, Paused, PayoutStatus, VendorConfiguration, VendorDatum}
 use utilities.{equal_plus_min_ada, outputs_of}
 
 // The oversight committee can pause a specific payouts during a dispute
