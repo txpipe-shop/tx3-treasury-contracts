@@ -1,9 +1,9 @@
 use aiken/collection/list
 use aiken/option
 use cardano/address.{Credential}
-use cardano/assets.{PolicyId, Value, without_lovelace, lovelace_of}
+use cardano/assets.{PolicyId, Value, lovelace_of, without_lovelace}
 use cardano/transaction.{InlineDatum, Input, Output}
-use types.{ScriptHashRegistry, registry_token_name, VendorDatum, Payout}
+use types.{Payout, ScriptHashRegistry, VendorDatum, registry_token_name}
 
 pub fn find_script_hash_registry(
   reference_inputs: List<Input>,
@@ -39,26 +39,32 @@ pub fn equal_plus_min_ada(expected: Value, actual: Value) -> Bool {
 
 // Sum up all assets on the `outputs` held at `account`
 // Note: can also be used to traverse the inputs by mapping over them first
-pub fn value_sum(outputs: List<Output>, account: Credential, allow_stake: Bool) -> Value {
+pub fn value_sum(
+  outputs: List<Output>,
+  account: Credential,
+  allow_stake: Bool,
+) -> Value {
   outputs
-    |> list.filter(
-        fn(output) { output.address.payment_credential == account },
+    |> list.filter(fn(output) { output.address.payment_credential == account })
+    |> list.map(
+        fn(output) {
+          expect or {
+              allow_stake,
+              option.is_none(output.address.stake_credential),
+            }
+          output.value
+        },
       )
-    |> list.map(fn(output) {
-      expect or {
-        allow_stake,
-        option.is_none(output.address.stake_credential)
-      }
-      output.value
-    })
     |> list.reduce(assets.zero, assets.merge)
 }
 
-pub fn payout_sum(outputs: List<Output>, vendor: Credential, filter: fn(VendorDatum, Payout) -> Bool) -> Value {
+pub fn payout_sum(
+  outputs: List<Output>,
+  vendor: Credential,
+  filter: fn(VendorDatum, Payout) -> Bool,
+) -> Value {
   outputs
-    |> list.filter(
-        fn(output) { output.address.payment_credential == vendor },
-      )
+    |> list.filter(fn(output) { output.address.payment_credential == vendor })
     |> list.foldl(
         assets.zero,
         fn(output, total) {

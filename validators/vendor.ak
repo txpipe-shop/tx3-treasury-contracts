@@ -1,12 +1,12 @@
 use cardano/transaction.{OutputReference, Transaction, find_input}
+use logic/vendor/adjudicate
 use logic/vendor/malformed
 use logic/vendor/modify
-use logic/vendor/adjudicate
 use logic/vendor/sweep
 use logic/vendor/withdraw
 use types.{
-  Modify, Adjudicate, SweepVendor, VendorConfiguration,
-  VendorSpendRedeemer, Withdraw, Malformed,
+  Adjudicate, Malformed, Modify, SweepVendor, VendorConfiguration,
+  VendorSpendRedeemer, Withdraw,
 }
 
 /// A vendor script, for an ongoing project with an owner

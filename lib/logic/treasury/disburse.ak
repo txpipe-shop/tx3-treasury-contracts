@@ -1,10 +1,10 @@
 use aiken/interval.{is_entirely_before}
 use cardano/address.{Credential}
-use cardano/assets.{Value, merge, negate, lovelace_of}
+use cardano/assets.{Value, lovelace_of, merge, negate}
 use cardano/transaction.{Transaction}
 use sundae/multisig.{satisfied}
 use types.{TreasuryConfiguration}
-use utilities.{value_sum, outputs_of, equal_plus_min_ada}
+use utilities.{equal_plus_min_ada, outputs_of, value_sum}
 
 // To support conversion to and from stablecoins, or fiat payments,
 // the oversight committee can disburse an arbitrary amount of funds

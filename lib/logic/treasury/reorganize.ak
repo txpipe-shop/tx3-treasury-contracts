@@ -3,7 +3,7 @@ use cardano/address.{Credential}
 use cardano/transaction.{Transaction}
 use sundae/multisig.{satisfied}
 use types.{TreasuryConfiguration}
-use utilities.{value_sum, outputs_of, equal_plus_min_ada}
+use utilities.{equal_plus_min_ada, outputs_of, value_sum}
 
 // Before the expiration, the oversight committee can reorganize the treasury UTxOs, so long as no value escapes
 pub fn logic(

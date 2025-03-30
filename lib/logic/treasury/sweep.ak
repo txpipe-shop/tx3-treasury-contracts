@@ -4,7 +4,7 @@ use cardano/assets.{lovelace_of, without_lovelace}
 use cardano/transaction.{Transaction}
 use sundae/multisig.{satisfied}
 use types.{TreasuryConfiguration}
-use utilities.{value_sum, outputs_of}
+use utilities.{outputs_of, value_sum}
 
 // Check whether the funds are swept back to the treasury correctly
 // In particular,

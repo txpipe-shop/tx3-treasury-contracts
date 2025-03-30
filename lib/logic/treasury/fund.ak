@@ -4,7 +4,10 @@ use cardano/assets.{Value, merge, negate}
 use cardano/transaction.{Transaction}
 use sundae/multisig.{satisfied}
 use types.{TreasuryConfiguration}
-use utilities.{find_script_hash_registry, value_sum, payout_sum, outputs_of, equal_plus_min_ada}
+use utilities.{
+  equal_plus_min_ada, find_script_hash_registry, outputs_of, payout_sum,
+  value_sum,
+}
 
 // Pay out funds to the vendor script, to fund a new project
 pub fn logic(
@@ -13,12 +16,8 @@ pub fn logic(
   amount: Value,
   transaction: Transaction,
 ) {
-  let TreasuryConfiguration {
-    registry_token,
-    expiration,
-    permissions,
-    ..
-  } = config
+  let TreasuryConfiguration { registry_token, expiration, permissions, .. } =
+    config
   let Transaction {
     inputs,
     reference_inputs,
@@ -44,10 +43,15 @@ pub fn logic(
 
   // Sum up all of the payouts on all of the vendor outputs
   // checking that the datums are well formed and no payouts are too far in the future
-  let payout_sum = payout_sum(outputs, registry.vendor, fn(_, p) {
-    expect p.maturation <= config.expiration
-    True
-  })
+  let payout_sum =
+    payout_sum(
+      outputs,
+      registry.vendor,
+      fn(_, p) {
+        expect p.maturation <= config.expiration
+        True
+      },
+    )
 
   // TODO: do we need to check that the redeemer used for all other inputs at `account` is Fund?
   // TODO: do we need amount? can we just compare the difference between inputs and outputs against the sum of the payouts?
