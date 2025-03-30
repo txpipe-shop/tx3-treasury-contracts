@@ -22,7 +22,7 @@ validator vendor(config: VendorConfiguration) {
     let account = spent_input.output.address.payment_credential
 
     when redeemer is {
-      Withdraw -> withdraw.logic(self)
+      Withdraw -> withdraw.logic(account, self)
       Pause { .. } -> pause.logic(self)
       Resume { .. } -> resume.logic(self)
       Modify -> modify.logic(self)
