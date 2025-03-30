@@ -29,13 +29,13 @@ pub fn logic(
   // TODO: do we need to check that the redeemer used for all other inputs at `account` is reogranize?
   expect and {
       // All native assets must remain at the contract unchanged
-      equal_plus_min_ada(input_sum, output_sum),
-      is_entirely_before(validity_range, config.expiration),
+      equal_plus_min_ada(input_sum, output_sum)?,
+      is_entirely_before(validity_range, config.expiration)?,
       satisfied(
         config.permissions.reorganize,
         extra_signatories,
         validity_range,
         withdrawals,
-      ),
+      )?,
     }
 }

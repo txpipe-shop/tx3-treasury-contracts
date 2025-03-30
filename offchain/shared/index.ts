@@ -1,5 +1,6 @@
 import { Core } from "@blaze-cardano/sdk";
 import { TreasuryConfiguration, TreasuryTreasuryWithdraw, VendorConfiguration, VendorVendorSpend } from "../types/contracts";
+import { Slot } from "@blaze-cardano/core";
 
 export function loadTreasuryScript(network: Core.NetworkId, config: TreasuryConfiguration) {
   const script = new TreasuryTreasuryWithdraw(config);
@@ -46,4 +47,12 @@ export function loadScripts(network: Core.NetworkId, treasuryConfig: TreasuryCon
     treasuryScript,
     vendorScript,
   };
+}
+
+export function unix_to_slot(unix: bigint): Slot {
+  return Slot(Number(unix / 1000n));
+}
+
+export function slot_to_unix(slot: Slot): bigint {
+  return BigInt(slot) * 1000n;
 }

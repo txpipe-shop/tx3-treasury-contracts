@@ -9,8 +9,8 @@ import {
   makeExpectTxValid,
   sampleTreasuryConfig,
   setupBlaze,
-} from "./utilities.test";
-import { loadTreasuryScript } from "../shared";
+} from "../utilities.test";
+import { loadTreasuryScript } from "../../shared";
 
 describe("A malicious user", () => {
   const amount = 340_000_000_000_000n;

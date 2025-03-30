@@ -10,43 +10,51 @@ import {
 } from "@blaze-cardano/sdk";
 import {
   Bip32PrivateKey,
+  Ed25519KeyHashHex,
   getBurnAddress,
   mnemonicToEntropy,
+  Slot,
   wordlist,
 } from "@blaze-cardano/core";
 import { Emulator, EmulatorProvider } from "@blaze-cardano/emulator";
-import { loadScripts } from "../shared";
+import { loadScripts, slot_to_unix } from "../shared";
 import type { TreasuryConfiguration, VendorConfiguration } from "../types/contracts";
 
 export function registryToken(): [string, string] {
   return ["00000000000000000000000000000000", "REGISTRY"];
 }
 
+// TODO: extend the emulator to support faked keys
+export const sweep_key      = "c8c47610a36034aac6fc58848bdae5c278d994ff502c05455e3b3ee8";
+export const disburse_key   = "c8c47610a36034aac6fc58848bdae5c278d994ff502c05455e3b3ee8";
+export const fund_key       = "c8c47610a36034aac6fc58848bdae5c278d994ff502c05455e3b3ee8";
+export const reorganize_key = "c8c47610a36034aac6fc58848bdae5c278d994ff502c05455e3b3ee8";
+
 export function sampleTreasuryConfig(): TreasuryConfiguration {
   const [policyId, _] = registryToken();
   return {
     registry_token: policyId,
-    expiration: 1000n,
-    payout_upperbound: 1500n,
+    expiration: slot_to_unix(Slot(30)),
+    payout_upperbound: slot_to_unix(Slot(45)),
     permissions: {
       sweep: {
         Signature: {
-          key_hash: "ab",
+          key_hash: sweep_key,
         },
       },
       disburse: {
         Signature: {
-          key_hash: "ab",
+          key_hash: disburse_key,
         },
       },
       fund: {
         Signature: {
-          key_hash: "ab",
+          key_hash: fund_key,
         },
       },
       reorganize: {
         Signature: {
-          key_hash: "ab",
+          key_hash: reorganize_key,
         },
       },
     },
@@ -57,7 +65,7 @@ export function sampleVendorConfig(): VendorConfiguration {
   const [policyId, _] = registryToken();
   return {
     registry_token: policyId,
-    expiration: 1500n,
+    expiration: 15n * 1000n,
     permissions: {
       pause: {
         Signature: {
@@ -76,6 +84,10 @@ export function sampleVendorConfig(): VendorConfiguration {
       },
     },
   };
+}
+
+export function blocks(slot: Slot): number {
+  return slot / 20;
 }
 
 export async function setupBlaze(txOuts: Core.TransactionOutput[] = []) {

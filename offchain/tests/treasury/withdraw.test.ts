@@ -8,14 +8,14 @@ import {
 } from "@blaze-cardano/sdk";
 import * as Data from "@blaze-cardano/data";
 import { Emulator, EmulatorProvider } from "@blaze-cardano/emulator";
-import { withdraw } from "../withdraw";
+import { withdraw } from "../../treasury/withdraw";
 import {
   expectScriptFailure,
   makeExpectTxValid,
   sampleTreasuryConfig,
   setupBlaze,
-} from "./utilities.test";
-import { loadTreasuryScript } from "../shared";
+} from "../utilities.test";
+import { loadTreasuryScript } from "../../shared";
 
 describe("When withdrawing", () => {
   const amount = 340_000_000_000_000n;
