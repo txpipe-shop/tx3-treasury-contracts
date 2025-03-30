@@ -1,6 +1,6 @@
 use aiken/collection/list
 use cardano/address.{Credential}
-use cardano/assets.{PolicyId, Value}
+use cardano/assets.{PolicyId, Value, without_lovelace, lovelace_of}
 use cardano/transaction.{InlineDatum, Input, Output}
 use types.{ScriptHashRegistry, registry_token_name}
 
@@ -24,7 +24,13 @@ pub fn find_script_hash_registry(
   registry
 }
 
-// Sum up all assets on the `inputs` held at `account`
+
+pub fn equal_plus_min_ada(expected: Value, actual: Value) -> Bool {
+  and {
+    without_lovelace(expected) == without_lovelace(actual),
+    lovelace_of(expected) <= lovelace_of(actual),
+  }
+}
 pub fn input_sum(inputs: List<Input>, account: Credential) -> Value {
   inputs
     |> list.filter(

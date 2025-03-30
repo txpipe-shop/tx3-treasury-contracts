@@ -6,14 +6,14 @@ use logic/vendor/resume
 use logic/vendor/sweep
 use logic/vendor/withdraw
 use types.{
-  Modify, Pause, Resume, SweepVendor, VendorConfiguration, VendorDatum,
-  VendorSpendRedeemer, Withdraw,
+  Modify, Pause, Resume, SweepVendor, VendorConfiguration,
+  VendorSpendRedeemer, Withdraw, Malformed,
 }
 
 /// A vendor script, for an ongoing project with an owner
 validator vendor(config: VendorConfiguration) {
   spend(
-    datum: Option<Data>,
+    _: Option<Data>,
     redeemer: VendorSpendRedeemer,
     utxo: OutputReference,
     self: Transaction,
@@ -21,20 +21,13 @@ validator vendor(config: VendorConfiguration) {
     expect Some(spent_input) = find_input(self.inputs, utxo)
     let account = spent_input.output.address.payment_credential
 
-    when datum is {
-      None -> malformed.logic(config, account, self)
-      Some(datum) ->
-        if datum is VendorDatum {
-          when redeemer is {
-            Withdraw -> withdraw.logic(self)
-            Pause { .. } -> pause.logic(self)
-            Resume { .. } -> resume.logic(self)
-            Modify -> modify.logic(self)
-            SweepVendor -> sweep.logic(self)
-          }
-        } else {
-          malformed.logic(config, account, self)
-        }
+    when redeemer is {
+      Withdraw -> withdraw.logic(self)
+      Pause { .. } -> pause.logic(self)
+      Resume { .. } -> resume.logic(self)
+      Modify -> modify.logic(self)
+      SweepVendor -> sweep.logic(config, account, self)
+      Malformed -> malformed.logic(config, account, self)
     }
   }
 

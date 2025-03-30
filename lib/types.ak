@@ -75,6 +75,7 @@ pub type VendorSpendRedeemer {
   Resume { indices: List<Int> }
   Modify
   SweepVendor
+  Malformed
 }
 
 pub type PayoutStatus {
