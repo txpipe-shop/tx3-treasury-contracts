@@ -1,12 +1,11 @@
 use cardano/transaction.{OutputReference, Transaction, find_input}
 use logic/vendor/malformed
 use logic/vendor/modify
-use logic/vendor/pause
-use logic/vendor/resume
+use logic/vendor/adjudicate
 use logic/vendor/sweep
 use logic/vendor/withdraw
 use types.{
-  Modify, Pause, Resume, SweepVendor, VendorConfiguration,
+  Modify, Adjudicate, SweepVendor, VendorConfiguration,
   VendorSpendRedeemer, Withdraw, Malformed,
 }
 
@@ -23,8 +22,7 @@ validator vendor(config: VendorConfiguration) {
 
     when redeemer is {
       Withdraw -> withdraw.logic(account, self)
-      Pause { .. } -> pause.logic(self)
-      Resume { .. } -> resume.logic(self)
+      Adjudicate { .. } -> adjudicate.logic(self)
       Modify -> modify.logic(self)
       SweepVendor -> sweep.logic(config, account, self)
       Malformed -> malformed.logic(config, account, self)
