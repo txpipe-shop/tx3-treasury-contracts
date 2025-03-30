@@ -1,6 +1,6 @@
 name = "sundae/treasury-funds"
 version = "0.0.0"
-compiler = "v1.1.4"
+compiler = "v1.1.12"
 plutus = "v3"
 license = "Apache-2.0"
 description = "Aiken contracts for project 'sundae/treasury-funds'"
@@ -13,6 +13,16 @@ platform = "github"
 [[dependencies]]
 name = "aiken-lang/stdlib"
 version = "v2.2.0"
+source = "github"
+
+[[dependencies]]
+name = "aiken-lang/fuzz"
+version = "v2.1.1"
+source = "github"
+
+[[dependencies]]
+name = "SundaeSwap-finance/aicone"
+version = "504e104"
 source = "github"
 
 [config]

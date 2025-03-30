@@ -1,31 +1,44 @@
 use cardano/address.{Credential}
-use cardano/transaction.{OutputReference, Transaction, find_input}
-use sweep
-use types.{Configuration, SpendRedeemer, Sweep}
-use withdraw
+use cardano/assets.{from_asset_list}
+use cardano/transaction.{Input,
+  Output, OutputReference, Transaction, find_input}
+use logic/treasury/disburse
+use logic/treasury/fund
+use logic/treasury/reorganize
+use logic/treasury/sweep
+use logic/treasury/withdraw
+use types.{
+  Disburse, Fund, Reorganize, SweepTreasury, TreasuryConfiguration,
+  TreasurySpendRedeemer,
+}
 
-validator treasury(config: Configuration) {
-  spend(_d, redeemer: SpendRedeemer, utxo: OutputReference, self: Transaction) {
-    let Configuration { expiration } = config
-    // TODO: blaze recursive type support
-    // expect sweep: MultisigScript = sweep_permissions
-    let Transaction { validity_range, .. } = self
-
+/// A treasury script to hold funds withdrawn from the Cardano treasury
+validator treasury(config: TreasuryConfiguration) {
+  // Funds can be spent to:
+  //  - Sweep them back to the treasury
+  //  - Set up a new vendor project
+  //  - Disburse funds for arbitrary spending
+  //  - Reorganize the treasury UTxOs
+  spend(
+    _d,
+    redeemer: TreasurySpendRedeemer,
+    utxo: OutputReference,
+    self: Transaction,
+  ) {
     expect Some(spent_input) = find_input(self.inputs, utxo)
     let account = spent_input.output.address.payment_credential
 
     when redeemer is {
       // Funds can be swept back to the treasury after the expiration
-      Sweep ->
-        sweep.logic(
-          validity_range,
-          expiration,
-          self.inputs,
-          self.outputs,
-          account,
-          self.treasury_donation,
-        )
-      _ -> fail
+      SweepTreasury { .. } -> sweep.logic(config, account, self)
+      // UTxOs at the treasury address can be reorganized, such as splitting or merging them
+      Reorganize { .. } -> reorganize.logic(config, account, self)
+      // Funds can be used to fund a new vendor project
+      Fund { amount } ->
+        fund.logic(config, account, from_asset_list(amount), self)
+      // Funds can be disbursed to arbitrary destinations
+      Disburse { amount } ->
+        disburse.logic(config, account, from_asset_list(amount), self)
     }
 
     True
