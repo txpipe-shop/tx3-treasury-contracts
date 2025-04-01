@@ -9,11 +9,12 @@ import {
   sampleTreasuryConfig,
   setupEmulator,
 } from "../utilities.test";
-import { loadTreasuryScript } from "../../shared";
+import { loadTreasuryScript, unix_to_slot } from "../../shared";
 import { reorganize } from "../../treasury/reorganize";
-import type {
-  TreasuryConfiguration,
-  TreasuryTreasuryWithdraw,
+import {
+  TreasurySpendRedeemer,
+  type TreasuryConfiguration,
+  type TreasuryTreasuryWithdraw,
 } from "../../types/contracts";
 
 describe("When reorganizing", () => {
@@ -23,6 +24,7 @@ describe("When reorganizing", () => {
   let config: TreasuryConfiguration;
   let scriptInput: Core.TransactionUnspentOutput;
   let secondScriptInput: Core.TransactionUnspentOutput;
+  let thirdScriptInput: Core.TransactionUnspentOutput;
   let refInput: Core.TransactionUnspentOutput;
   let rewardAccount: RewardAccount;
   let treasuryScript: TreasuryTreasuryWithdraw;
@@ -50,6 +52,17 @@ describe("When reorganizing", () => {
     );
     secondScriptInput.output().setDatum(Core.Datum.newInlineData(Data.Void()));
     emulator.addUtxo(secondScriptInput);
+
+    thirdScriptInput = new Core.TransactionUnspentOutput(
+      new Core.TransactionInput(Core.TransactionId("1".repeat(64)), 2n),
+      new Core.TransactionOutput(
+        scriptAddress,
+        makeValue(500_000n, ["a".repeat(64), 1n]), // Below minUTxO to test equals_plus_min_ada
+      ),
+    );
+    // TODO: update blaze to allow spending null datums for plutus v3
+    thirdScriptInput.output().setDatum(Core.Datum.newInlineData(Data.Void()));
+    emulator.addUtxo(thirdScriptInput);
 
     refInput = emulator.lookupScript(treasuryScript.Script);
   });
@@ -100,6 +113,134 @@ describe("When reorganizing", () => {
             ],
             [Ed25519KeyHashHex(await reorganize_key(emulator))],
           ),
+        );
+      });
+    });
+
+    test("can rebalance UTxOs with native assets", async () => {
+      await emulator.as(Reorganizer, async (blaze) => {
+        await emulator.expectValidTransaction(
+          blaze,
+          await reorganize(
+            config,
+            blaze,
+            [scriptInput, thirdScriptInput],
+            [makeValue(500_000_500_000n, ["a".repeat(64), 1n])],
+            [Ed25519KeyHashHex(await reorganize_key(emulator))],
+          ),
+        );
+      });
+    });
+
+    test("can rebalance to resolve minUTxO issues", async () => {
+      await emulator.as(Reorganizer, async (blaze) => {
+        await emulator.expectValidTransaction(
+          blaze,
+          await reorganize(
+            config,
+            blaze,
+            [thirdScriptInput],
+            [makeValue(2_000_000n, ["a".repeat(64), 1n])],
+            [Ed25519KeyHashHex(await reorganize_key(emulator))],
+          ),
+        );
+      });
+    });
+
+    test("cannot steal funds", async () => {
+      await emulator.as(Reorganizer, async (blaze) => {
+        await emulator.expectScriptFailure(
+          blaze
+            .newTransaction()
+            .addInput(
+              scriptInput,
+              Data.serialize(TreasurySpendRedeemer, "Reorganize"),
+            )
+            .setValidUntil(unix_to_slot(config.expiration - 1000n))
+            .addReferenceInput(refInput),
+          /equal_plus_min_ada\(input_sum, output_sum\)/,
+        );
+      });
+    });
+
+    test("cannot steal partial funds", async () => {
+      await emulator.as(Reorganizer, async (blaze, address) => {
+        await emulator.expectScriptFailure(
+          blaze
+            .newTransaction()
+            .addInput(
+              scriptInput,
+              Data.serialize(TreasurySpendRedeemer, "Reorganize"),
+            )
+            .lockAssets(scriptAddress, makeValue(499_999_999_999n), Data.Void())
+            .payLovelace(address, 1_000_000n)
+            .setValidUntil(unix_to_slot(config.expiration - 1000n))
+            .addReferenceInput(refInput),
+          /equal_plus_min_ada\(input_sum, output_sum\)/,
+        );
+      });
+    });
+
+    test("cannot steal native assets", async () => {
+      await emulator.as(Reorganizer, async (blaze, address) => {
+        await emulator.expectScriptFailure(
+          blaze
+            .newTransaction()
+            .addInput(
+              scriptInput,
+              Data.serialize(TreasurySpendRedeemer, "Reorganize"),
+            )
+            .addInput(
+              thirdScriptInput,
+              Data.serialize(TreasurySpendRedeemer, "Reorganize"),
+            )
+            .lockAssets(scriptAddress, makeValue(500_000_500_000n), Data.Void())
+            .payAssets(address, makeValue(2_000_000n, ["a".repeat(64), 1n]))
+            .setValidUntil(unix_to_slot(config.expiration - 1000n))
+            .addReferenceInput(refInput),
+          /equal_plus_min_ada\(input_sum, output_sum\)/,
+        );
+      });
+    });
+
+    test("cannot add native assets", async () => {
+      await emulator.as(Reorganizer, async (blaze, address) => {
+        await emulator.fund(
+          Reorganizer,
+          makeValue(2_000_000n, ["b".repeat(64), 1n]),
+        );
+        await emulator.expectScriptFailure(
+          blaze
+            .newTransaction()
+            .addInput(
+              scriptInput,
+              Data.serialize(TreasurySpendRedeemer, "Reorganize"),
+            )
+            .lockAssets(
+              scriptAddress,
+              makeValue(500_000_00_000n, ["b".repeat(64), 1n]),
+              Data.Void(),
+            )
+            .setValidUntil(unix_to_slot(config.expiration - 1000n))
+            .addReferenceInput(refInput),
+          /equal_plus_min_ada\(input_sum, output_sum\)/,
+        );
+      });
+    });
+  });
+
+  describe("a malicious user", () => {
+    test("cannot reorganize UTxOs", async () => {
+      await emulator.as("MaliciousUser", async (blaze, address) => {
+        await emulator.expectScriptFailure(
+          await reorganize(
+            config,
+            blaze,
+            [scriptInput],
+            [makeValue(100_000_000_000n), makeValue(400_000_000_000n)],
+            [Ed25519KeyHashHex(address.asBase()?.getPaymentCredential().hash!)],
+          ),
+          /satisfied\(config.permissions.reorganize/,
         );
       });
     });
