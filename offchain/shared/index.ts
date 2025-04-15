@@ -1,8 +1,16 @@
 import { Core } from "@blaze-cardano/sdk";
-import { TreasuryConfiguration, TreasuryTreasuryWithdraw, VendorConfiguration, VendorVendorSpend } from "../types/contracts";
-import { Slot } from "@blaze-cardano/core";
+import {
+  TreasuryConfiguration,
+  TreasuryTreasuryWithdraw,
+  VendorConfiguration,
+  VendorVendorSpend,
+} from "../types/contracts";
+import { Slot, Value } from "@blaze-cardano/core";
 
-export function loadTreasuryScript(network: Core.NetworkId, config: TreasuryConfiguration) {
+export function loadTreasuryScript(
+  network: Core.NetworkId,
+  config: TreasuryConfiguration,
+) {
   const script = new TreasuryTreasuryWithdraw(config);
   const credential = {
     type: Core.CredentialType.ScriptHash,
@@ -22,7 +30,10 @@ export function loadTreasuryScript(network: Core.NetworkId, config: TreasuryConf
   };
 }
 
-export function loadVendorScript(network: Core.NetworkId, config: VendorConfiguration) {
+export function loadVendorScript(
+  network: Core.NetworkId,
+  config: VendorConfiguration,
+) {
   const script = new VendorVendorSpend(config);
   const credential = {
     type: Core.CredentialType.ScriptHash,
@@ -40,7 +51,11 @@ export function loadVendorScript(network: Core.NetworkId, config: VendorConfigur
   };
 }
 
-export function loadScripts(network: Core.NetworkId, treasuryConfig: TreasuryConfiguration, vendorConfig: VendorConfiguration) {
+export function loadScripts(
+  network: Core.NetworkId,
+  treasuryConfig: TreasuryConfiguration,
+  vendorConfig: VendorConfiguration,
+) {
   const treasuryScript = loadTreasuryScript(network, treasuryConfig);
   const vendorScript = loadVendorScript(network, vendorConfig);
   return {
@@ -55,4 +70,19 @@ export function unix_to_slot(unix: bigint): Slot {
 
 export function slot_to_unix(slot: Slot): bigint {
   return BigInt(slot) * 1000n;
+}
+
+export function coreValueToContractsValue(amount: Value): {
+  [policyId: string]: { [assetName: string]: bigint };
+} {
+  const ret: { [policyId: string]: { [assetName: string]: bigint } } = {};
+  ret[""] = {};
+  ret[""][""] = amount.coin();
+  for (const [assetId, amt] of amount.multiasset() ?? []) {
+    const policyId = assetId.slice(0, 64);
+    const assetName = assetId.slice(64);
+    ret[policyId] ??= {};
+    ret[policyId][assetName] = amt;
+  }
+  return ret;
 }

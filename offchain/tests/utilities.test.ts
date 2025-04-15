@@ -8,23 +8,29 @@ import {
   TxBuilder,
   Wallet,
 } from "@blaze-cardano/sdk";
+import * as Data from "@blaze-cardano/data";
 import {
   Bip32PrivateKey,
   Ed25519KeyHashHex,
   getBurnAddress,
   mnemonicToEntropy,
   Slot,
+  toHex,
   wordlist,
 } from "@blaze-cardano/core";
 import { Emulator, EmulatorProvider } from "@blaze-cardano/emulator";
 import { loadScripts, slot_to_unix } from "../shared";
-import type {
-  TreasuryConfiguration,
-  VendorConfiguration,
+import {
+  ScriptHashRegistry,
+  type TreasuryConfiguration,
+  type VendorConfiguration,
 } from "../types/contracts";
 
 export function registryToken(): [string, string] {
-  return ["00000000000000000000000000000000", "REGISTRY"];
+  return [
+    "00000000000000000000000000000000000000000000000000000000",
+    toHex(Buffer.from("REGISTRY")),
+  ];
 }
 
 export const Sweeper = "Sweeper";
@@ -211,6 +217,20 @@ export async function setupEmulator(txOuts: Core.TransactionOutput[] = []) {
     Core.NetworkId.Testnet,
     await sampleTreasuryConfig(emulator),
     sampleVendorConfig(),
+  );
+
+  const [registryPolicy, registryName] = registryToken();
+  await emulator.register(
+    "Registry",
+    makeValue(5_000_000n, [registryPolicy + registryName, 1n]),
+    Data.serialize(ScriptHashRegistry, {
+      treasury: {
+        Script: [treasuryScript.credential.hash],
+      },
+      vendor: {
+        Script: [vendorScript.credential.hash],
+      },
+    }),
   );
 
   await emulator.publishScript(treasuryScript.script.Script);

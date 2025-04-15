@@ -227,6 +227,36 @@ describe("When reorganizing", () => {
         );
       });
     });
+
+    describe("after the timeout", async () => {
+      beforeEach(async () => {
+        emulator.stepForwardToUnix(config.expiration + 1n);
+      });
+
+      test("cannot rebalance", async () => {
+        await emulator.as(Reorganizer, async (blaze) => {
+          await emulator.expectScriptFailure(
+            blaze
+              .newTransaction()
+              .setValidUntil(unix_to_slot(config.expiration + 5000n))
+              .addReferenceInput(refInput)
+              .addRequiredSigner(
+                Ed25519KeyHashHex(await reorganize_key(emulator)),
+              )
+              .addInput(
+                scriptInput,
+                Data.serialize(TreasurySpendRedeemer, "Reorganize"),
+              )
+              .lockAssets(
+                scriptAddress,
+                makeValue(500_000_000_000n),
+                Data.Void(),
+              ),
+            /Trace is_entirely_before\(/,
+          );
+        });
+      });
+    });
   });
 
   describe("a malicious user", () => {
