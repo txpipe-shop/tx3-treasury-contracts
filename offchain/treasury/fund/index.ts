@@ -13,6 +13,7 @@ import {
   TransactionUnspentOutput,
   Value,
 } from "@blaze-cardano/core";
+import * as Tx from "@blaze-cardano/tx";
 import * as Data from "@blaze-cardano/data";
 import {
   coreValueToContractsValue,
@@ -56,12 +57,16 @@ export async function fund<P extends Provider, W extends Wallet>(
     tx = tx.addRequiredSigner(signer);
   }
 
-  const amount = coreValueToContractsValue(input.output().amount());
+  const totalPayout = schedule.reduce(
+    (acc, s) => Tx.Value.merge(acc, s.amount),
+    makeValue(0n),
+  );
+
   tx = tx.addInput(
     input,
     Data.serialize(TreasurySpendRedeemer, {
       Fund: {
-        amount,
+        amount: coreValueToContractsValue(totalPayout),
       },
     }),
   );
@@ -79,9 +84,17 @@ export async function fund<P extends Provider, W extends Wallet>(
 
   tx.lockAssets(
     vendorScriptAddress,
-    input.output().amount(),
+    totalPayout,
     Data.serialize(VendorDatum, datum),
   );
+
+  const remainder = Tx.Value.merge(
+    input.output().amount(),
+    Tx.Value.negate(totalPayout),
+  );
+  if (!Tx.Value.empty(remainder)) {
+    tx.lockAssets(treasuryScriptAddress, remainder, Data.Void());
+  }
 
   return tx;
 }
