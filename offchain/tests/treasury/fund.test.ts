@@ -13,13 +13,14 @@ import * as Data from "@blaze-cardano/data";
 import {
   Funder,
   fund_key,
+  registryToken,
   reorganize_key,
   sampleTreasuryConfig,
   sampleVendorConfig,
   setupEmulator,
 } from "../utilities.test";
 import {
-  coreValueToContractsValue,
+  coreValueToContractsValue as translateValue,
   loadTreasuryScript,
   loadVendorScript,
   slot_to_unix,
@@ -46,6 +47,7 @@ describe("When funding", () => {
   let thirdScriptInput: Core.TransactionUnspentOutput;
   let fourthScriptInput: Core.TransactionUnspentOutput;
   let refInput: Core.TransactionUnspentOutput;
+  let registryInput: Core.TransactionUnspentOutput;
   let vendor: MultisigScript;
   let rewardAccount: RewardAccount;
   let treasuryScript: TreasuryTreasuryWithdraw;
@@ -112,6 +114,15 @@ describe("When funding", () => {
     // TODO: update blaze to allow spending null datums for plutus v3
     fourthScriptInput.output().setDatum(Core.Datum.newInlineData(Data.Void()));
     emulator.addUtxo(fourthScriptInput);
+
+    let [registryPolicy, registryName] = registryToken();
+    registryInput = emulator.utxos().find((u) =>
+      u
+        .output()
+        .amount()
+        .multiasset()
+        ?.get(AssetId(registryPolicy + registryName)),
+    )!;
 
     refInput = emulator.lookupScript(treasuryScript.Script);
   });
@@ -234,12 +245,7 @@ describe("When funding", () => {
       });
       test("cannot steal funds", async () => {
         await emulator.as(Funder, async (blaze) => {
-          let registryInput = await blaze.provider.getUnspentOutputByNFT(
-            AssetId(
-              configs.treasury.registry_token + toHex(Buffer.from("REGISTRY")),
-            ),
-          );
-          let value = coreValueToContractsValue(makeValue(1_000_000n));
+          let value = translateValue(makeValue(1_000_000n));
           const datum: VendorDatum = {
             vendor,
             payouts: [
@@ -272,18 +278,13 @@ describe("When funding", () => {
                 makeValue(1_000_000n),
                 Data.serialize(VendorDatum, datum),
               ),
-            /payout_sum == amount/,
+            /Trace equal_plus_min_ada\(merge\(input_sum, negate\(amount\)\), output_sum\)/,
           );
         });
       });
       test("cannot mismatch redeemer and datum payout", async () => {
         await emulator.as(Funder, async (blaze) => {
-          let registryInput = await blaze.provider.getUnspentOutputByNFT(
-            AssetId(
-              configs.treasury.registry_token + toHex(Buffer.from("REGISTRY")),
-            ),
-          );
-          let value = coreValueToContractsValue(makeValue(1_000_000n));
+          let value = translateValue(makeValue(1_000_000n));
           const datum: VendorDatum = {
             vendor,
             payouts: [
@@ -307,7 +308,7 @@ describe("When funding", () => {
                 scriptInput,
                 Data.serialize(TreasurySpendRedeemer, {
                   Fund: {
-                    amount: coreValueToContractsValue(makeValue(2_000_000n)),
+                    amount: translateValue(makeValue(2_000_000n)),
                   },
                 }),
               )
@@ -321,18 +322,13 @@ describe("When funding", () => {
                 makeValue(49_999_000_000n),
                 Data.Void(),
               ),
-            /payout_sum == amount/,
+            /Trace payout_sum == amount/,
           );
         });
       });
       test("cannot mismatch redeemer and actual payout", async () => {
         await emulator.as(Funder, async (blaze) => {
-          let registryInput = await blaze.provider.getUnspentOutputByNFT(
-            AssetId(
-              configs.treasury.registry_token + toHex(Buffer.from("REGISTRY")),
-            ),
-          );
-          let value = coreValueToContractsValue(makeValue(1_000_000n));
+          let value = translateValue(makeValue(1_000_000n));
           const datum: VendorDatum = {
             vendor,
             payouts: [
@@ -356,7 +352,7 @@ describe("When funding", () => {
                 scriptInput,
                 Data.serialize(TreasurySpendRedeemer, {
                   Fund: {
-                    amount: coreValueToContractsValue(makeValue(1_000_000n)),
+                    amount: translateValue(makeValue(1_000_000n)),
                   },
                 }),
               )
@@ -370,18 +366,13 @@ describe("When funding", () => {
                 makeValue(49_998_000_000n),
                 Data.Void(),
               ),
-            /payout_sum == amount/,
+            /Trace equal_plus_min_ada\(merge\(input_sum, negate\(amount\)\), output_sum\)/,
           );
         });
       });
       test("cannot fund past expiration", async () => {
         await emulator.as(Funder, async (blaze) => {
-          let registryInput = await blaze.provider.getUnspentOutputByNFT(
-            AssetId(
-              configs.treasury.registry_token + toHex(Buffer.from("REGISTRY")),
-            ),
-          );
-          let value = coreValueToContractsValue(makeValue(1_000_000n));
+          let value = translateValue(makeValue(1_000_000n));
           const datum: VendorDatum = {
             vendor,
             payouts: [
@@ -419,7 +410,7 @@ describe("When funding", () => {
                 makeValue(499_999_000_000n),
                 Data.Void(),
               ),
-            /p.maturation <= config.expiration/,
+            /Trace expect p.maturation <= config.expiration/,
           );
         });
       });
@@ -430,12 +421,7 @@ describe("When funding", () => {
       });
       test("cannot fund a new project", async () => {
         await emulator.as(Funder, async (blaze) => {
-          let registryInput = await blaze.provider.getUnspentOutputByNFT(
-            AssetId(
-              configs.treasury.registry_token + toHex(Buffer.from("REGISTRY")),
-            ),
-          );
-          let value = coreValueToContractsValue(makeValue(1_000_000n));
+          let value = translateValue(makeValue(1_000_000n));
           const datum: VendorDatum = {
             vendor,
             payouts: [
@@ -473,9 +459,32 @@ describe("When funding", () => {
                 makeValue(499_999_000_000n),
                 Data.Void(),
               ),
-            /is_entirely_before\(/,
+            /Trace is_entirely_before\(/,
           );
         });
+      });
+    });
+  });
+
+  describe("a malicious user", () => {
+    test("cannot reorganize UTxOs", async () => {
+      await emulator.as("MaliciousUser", async (blaze, address) => {
+        await emulator.expectScriptFailure(
+          await fund(
+            configs,
+            blaze,
+            scriptInput,
+            vendor,
+            [
+              {
+                date: new Date(Number(slot_to_unix(Slot(10)))),
+                amount: makeValue(10_000_000_000n),
+              },
+            ],
+            [Ed25519KeyHashHex(address.asBase()?.getPaymentCredential().hash!)],
+          ),
+          /Trace satisfied\(permissions.fund/,
+        );
       });
     });
   });
