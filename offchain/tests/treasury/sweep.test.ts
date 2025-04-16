@@ -51,7 +51,7 @@ describe("When sweeping", () => {
       new Core.TransactionInput(Core.TransactionId("1".repeat(64)), 2n),
       new Core.TransactionOutput(
         treasury.scriptAddress,
-        makeValue(1_000_000_000n, ["a".repeat(64), 1n]),
+        makeValue(1_000_000_000n, ["a".repeat(56), 1n]),
       ),
     );
     withAssetScriptInput
@@ -138,7 +138,7 @@ describe("When sweeping", () => {
               )
               .lockAssets(
                 scriptAddress,
-                makeValue(2_000_000n, ["a".repeat(64), 1n]),
+                makeValue(2_000_000n, ["a".repeat(56), 1n]),
                 Data.Void(),
               )
               .setValidFrom(unix_to_slot(config.expiration + 1000n))
@@ -230,7 +230,7 @@ describe("When sweeping", () => {
               )
               .lockAssets(
                 fullAddress,
-                makeValue(2_000_000n, ["a".repeat(64), 1n]),
+                makeValue(2_000_000n, ["a".repeat(56), 1n]),
                 Data.Void(),
               )
               .setValidFrom(unix_to_slot(config.expiration + 1000n))

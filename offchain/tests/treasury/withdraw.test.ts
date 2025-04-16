@@ -60,7 +60,7 @@ describe("When withdrawing", () => {
             .addReferenceInput(refInput!)
             .lockAssets(
               scriptAddress,
-              makeValue(amount, ["a".repeat(64), 1n]),
+              makeValue(amount, ["a".repeat(56), 1n]),
               Data.Void(),
             ),
         );

@@ -238,7 +238,7 @@ export async function setupEmulator(txOuts: Core.TransactionOutput[] = []) {
   await emulator.register("MaliciousUser");
   await emulator.register(
     "Anyone",
-    makeValue(5_000_000n, ["a".repeat(64), 1n]),
+    makeValue(5_000_000n, ["a".repeat(56), 1n]),
   );
   await emulator.fund("Anyone", makeValue(1000_000_000n));
 

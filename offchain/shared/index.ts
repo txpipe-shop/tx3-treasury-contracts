@@ -79,8 +79,8 @@ export function coreValueToContractsValue(amount: Value): {
   ret[""] = {};
   ret[""][""] = amount.coin();
   for (const [assetId, amt] of amount.multiasset() ?? []) {
-    const policyId = assetId.slice(0, 64);
-    const assetName = assetId.slice(64);
+    const policyId = assetId.slice(0, 56);
+    const assetName = assetId.slice(56);
     ret[policyId] ??= {};
     ret[policyId][assetName] = amt;
   }

@@ -57,7 +57,7 @@ describe("When reorganizing", () => {
       new Core.TransactionInput(Core.TransactionId("1".repeat(64)), 2n),
       new Core.TransactionOutput(
         scriptAddress,
-        makeValue(500_000n, ["a".repeat(64), 1n]), // Below minUTxO to test equals_plus_min_ada
+        makeValue(500_000n, ["a".repeat(56), 1n]), // Below minUTxO to test equals_plus_min_ada
       ),
     );
     // TODO: update blaze to allow spending null datums for plutus v3
@@ -125,7 +125,7 @@ describe("When reorganizing", () => {
             config,
             blaze,
             [scriptInput, thirdScriptInput],
-            [makeValue(500_000_500_000n, ["a".repeat(64), 1n])],
+            [makeValue(500_000_500_000n, ["a".repeat(56), 1n])],
             [Ed25519KeyHashHex(await reorganize_key(emulator))],
           ),
         );
@@ -140,7 +140,7 @@ describe("When reorganizing", () => {
             config,
             blaze,
             [thirdScriptInput],
-            [makeValue(2_000_000n, ["a".repeat(64), 1n])],
+            [makeValue(2_000_000n, ["a".repeat(56), 1n])],
             [Ed25519KeyHashHex(await reorganize_key(emulator))],
           ),
         );
@@ -195,7 +195,7 @@ describe("When reorganizing", () => {
               Data.serialize(TreasurySpendRedeemer, "Reorganize"),
             )
             .lockAssets(scriptAddress, makeValue(500_000_500_000n), Data.Void())
-            .payAssets(address, makeValue(2_000_000n, ["a".repeat(64), 1n]))
+            .payAssets(address, makeValue(2_000_000n, ["a".repeat(56), 1n]))
             .setValidUntil(unix_to_slot(config.expiration - 1000n))
             .addReferenceInput(refInput),
           /equal_plus_min_ada\(input_sum, output_sum\)/,
@@ -207,7 +207,7 @@ describe("When reorganizing", () => {
       await emulator.as(Reorganizer, async (blaze, address) => {
         await emulator.fund(
           Reorganizer,
-          makeValue(2_000_000n, ["b".repeat(64), 1n]),
+          makeValue(2_000_000n, ["b".repeat(56), 1n]),
         );
         await emulator.expectScriptFailure(
           blaze
@@ -218,7 +218,7 @@ describe("When reorganizing", () => {
             )
             .lockAssets(
               scriptAddress,
-              makeValue(500_000_00_000n, ["b".repeat(64), 1n]),
+              makeValue(500_000_00_000n, ["b".repeat(56), 1n]),
               Data.Void(),
             )
             .setValidUntil(unix_to_slot(config.expiration - 1000n))

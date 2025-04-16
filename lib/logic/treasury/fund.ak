@@ -53,19 +53,22 @@ pub fn logic(
       },
     )
 
+  trace payout_sum
+  trace amount
+
   // TODO: do we need to check that the redeemer used for all other inputs at `account` is Fund?
   // TODO: do we need amount? can we just compare the difference between inputs and outputs against the sum of the payouts?
   // might be helpful if we switch to intent-based signing, which would help us avoid cases when the tx gets invalidated
   expect and {
-      payout_sum == amount,
-      equal_plus_min_ada(amount, output_vendor_sum),
-      output_sum == merge(input_sum, negate(amount)),
-      is_entirely_before(validity_range, expiration),
+      (payout_sum == amount)?,
+      (equal_plus_min_ada(amount, output_vendor_sum))?,
+      (equal_plus_min_ada(merge(input_sum, negate(amount)), output_sum))?,
+      is_entirely_before(validity_range, expiration)?,
       satisfied(
         permissions.fund,
         extra_signatories,
         validity_range,
         withdrawals,
-      ),
+      )?,
     }
 }

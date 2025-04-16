@@ -75,7 +75,7 @@ export async function fund<P extends Provider, W extends Wallet>(
     vendor,
     payouts: schedule.map((s) => {
       return {
-        maturation: BigInt(unix_to_slot(BigInt(s.date.valueOf()))),
+        maturation: BigInt(s.date.valueOf()),
         value: coreValueToContractsValue(s.amount),
         status: "Active",
       };
