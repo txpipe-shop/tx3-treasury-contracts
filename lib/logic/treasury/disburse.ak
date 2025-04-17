@@ -24,8 +24,8 @@ pub fn logic(
   let input_sum = value_sum(outputs_of(inputs), account, True)
   let output_sum = value_sum(outputs, account, False)
   expect and {
-      is_entirely_before(validity_range, expiration),
-      equal_plus_min_ada(merge(input_sum, negate(amount)), output_sum),
+      is_entirely_before(validity_range, expiration)?,
+      equal_plus_min_ada(merge(input_sum, negate(amount)), output_sum)?,
       // If we're before the expiration, we can pay out lovelace this way
       // After the expiration, we can *only* send native assets out, presumably to be converted back to ADA
       // This is to prevent USDM, for example, getting permanently locked, but also prevent the oversight committee
@@ -34,14 +34,14 @@ pub fn logic(
       // but without a very efficient stablecoin -> ADA conversion we can enforce at the contract level / more time to build one
       // this is the best compromise we can make for now
       or {
-        lovelace_of(amount) == 0,
-        is_entirely_before(validity_range, expiration),
-      },
+        (lovelace_of(amount) == 0)?,
+        is_entirely_before(validity_range, expiration)?,
+      }?,
       satisfied(
         permissions.disburse,
         transaction.extra_signatories,
         validity_range,
         withdrawals,
-      ),
+      )?,
     }
 }

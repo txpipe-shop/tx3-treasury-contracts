@@ -1,4 +1,4 @@
-import { beforeAll, beforeEach, describe, test } from "bun:test";
+import { beforeEach, describe, test } from "bun:test";
 import { Core, makeValue } from "@blaze-cardano/sdk";
 import {
   Address,
@@ -6,7 +6,6 @@ import {
   Ed25519KeyHashHex,
   RewardAccount,
   Slot,
-  toHex,
 } from "@blaze-cardano/core";
 import { Emulator } from "@blaze-cardano/emulator";
 import * as Data from "@blaze-cardano/data";
@@ -24,9 +23,7 @@ import {
   loadTreasuryScript,
   loadVendorScript,
   slot_to_unix,
-  unix_to_slot,
 } from "../../shared";
-import { reorganize } from "../../treasury/reorganize";
 import {
   MultisigScript,
   TreasurySpendRedeemer,
@@ -210,6 +207,26 @@ describe("When funding", () => {
                 {
                   date: new Date(Number(slot_to_unix(Slot(12)))),
                   amount: makeValue(10_000_000n, ["b".repeat(56), 50n]),
+                },
+              ],
+              [Ed25519KeyHashHex(await fund_key(emulator))],
+            ),
+          );
+        });
+      });
+      test.skip("can fund a new project with *only* native tokens", async () => {
+        await emulator.as(Funder, async (blaze) => {
+          await emulator.expectValidTransaction(
+            blaze,
+            await fund(
+              configs,
+              blaze,
+              fourthScriptInput,
+              vendor,
+              [
+                {
+                  date: new Date(Number(slot_to_unix(Slot(12)))),
+                  amount: makeValue(0n, ["b".repeat(56), 50n]),
                 },
               ],
               [Ed25519KeyHashHex(await fund_key(emulator))],

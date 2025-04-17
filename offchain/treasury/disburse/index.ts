@@ -1,12 +1,13 @@
 import {
-  makeValue,
   TxBuilder,
   type Blaze,
   type Provider,
   type Wallet,
 } from "@blaze-cardano/sdk";
 import {
+  Address,
   AssetId,
+  Datum,
   Ed25519KeyHashHex,
   Slot,
   toHex,
@@ -15,31 +16,22 @@ import {
 } from "@blaze-cardano/core";
 import * as Tx from "@blaze-cardano/tx";
 import * as Data from "@blaze-cardano/data";
+import { coreValueToContractsValue, loadTreasuryScript } from "../../shared";
 import {
-  coreValueToContractsValue,
-  loadTreasuryScript,
-  loadVendorScript,
-} from "../../shared";
-import {
-  VendorDatum,
-  MultisigScript,
   TreasuryConfiguration,
   TreasurySpendRedeemer,
   VendorConfiguration,
 } from "../../types/contracts";
 
-export async function fund<P extends Provider, W extends Wallet>(
+export async function disburse<P extends Provider, W extends Wallet>(
   configs: { treasury: TreasuryConfiguration; vendor: VendorConfiguration },
   blaze: Blaze<P, W>,
   input: TransactionUnspentOutput,
-  vendor: MultisigScript,
-  schedule: { date: Date; amount: Value }[],
+  recipient: Address,
+  amount: Value,
+  datum: Datum | undefined,
   signers: Ed25519KeyHashHex[],
 ): Promise<TxBuilder> {
-  const { scriptAddress: vendorScriptAddress } = loadVendorScript(
-    blaze.provider.network,
-    configs.vendor,
-  );
   const { script: treasuryScript, scriptAddress: treasuryScriptAddress } =
     loadTreasuryScript(blaze.provider.network, configs.treasury);
   const registryInput = await blaze.provider.getUnspentOutputByNFT(
@@ -58,40 +50,24 @@ export async function fund<P extends Provider, W extends Wallet>(
     tx = tx.addRequiredSigner(signer);
   }
 
-  const totalPayout = schedule.reduce(
-    (acc, s) => Tx.Value.merge(acc, s.amount),
-    makeValue(0n),
-  );
-
   tx = tx.addInput(
     input,
     Data.serialize(TreasurySpendRedeemer, {
-      Fund: {
-        amount: coreValueToContractsValue(totalPayout),
+      Disburse: {
+        amount: coreValueToContractsValue(amount),
       },
     }),
   );
 
-  const datum: VendorDatum = {
-    vendor,
-    payouts: schedule.map((s) => {
-      return {
-        maturation: BigInt(s.date.valueOf()),
-        value: coreValueToContractsValue(s.amount),
-        status: "Active",
-      };
-    }),
-  };
-
-  tx.lockAssets(
-    vendorScriptAddress,
-    totalPayout,
-    Data.serialize(VendorDatum, datum),
-  );
+  if (datum) {
+    tx.lockAssets(recipient, amount, datum);
+  } else {
+    tx.payAssets(recipient, amount);
+  }
 
   const remainder = Tx.Value.merge(
     input.output().amount(),
-    Tx.Value.negate(totalPayout),
+    Tx.Value.negate(amount),
   );
   if (!Tx.Value.empty(remainder)) {
     tx.lockAssets(treasuryScriptAddress, remainder, Data.Void());
