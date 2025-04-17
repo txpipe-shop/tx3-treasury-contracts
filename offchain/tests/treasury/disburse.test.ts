@@ -189,6 +189,48 @@ describe("When funding", () => {
           );
         });
       });
+      test("cannot attach stake address to change", async () => {
+        let fullAddress = new Core.Address({
+          type: Core.AddressType.BasePaymentScriptStakeKey,
+          networkId: Core.NetworkId.Testnet,
+          paymentPart: {
+            type: Core.CredentialType.ScriptHash,
+            hash: treasuryScript.Script.hash(),
+          },
+          delegationPart: {
+            type: Core.CredentialType.KeyHash,
+            hash: treasuryScript.Script.hash(), // Just use an arbitrary hash
+          },
+        });
+        await emulator.as(Funder, async (blaze, address) => {
+          let value = translateValue(makeValue(10_000_000n));
+          await emulator.expectScriptFailure(
+            blaze
+              .newTransaction()
+              .setValidUntil(
+                Slot(Number(configs.treasury.expiration / 1000n) - 1),
+              )
+              .addReferenceInput(registryInput)
+              .addReferenceInput(refInput)
+              .addRequiredSigner(Ed25519KeyHashHex(await fund_key(emulator)))
+              .addInput(
+                scriptInput,
+                Data.serialize(TreasurySpendRedeemer, {
+                  Disburse: {
+                    amount: value,
+                  },
+                }),
+              )
+              .payAssets(address, makeValue(10_000_000n))
+              .lockAssets(
+                fullAddress,
+                makeValue(499_990_000_000n),
+                Data.Void(),
+              ),
+            /Trace expect or {\n                            allow_stake/,
+          );
+        });
+      });
     });
     describe("after the expiration", async () => {
       beforeEach(async () => {

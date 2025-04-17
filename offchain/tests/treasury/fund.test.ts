@@ -29,6 +29,7 @@ import {
   TreasurySpendRedeemer,
   VendorConfiguration,
   VendorDatum,
+  VendorVendorSpend,
   type TreasuryConfiguration,
   type TreasuryTreasuryWithdraw,
 } from "../../types/contracts";
@@ -48,19 +49,27 @@ describe("When funding", () => {
   let vendor: MultisigScript;
   let rewardAccount: RewardAccount;
   let treasuryScript: TreasuryTreasuryWithdraw;
+  let vendorScript: VendorVendorSpend;
   let treasuryScriptAddress: Address;
   let vendorScriptAddress: Address;
   beforeEach(async () => {
     emulator = await setupEmulator();
     const treasuryConfig = await sampleTreasuryConfig(emulator);
     const vendorConfig = sampleVendorConfig();
-    const treasury = loadTreasuryScript(Core.NetworkId.Testnet, treasuryConfig);
-    const vendorScript = loadVendorScript(Core.NetworkId.Testnet, vendorConfig);
+    const treasuryScriptManifest = loadTreasuryScript(
+      Core.NetworkId.Testnet,
+      treasuryConfig,
+    );
+    const vendorScriptManifest = loadVendorScript(
+      Core.NetworkId.Testnet,
+      vendorConfig,
+    );
     configs = { treasury: treasuryConfig, vendor: vendorConfig };
-    rewardAccount = treasury.rewardAccount;
-    treasuryScript = treasury.script;
-    treasuryScriptAddress = treasury.scriptAddress;
-    vendorScriptAddress = vendorScript.scriptAddress;
+    rewardAccount = treasuryScriptManifest.rewardAccount;
+    treasuryScript = treasuryScriptManifest.script;
+    vendorScript = vendorScriptManifest.script;
+    treasuryScriptAddress = treasuryScriptManifest.scriptAddress;
+    vendorScriptAddress = vendorScriptManifest.scriptAddress;
 
     emulator.accounts.set(rewardAccount, amount);
 
@@ -214,6 +223,7 @@ describe("When funding", () => {
           );
         });
       });
+      // NOTE: currently blocked on an aiken stdlib bug
       test.skip("can fund a new project with *only* native tokens", async () => {
         await emulator.as(Funder, async (blaze) => {
           await emulator.expectValidTransaction(
@@ -257,6 +267,118 @@ describe("When funding", () => {
               ],
               [Ed25519KeyHashHex(await fund_key(emulator))],
             ),
+          );
+        });
+      });
+      test("cannot attach stake address to vendor script", async () => {
+        let fullAddress = new Core.Address({
+          type: Core.AddressType.BasePaymentScriptStakeKey,
+          networkId: Core.NetworkId.Testnet,
+          paymentPart: {
+            type: Core.CredentialType.ScriptHash,
+            hash: vendorScript.Script.hash(),
+          },
+          delegationPart: {
+            type: Core.CredentialType.KeyHash,
+            hash: treasuryScript.Script.hash(), // Just use an arbitrary hash
+          },
+        });
+        await emulator.as(Funder, async (blaze) => {
+          let value = translateValue(makeValue(10_000_000n));
+          const datum: VendorDatum = {
+            vendor,
+            payouts: [
+              {
+                maturation: BigInt(10),
+                value,
+                status: "Active",
+              },
+            ],
+          };
+          await emulator.expectScriptFailure(
+            blaze
+              .newTransaction()
+              .setValidUntil(
+                Slot(Number(configs.treasury.expiration / 1000n) - 1),
+              )
+              .addReferenceInput(registryInput)
+              .addReferenceInput(refInput)
+              .addRequiredSigner(Ed25519KeyHashHex(await fund_key(emulator)))
+              .addInput(
+                scriptInput,
+                Data.serialize(TreasurySpendRedeemer, {
+                  Fund: {
+                    amount: value,
+                  },
+                }),
+              )
+              .lockAssets(
+                fullAddress,
+                makeValue(10_000_000n),
+                Data.serialize(VendorDatum, datum),
+              )
+              .lockAssets(
+                treasuryScriptAddress,
+                makeValue(499_990_000_000n),
+                Data.Void(),
+              ),
+            /Trace expect or {\n                            allow_stake/,
+          );
+        });
+      });
+      test("cannot attach stake address to change", async () => {
+        let fullAddress = new Core.Address({
+          type: Core.AddressType.BasePaymentScriptStakeKey,
+          networkId: Core.NetworkId.Testnet,
+          paymentPart: {
+            type: Core.CredentialType.ScriptHash,
+            hash: treasuryScript.Script.hash(),
+          },
+          delegationPart: {
+            type: Core.CredentialType.KeyHash,
+            hash: treasuryScript.Script.hash(), // Just use an arbitrary hash
+          },
+        });
+        await emulator.as(Funder, async (blaze) => {
+          let value = translateValue(makeValue(10_000_000n));
+          const datum: VendorDatum = {
+            vendor,
+            payouts: [
+              {
+                maturation: BigInt(10),
+                value,
+                status: "Active",
+              },
+            ],
+          };
+          await emulator.expectScriptFailure(
+            blaze
+              .newTransaction()
+              .setValidUntil(
+                Slot(Number(configs.treasury.expiration / 1000n) - 1),
+              )
+              .addReferenceInput(registryInput)
+              .addReferenceInput(refInput)
+              .addRequiredSigner(Ed25519KeyHashHex(await fund_key(emulator)))
+              .addInput(
+                scriptInput,
+                Data.serialize(TreasurySpendRedeemer, {
+                  Fund: {
+                    amount: value,
+                  },
+                }),
+              )
+              .lockAssets(
+                vendorScriptAddress,
+                makeValue(10_000_000n),
+                Data.serialize(VendorDatum, datum),
+              )
+              .lockAssets(
+                fullAddress,
+                makeValue(499_990_000_000n),
+                Data.Void(),
+              ),
+            /Trace expect or {\n                            allow_stake/,
           );
         });
       });
