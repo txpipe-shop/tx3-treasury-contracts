@@ -156,9 +156,12 @@ describe("When reorganizing", () => {
               scriptInput,
               Data.serialize(TreasurySpendRedeemer, "Reorganize"),
             )
+            .addRequiredSigner(
+              Ed25519KeyHashHex(await reorganize_key(emulator)),
+            )
             .setValidUntil(unix_to_slot(config.expiration - 1000n))
             .addReferenceInput(refInput),
-          /equal_plus_min_ada\(input_sum, output_sum\)/,
+          /Trace equal_plus_min_ada\(input_sum, output_sum\)/,
         );
       });
     });
@@ -172,11 +175,14 @@ describe("When reorganizing", () => {
               scriptInput,
               Data.serialize(TreasurySpendRedeemer, "Reorganize"),
             )
+            .addRequiredSigner(
+              Ed25519KeyHashHex(await reorganize_key(emulator)),
+            )
             .lockAssets(scriptAddress, makeValue(499_999_999_999n), Data.Void())
             .payLovelace(address, 1_000_000n)
             .setValidUntil(unix_to_slot(config.expiration - 1000n))
             .addReferenceInput(refInput),
-          /equal_plus_min_ada\(input_sum, output_sum\)/,
+          /Trace equal_plus_min_ada\(input_sum, output_sum\)/,
         );
       });
     });
@@ -194,11 +200,50 @@ describe("When reorganizing", () => {
               thirdScriptInput,
               Data.serialize(TreasurySpendRedeemer, "Reorganize"),
             )
+            .addRequiredSigner(
+              Ed25519KeyHashHex(await reorganize_key(emulator)),
+            )
             .lockAssets(scriptAddress, makeValue(500_000_500_000n), Data.Void())
             .payAssets(address, makeValue(2_000_000n, ["a".repeat(56), 1n]))
             .setValidUntil(unix_to_slot(config.expiration - 1000n))
             .addReferenceInput(refInput),
-          /equal_plus_min_ada\(input_sum, output_sum\)/,
+          /Trace equal_plus_min_ada\(input_sum, output_sum\)/,
+        );
+      });
+    });
+
+    test("cannot attach staking address", async () => {
+      let fullAddress = new Core.Address({
+        type: Core.AddressType.BasePaymentScriptStakeKey,
+        networkId: Core.NetworkId.Testnet,
+        paymentPart: {
+          type: Core.CredentialType.ScriptHash,
+          hash: treasuryScript.Script.hash(),
+        },
+        delegationPart: {
+          type: Core.CredentialType.KeyHash,
+          hash: treasuryScript.Script.hash(), // Just use an arbitrary hash
+        },
+      });
+      await emulator.as(Reorganizer, async (blaze) => {
+        await emulator.expectScriptFailure(
+          blaze
+            .newTransaction()
+            .addInput(
+              scriptInput,
+              Data.serialize(TreasurySpendRedeemer, "Reorganize"),
+            )
+            .setValidUntil(unix_to_slot(config.expiration - 1000n))
+            .addReferenceInput(refInput)
+            .addRequiredSigner(
+              Ed25519KeyHashHex(await reorganize_key(emulator)),
+            )
+            .lockAssets(
+              fullAddress,
+              scriptInput.output().amount(),
+              Data.Void(),
+            ),
+          /Trace expect or {\n                            allow_stake,/,
         );
       });
     });
@@ -221,9 +266,12 @@ describe("When reorganizing", () => {
               makeValue(500_000_00_000n, ["b".repeat(56), 1n]),
               Data.Void(),
             )
+            .addRequiredSigner(
+              Ed25519KeyHashHex(await reorganize_key(emulator)),
+            )
             .setValidUntil(unix_to_slot(config.expiration - 1000n))
             .addReferenceInput(refInput),
-          /equal_plus_min_ada\(input_sum, output_sum\)/,
+          /Trace equal_plus_min_ada\(input_sum, output_sum\)/,
         );
       });
     });
@@ -270,7 +318,7 @@ describe("When reorganizing", () => {
             [makeValue(100_000_000_000n), makeValue(400_000_000_000n)],
             [Ed25519KeyHashHex(address.asBase()?.getPaymentCredential().hash!)],
           ),
-          /satisfied\(config.permissions.reorganize/,
+          /Trace satisfied\(config.permissions.reorganize/,
         );
       });
     });

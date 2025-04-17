@@ -223,8 +223,7 @@ describe("When funding", () => {
           );
         });
       });
-      // NOTE: currently blocked on an aiken stdlib bug
-      test.skip("can fund a new project with *only* native tokens", async () => {
+      test("can fund a new project with *only* native tokens", async () => {
         await emulator.as(Funder, async (blaze) => {
           await emulator.expectValidTransaction(
             blaze,

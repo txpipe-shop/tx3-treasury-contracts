@@ -171,8 +171,7 @@ describe("When funding", () => {
           );
         });
       });
-      // NOTE: may be blocked on aiken stdlib bug
-      test.skip("can disburse *only* native assets", async () => {
+      test("can disburse *only* native assets", async () => {
         await emulator.as(Disburser, async (blaze) => {
           const vendor = await emulator.register("Vendor");
           await emulator.expectValidTransaction(
@@ -261,8 +260,7 @@ describe("When funding", () => {
           );
         });
       });
-      // NOTE: dependent on an aiken stdlib bug
-      test.skip("can disburse *only* native tokens", async () => {
+      test("can disburse *only* native tokens", async () => {
         test("can disburse native assets", async () => {
           await emulator.as(Disburser, async (blaze) => {
             const vendor = await emulator.register("Vendor");
