@@ -71,19 +71,20 @@ pub fn logic(
       assets.merge(treasury_input_sum, swept_value),
       treasury_output_sum,
     )
-  when expected_payouts is {
-    [] -> vendor_outputs == []
-    _ -> {
-      expect [vendor_output] = vendor_outputs
-      expect InlineDatum(out_datum) = vendor_output.datum
-      expect out_datum: VendorDatum = out_datum
-      and {
-        equal_plus_min_ada(matured_value, vendor_output.value),
-        out_datum == VendorDatum {
-          vendor: datum.vendor,
-          payouts: expected_payouts,
-        },
+  expect
+    when expected_payouts is {
+      [] -> vendor_outputs == []
+      _ -> {
+        expect [vendor_output] = vendor_outputs
+        expect InlineDatum(out_datum) = vendor_output.datum
+        expect out_datum: VendorDatum = out_datum
+        and {
+          equal_plus_min_ada(matured_value, vendor_output.value),
+          out_datum == VendorDatum {
+            vendor: datum.vendor,
+            payouts: expected_payouts,
+          },
+        }
       }
     }
-  }
 }

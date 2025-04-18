@@ -79,22 +79,22 @@ pub fn logic(
   let treasury_output_sum = value_sum(outputs, registry.treasury, False)
 
   let unmatured_value = assets.merge(input.value, assets.negate(matured_value))
-  and {
-    equal_plus_min_ada(
-      unmatured_value,
-      assets.merge(vendor_output_sum, treasury_output_sum),
-    ),
-    satisfied(
-      input_vendor_datum.vendor,
-      extra_signatories,
-      validity_range,
-      withdrawals,
-    ),
-    satisfied(
-      permissions.modify,
-      extra_signatories,
-      validity_range,
-      withdrawals,
-    ),
-  }
+  expect and {
+      equal_plus_min_ada(
+        unmatured_value,
+        assets.merge(vendor_output_sum, treasury_output_sum),
+      ),
+      satisfied(
+        input_vendor_datum.vendor,
+        extra_signatories,
+        validity_range,
+        withdrawals,
+      ),
+      satisfied(
+        permissions.modify,
+        extra_signatories,
+        validity_range,
+        withdrawals,
+      ),
+    }
 }

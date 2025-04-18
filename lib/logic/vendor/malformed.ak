@@ -47,5 +47,5 @@ pub fn logic(
   let input_sum = value_sum(outputs_of(inputs), account, True)
   let output_sum = value_sum(outputs, registry.treasury, False)
 
-  equal_plus_min_ada(input_sum, output_sum)
+  expect equal_plus_min_ada(input_sum, output_sum)
 }

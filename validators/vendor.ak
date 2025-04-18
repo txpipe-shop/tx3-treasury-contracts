@@ -28,6 +28,8 @@ validator vendor(config: VendorConfiguration) {
       SweepVendor -> sweep.logic(config, account, self)
       Malformed -> malformed.logic(config, account, self)
     }
+
+    True
   }
 
   // No other actions (withdrawing, minting, publishing certificates, voting, etc.) are valid

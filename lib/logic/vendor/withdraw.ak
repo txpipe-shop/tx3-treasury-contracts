@@ -60,17 +60,17 @@ pub fn logic(account: Credential, transaction: Transaction) {
   let expected_output_value =
     assets.merge(vendor_input.value, assets.negate(matured_value))
 
-  and {
-    satisfied(
-      input_vendor_datum.vendor,
-      extra_signatories,
-      validity_range,
-      withdrawals,
-    ),
-    output_vendor_datum == VendorDatum {
-      vendor: input_vendor_datum.vendor,
-      payouts: expected_payouts,
-    },
-    equal_plus_min_ada(expected_output_value, vendor_output.value),
-  }
+  expect and {
+      satisfied(
+        input_vendor_datum.vendor,
+        extra_signatories,
+        validity_range,
+        withdrawals,
+      ),
+      output_vendor_datum == VendorDatum {
+        vendor: input_vendor_datum.vendor,
+        payouts: expected_payouts,
+      },
+      equal_plus_min_ada(expected_output_value, vendor_output.value),
+    }
 }
