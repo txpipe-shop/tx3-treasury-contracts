@@ -24,7 +24,6 @@ pub fn logic(
   let input_sum = value_sum(outputs_of(inputs), account, True)
   let output_sum = value_sum(outputs, account, False)
   expect and {
-      is_entirely_before(validity_range, expiration)?,
       equal_plus_min_ada(merge(input_sum, negate(amount)), output_sum)?,
       // If we're before the expiration, we can pay out lovelace this way
       // After the expiration, we can *only* send native assets out, presumably to be converted back to ADA

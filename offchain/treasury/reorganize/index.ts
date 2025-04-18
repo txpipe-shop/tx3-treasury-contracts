@@ -5,10 +5,18 @@ import {
   type Provider,
   type Wallet,
 } from "@blaze-cardano/sdk";
-import { Ed25519KeyHashHex, Slot, TransactionUnspentOutput, Value } from "@blaze-cardano/core";
+import {
+  Ed25519KeyHashHex,
+  Slot,
+  TransactionUnspentOutput,
+  Value,
+} from "@blaze-cardano/core";
 import * as Data from "@blaze-cardano/data";
 import { loadTreasuryScript } from "../../shared";
-import { TreasuryConfiguration, TreasurySpendRedeemer } from "../../types/contracts";
+import {
+  TreasuryConfiguration,
+  TreasurySpendRedeemer,
+} from "../../types/contracts";
 
 export async function reorganize<P extends Provider, W extends Wallet>(
   config: TreasuryConfiguration,
@@ -34,7 +42,10 @@ export async function reorganize<P extends Provider, W extends Wallet>(
   }
 
   for (const input of inputs) {
-    tx = tx.addInput(input, Data.serialize(TreasurySpendRedeemer, "Reorganize"));
+    tx = tx.addInput(
+      input,
+      Data.serialize(TreasurySpendRedeemer, "Reorganize"),
+    );
   }
 
   for (const outputAmount of outputAmounts) {

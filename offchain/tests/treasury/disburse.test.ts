@@ -15,7 +15,6 @@ import {
   disburse_key,
   fund_key,
   registryToken,
-  reorganize_key,
   sampleTreasuryConfig,
   sampleVendorConfig,
   setupEmulator,
@@ -24,20 +23,16 @@ import {
   coreValueToContractsValue as translateValue,
   loadTreasuryScript,
   loadVendorScript,
-  slot_to_unix,
 } from "../../shared";
 import {
-  MultisigScript,
   TreasurySpendRedeemer,
   VendorConfiguration,
-  VendorDatum,
   type TreasuryConfiguration,
   type TreasuryTreasuryWithdraw,
 } from "../../types/contracts";
-import { fund } from "../../treasury/fund";
 import { disburse } from "../../treasury/disburse";
 
-describe("When funding", () => {
+describe("When disbursing", () => {
   const amount = 340_000_000_000_000n;
 
   let emulator: Emulator;
@@ -181,7 +176,7 @@ describe("When funding", () => {
               blaze,
               fourthScriptInput,
               vendor,
-              makeValue(2_000_000n, ["b".repeat(56), 50n]),
+              makeValue(0n, ["b".repeat(56), 50n]),
               undefined,
               [Ed25519KeyHashHex(await disburse_key(emulator))],
             ),
@@ -255,28 +250,32 @@ describe("When funding", () => {
                   },
                 }),
               )
+              .lockAssets(
+                treasuryScriptAddress,
+                makeValue(499_990_000_000n),
+                Data.Void(),
+              )
               .payAssets(vendor, makeValue(10_000_000n)),
             /Trace is_entirely_before\(/,
           );
         });
       });
       test("can disburse *only* native tokens", async () => {
-        test("can disburse native assets", async () => {
-          await emulator.as(Disburser, async (blaze) => {
-            const vendor = await emulator.register("Vendor");
-            await emulator.expectValidTransaction(
+        await emulator.as(Disburser, async (blaze) => {
+          const vendor = await emulator.register("Vendor");
+          await emulator.expectValidTransaction(
+            blaze,
+            await disburse(
+              configs,
               blaze,
-              await disburse(
-                configs,
-                blaze,
-                fourthScriptInput,
-                vendor,
-                makeValue(0n, ["b".repeat(56), 50n]),
-                undefined,
-                [Ed25519KeyHashHex(await disburse_key(emulator))],
-              ),
-            );
-          });
+              fourthScriptInput,
+              vendor,
+              makeValue(0n, ["b".repeat(56), 50n]),
+              undefined,
+              [Ed25519KeyHashHex(await disburse_key(emulator))],
+              true,
+            ),
+          );
         });
       });
     });

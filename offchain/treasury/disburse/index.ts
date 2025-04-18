@@ -31,20 +31,29 @@ export async function disburse<P extends Provider, W extends Wallet>(
   amount: Value,
   datum: Datum | undefined,
   signers: Ed25519KeyHashHex[],
+  after: boolean = false,
 ): Promise<TxBuilder> {
   const { script: treasuryScript, scriptAddress: treasuryScriptAddress } =
     loadTreasuryScript(blaze.provider.network, configs.treasury);
   const registryInput = await blaze.provider.getUnspentOutputByNFT(
     AssetId(configs.treasury.registry_token + toHex(Buffer.from("REGISTRY"))),
   );
+
   const refInput = await blaze.provider.resolveScriptRef(treasuryScript.Script);
   if (!refInput)
     throw new Error("Could not find treasury script reference on-chain");
   let tx = blaze
     .newTransaction()
-    .setValidUntil(Slot(Number(configs.treasury.expiration / 1000n) - 1))
     .addReferenceInput(registryInput)
     .addReferenceInput(refInput);
+
+  if (after) {
+    tx = tx.setValidFrom(Slot(Number(configs.treasury.expiration / 1000n) + 1));
+  } else {
+    tx = tx.setValidUntil(
+      Slot(Number(configs.treasury.expiration / 1000n) - 1),
+    );
+  }
 
   for (const signer of signers) {
     tx = tx.addRequiredSigner(signer);
