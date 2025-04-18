@@ -45,7 +45,7 @@ pub fn logic(
   // Note: we don't need to assert the datums of the outputs,
   // because the treasury contract doesn't use a datum at all!
   let input_sum = value_sum(outputs_of(inputs), account, True)
-  let output_sum = value_sum(outputs, registry.treasury, True)
+  let output_sum = value_sum(outputs, registry.treasury, False)
 
   equal_plus_min_ada(input_sum, output_sum)
 }
