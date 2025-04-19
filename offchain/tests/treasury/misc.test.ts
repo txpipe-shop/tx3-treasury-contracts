@@ -66,7 +66,7 @@ describe("", () => {
 
   describe("A permissioned user", async () => {
     // TODO: blaze / uplc crate don't let us spend with no datum
-    test.skip("can spend with no datum", async () => {
+    test("can spend with no datum", async () => {
       await emulator.as(Reorganizer, async (blaze) => {
         await emulator.expectValidTransaction(
           blaze,

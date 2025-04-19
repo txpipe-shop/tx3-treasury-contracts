@@ -1,4 +1,4 @@
-import { Core } from "@blaze-cardano/sdk";
+import { Core, makeValue } from "@blaze-cardano/sdk";
 import {
   TreasuryConfiguration,
   TreasuryTreasuryWithdraw,
@@ -89,4 +89,20 @@ export function coreValueToContractsValue(amount: Value): {
     }
   }
   return ret;
+}
+
+export function contractsValueToCoreValue(amount: {
+  [policyId: string]: { [assetName: string]: bigint };
+}): Value {
+  let values: [string, bigint][] = [];
+  for (const [policy, assets] of Object.entries(amount)) {
+    if (policy == "") {
+      continue;
+    }
+    for (const [assetName, amount] of Object.entries(assets)) {
+      values.push([policy + assetName, amount]);
+    }
+  }
+
+  return makeValue((amount[""] ?? {})[""] ?? 0n, ...values);
 }

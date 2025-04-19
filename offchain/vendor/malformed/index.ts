@@ -43,7 +43,7 @@ export async function sweep_malformed<P extends Provider, W extends Wallet>(
   );
   const refInput = await blaze.provider.resolveScriptRef(vendorScript.Script);
   if (!refInput)
-    throw new Error("Could not find treasury script reference on-chain");
+    throw new Error("Could not find vendor script reference on-chain");
   let tx = blaze
     .newTransaction()
     .addReferenceInput(registryInput)

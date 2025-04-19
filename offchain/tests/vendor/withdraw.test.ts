@@ -1,0 +1,658 @@
+import { beforeEach, describe, test } from "bun:test";
+import { Core, makeValue } from "@blaze-cardano/sdk";
+import {
+  Address,
+  AssetId,
+  Ed25519KeyHashHex,
+  Ed25519PublicKeyHex,
+  RewardAccount,
+  Slot,
+} from "@blaze-cardano/core";
+import { Emulator } from "@blaze-cardano/emulator";
+import * as Data from "@blaze-cardano/data";
+import {
+  registryToken,
+  reorganize_key,
+  sampleTreasuryConfig,
+  sampleVendorConfig,
+  setupEmulator,
+  Vendor,
+  vendor_key,
+} from "../utilities.test";
+import {
+  coreValueToContractsValue as translateValue,
+  loadTreasuryScript,
+  loadVendorScript,
+  coreValueToContractsValue,
+  slot_to_unix,
+} from "../../shared";
+import {
+  MultisigScript,
+  VendorConfiguration,
+  VendorDatum,
+  VendorSpendRedeemer,
+  VendorVendorSpend,
+  type TreasuryConfiguration,
+  type TreasuryTreasuryWithdraw,
+} from "../../types/contracts";
+import { withdraw } from "../../vendor/withdraw";
+
+describe("When withdrawing from the vendor script", () => {
+  const amount = 340_000_000_000_000n;
+
+  let emulator: Emulator;
+  let config: VendorConfiguration;
+  let scriptInput: Core.TransactionUnspentOutput;
+  let firstDatum: VendorDatum;
+  let secondScriptInput: Core.TransactionUnspentOutput;
+  let secondDatum: VendorDatum;
+  let thirdScriptInput: Core.TransactionUnspentOutput;
+  let thirdDatum: VendorDatum;
+  let fourthScriptInput: Core.TransactionUnspentOutput;
+  let fourthDatum: VendorDatum;
+  let fifthScriptInput: Core.TransactionUnspentOutput;
+  let fifthDatum: VendorDatum;
+  let refInput: Core.TransactionUnspentOutput;
+  let registryInput: Core.TransactionUnspentOutput;
+  let vendor: MultisigScript;
+  let vendorSigner: Ed25519KeyHashHex;
+  let rewardAccount: RewardAccount;
+  let treasuryScript: TreasuryTreasuryWithdraw;
+  let vendorScript: VendorVendorSpend;
+  let vendorScriptAddress: Address;
+  beforeEach(async () => {
+    emulator = await setupEmulator();
+    const treasuryConfig = await sampleTreasuryConfig(emulator);
+    const vendorConfig = sampleVendorConfig();
+    const treasuryScriptManifest = loadTreasuryScript(
+      Core.NetworkId.Testnet,
+      treasuryConfig,
+    );
+    const vendorScriptManifest = loadVendorScript(
+      Core.NetworkId.Testnet,
+      vendorConfig,
+    );
+    config = vendorConfig;
+    rewardAccount = treasuryScriptManifest.rewardAccount;
+    treasuryScript = treasuryScriptManifest.script;
+    vendorScript = vendorScriptManifest.script;
+    vendorScriptAddress = vendorScriptManifest.scriptAddress;
+
+    emulator.accounts.set(rewardAccount, amount);
+
+    vendor = {
+      Signature: {
+        key_hash: await vendor_key(emulator),
+      },
+    };
+    vendorSigner = Ed25519KeyHashHex(await vendor_key(emulator));
+
+    scriptInput = new Core.TransactionUnspentOutput(
+      new Core.TransactionInput(Core.TransactionId("1".repeat(64)), 0n),
+      new Core.TransactionOutput(
+        vendorScriptAddress,
+        makeValue(500_000_000_000n),
+      ),
+    );
+    firstDatum = {
+      vendor: vendor,
+      payouts: [
+        {
+          maturation: 1000n,
+          value: coreValueToContractsValue(makeValue(500_000_000_000n)),
+          status: "Active",
+        },
+      ],
+    };
+    scriptInput
+      .output()
+      .setDatum(
+        Core.Datum.newInlineData(Data.serialize(VendorDatum, firstDatum)),
+      );
+    emulator.addUtxo(scriptInput);
+
+    secondScriptInput = new Core.TransactionUnspentOutput(
+      new Core.TransactionInput(Core.TransactionId("1".repeat(64)), 1n),
+      new Core.TransactionOutput(
+        vendorScriptAddress,
+        makeValue(100_000_000n, ["b".repeat(56), 200_000_000_000n]),
+      ),
+    );
+    secondDatum = {
+      vendor: vendor,
+      payouts: [
+        {
+          maturation: 100000n,
+          value: coreValueToContractsValue(
+            makeValue(100_000_000n, ["b".repeat(56), 200_000_000_000n]),
+          ),
+          status: "Active",
+        },
+      ],
+    };
+    secondScriptInput
+      .output()
+      .setDatum(
+        Core.Datum.newInlineData(Data.serialize(VendorDatum, secondDatum)),
+      );
+    emulator.addUtxo(secondScriptInput);
+
+    thirdScriptInput = new Core.TransactionUnspentOutput(
+      new Core.TransactionInput(Core.TransactionId("1".repeat(64)), 2n),
+      new Core.TransactionOutput(
+        vendorScriptAddress,
+        makeValue(20_000_000n, ["a".repeat(56), 1n]), // Below minUTxO to test equals_plus_min_ada
+      ),
+    );
+    thirdDatum = {
+      vendor: vendor,
+      payouts: [
+        {
+          maturation: 1000n,
+          value: coreValueToContractsValue(makeValue(10_000_000n)),
+          status: "Active",
+        },
+        {
+          maturation: 2000n,
+          value: coreValueToContractsValue(makeValue(10_000_000n)),
+          status: "Active",
+        },
+        {
+          maturation: 10000n,
+          value: coreValueToContractsValue(makeValue(0n, ["a".repeat(56), 1n])),
+          status: "Active",
+        },
+      ],
+    };
+    thirdScriptInput
+      .output()
+      .setDatum(
+        Core.Datum.newInlineData(Data.serialize(VendorDatum, thirdDatum)),
+      );
+    emulator.addUtxo(thirdScriptInput);
+    fourthDatum = {
+      vendor: vendor,
+      payouts: [
+        {
+          maturation: 1000n,
+          value: coreValueToContractsValue(makeValue(10_000_000n)),
+          status: "Active",
+        },
+        {
+          maturation: 2000n,
+          value: coreValueToContractsValue(makeValue(10_000_000n)),
+          status: "Paused",
+        },
+        {
+          maturation: 10000n,
+          value: coreValueToContractsValue(makeValue(10_000_000n)),
+          status: "Active",
+        },
+      ],
+    };
+    fourthScriptInput = new Core.TransactionUnspentOutput(
+      new Core.TransactionInput(Core.TransactionId("1".repeat(64)), 3n),
+      new Core.TransactionOutput(vendorScriptAddress, makeValue(30_000_000n)),
+    );
+    fourthScriptInput
+      .output()
+      .setDatum(
+        Core.Datum.newInlineData(Data.serialize(VendorDatum, fourthDatum)),
+      );
+    emulator.addUtxo(fourthScriptInput);
+    fifthDatum = {
+      vendor: vendor,
+      payouts: [
+        {
+          maturation: 1000n,
+          value: coreValueToContractsValue(
+            makeValue(0n, ["c".repeat(56), 100n]),
+          ),
+          status: "Active",
+        },
+      ],
+    };
+    fifthScriptInput = new Core.TransactionUnspentOutput(
+      new Core.TransactionInput(Core.TransactionId("1".repeat(64)), 4n),
+      new Core.TransactionOutput(
+        vendorScriptAddress,
+        makeValue(3_000_000n, ["c".repeat(56), 100n]),
+      ),
+    );
+    fifthScriptInput
+      .output()
+      .setDatum(
+        Core.Datum.newInlineData(Data.serialize(VendorDatum, fifthDatum)),
+      );
+    emulator.addUtxo(fifthScriptInput);
+
+    let [registryPolicy, registryName] = registryToken();
+    registryInput = emulator.utxos().find((u) =>
+      u
+        .output()
+        .amount()
+        .multiasset()
+        ?.get(AssetId(registryPolicy + registryName)),
+    )!;
+
+    refInput = emulator.lookupScript(vendorScript.Script);
+  });
+
+  describe("the vendor", () => {
+    test("can withdraw a matured payouts", async () => {
+      emulator.stepForwardToSlot(2n);
+      await emulator.as(Vendor, async (blaze, vendorAddress) => {
+        await emulator.expectValidTransaction(
+          blaze,
+          await withdraw(
+            config,
+            blaze,
+            new Date(Number(slot_to_unix(Slot(2)))),
+            [scriptInput],
+            [firstDatum],
+            vendorAddress,
+            [vendorSigner],
+          ),
+        );
+      });
+    });
+    test("can withdraw native tokens", async () => {
+      emulator.stepForwardToSlot(101n);
+      await emulator.as(Vendor, async (blaze, vendorAddress) => {
+        await emulator.expectValidTransaction(
+          blaze,
+          await withdraw(
+            config,
+            blaze,
+            new Date(Number(slot_to_unix(Slot(101)))),
+            [secondScriptInput],
+            [secondDatum],
+            vendorAddress,
+            [vendorSigner],
+          ),
+        );
+      });
+    });
+    test("can withdraw *only* native tokens", async () => {
+      emulator.stepForwardToSlot(101n);
+      await emulator.as(Vendor, async (blaze, vendorAddress) => {
+        await emulator.expectValidTransaction(
+          blaze,
+          await withdraw(
+            config,
+            blaze,
+            new Date(Number(slot_to_unix(Slot(101)))),
+            [fifthScriptInput],
+            [fifthDatum],
+            vendorAddress,
+            [vendorSigner],
+          ),
+        );
+      });
+    });
+    test("can withdraw a multiple matured payouts", async () => {
+      emulator.stepForwardToSlot(3n);
+      await emulator.as(Vendor, async (blaze, vendorAddress) => {
+        await emulator.expectValidTransaction(
+          blaze,
+          await withdraw(
+            config,
+            blaze,
+            new Date(Number(slot_to_unix(Slot(3)))),
+            [thirdScriptInput],
+            [thirdDatum],
+            vendorAddress,
+            [vendorSigner],
+          ),
+        );
+      });
+    });
+    test("can withdraw all payouts", async () => {
+      emulator.stepForwardToSlot(101n);
+      await emulator.as(Vendor, async (blaze, vendorAddress) => {
+        await emulator.expectValidTransaction(
+          blaze,
+          await withdraw(
+            config,
+            blaze,
+            new Date(Number(slot_to_unix(Slot(101)))),
+            [thirdScriptInput],
+            [thirdDatum],
+            vendorAddress,
+            [vendorSigner],
+          ),
+        );
+      });
+    });
+    test("can withdraw unpaused payouts", async () => {
+      emulator.stepForwardToSlot(11n);
+      await emulator.as(Vendor, async (blaze, vendorAddress) => {
+        await emulator.expectValidTransaction(
+          blaze,
+          await withdraw(
+            config,
+            blaze,
+            new Date(Number(slot_to_unix(Slot(11)))),
+            [fourthScriptInput],
+            [fourthDatum],
+            vendorAddress,
+            [vendorSigner],
+          ),
+        );
+      });
+    });
+    test("can spend without withdrawing", async () => {
+      await emulator.as(Vendor, async (blaze, vendorAddress) => {
+        await emulator.expectValidTransaction(
+          blaze,
+          // NOTE: this behavior is important so the vendor can attach metadata.
+          // For example, this can be used to publish proof of accomplishment, invoices, etc.
+          await withdraw(
+            config,
+            blaze,
+            new Date(Number(slot_to_unix(Slot(0)))),
+            [scriptInput],
+            [firstDatum],
+            vendorAddress,
+            [vendorSigner],
+          ),
+        );
+      });
+    });
+    test("cannot withdraw unmatured payouts", async () => {
+      await emulator.as(Vendor, async (blaze) => {
+        await emulator.expectScriptFailure(
+          blaze
+            .newTransaction()
+            .addReferenceInput(refInput)
+            .setValidFrom(Slot(0))
+            .addRequiredSigner(vendorSigner)
+            .addInput(
+              scriptInput,
+              Data.serialize(VendorSpendRedeemer, "Withdraw"),
+            ),
+          /Trace expect \[vendor_output\] =/,
+        );
+      });
+    });
+    test("cannot steal unmatured payout", async () => {
+      await emulator.as(Vendor, async (blaze) => {
+        let datum: VendorDatum = {
+          vendor,
+          payouts: [
+            {
+              maturation: 1000n,
+              value: coreValueToContractsValue(makeValue(500_000_000_000n)),
+              status: "Active",
+            },
+          ],
+        };
+        await emulator.expectScriptFailure(
+          blaze
+            .newTransaction()
+            .addReferenceInput(refInput)
+            .setValidFrom(Slot(0))
+            .addRequiredSigner(vendorSigner)
+            .addInput(
+              scriptInput,
+              Data.serialize(VendorSpendRedeemer, "Withdraw"),
+            )
+            .lockAssets(
+              vendorScriptAddress,
+              makeValue(1_000_000n),
+              Data.serialize(VendorDatum, datum),
+            ),
+          /Trace equal_plus_min_ada\(expected_output_value, vendor_output.value\)/,
+        );
+      });
+    });
+    test("cannot leave matured payouts", async () => {
+      await emulator.as(Vendor, async (blaze) => {
+        emulator.stepForwardToSlot(3n);
+        let datum: VendorDatum = {
+          vendor,
+          payouts: [
+            {
+              maturation: 2000n,
+              value: coreValueToContractsValue(makeValue(10_000_000n)),
+              status: "Active",
+            },
+            {
+              maturation: 10000n,
+              value: coreValueToContractsValue(
+                makeValue(0n, ["a".repeat(56), 1n]),
+              ),
+              status: "Active",
+            },
+          ],
+        };
+        await emulator.expectScriptFailure(
+          blaze
+            .newTransaction()
+            .addReferenceInput(refInput)
+            .setValidFrom(Slot(3))
+            .addRequiredSigner(vendorSigner)
+            .addInput(
+              thirdScriptInput,
+              Data.serialize(VendorSpendRedeemer, "Withdraw"),
+            )
+            .lockAssets(
+              vendorScriptAddress,
+              makeValue(10_000_000n, ["a".repeat(56), 1n]),
+              Data.serialize(VendorDatum, datum),
+            ),
+          /Trace output_vendor_datum == VendorDatum \{ vendor: input_vendor_datum.vendor, payouts: remaining_payouts \}/,
+        );
+      });
+    });
+    test("cannot change future payouts dates", async () => {
+      await emulator.as(Vendor, async (blaze) => {
+        emulator.stepForwardToSlot(2n);
+        let datum: VendorDatum = {
+          vendor,
+          payouts: [
+            {
+              maturation: 2000n,
+              value: coreValueToContractsValue(makeValue(10_000_000n)),
+              status: "Active",
+            },
+            {
+              maturation: 3000n,
+              value: coreValueToContractsValue(
+                makeValue(0n, ["a".repeat(56), 1n]),
+              ),
+              status: "Active",
+            },
+          ],
+        };
+        await emulator.expectScriptFailure(
+          blaze
+            .newTransaction()
+            .addReferenceInput(refInput)
+            .setValidFrom(Slot(3))
+            .addRequiredSigner(vendorSigner)
+            .addInput(
+              thirdScriptInput,
+              Data.serialize(VendorSpendRedeemer, "Withdraw"),
+            )
+            .lockAssets(
+              vendorScriptAddress,
+              makeValue(10_000_000n, ["a".repeat(56), 1n]),
+              Data.serialize(VendorDatum, datum),
+            ),
+          /Trace output_vendor_datum == VendorDatum \{ vendor: input_vendor_datum.vendor, payouts: remaining_payouts \}/,
+        );
+      });
+    });
+    test("cannot change future payouts amounts", async () => {
+      await emulator.as(Vendor, async (blaze) => {
+        emulator.stepForwardToSlot(2n);
+        let datum: VendorDatum = {
+          vendor,
+          payouts: [
+            {
+              maturation: 2000n,
+              value: coreValueToContractsValue(
+                makeValue(10_000_000n, ["a".repeat(56), 1n]),
+              ),
+              status: "Active",
+            },
+            {
+              maturation: 3000n,
+              value: coreValueToContractsValue(makeValue(0n)),
+              status: "Active",
+            },
+          ],
+        };
+        await emulator.expectScriptFailure(
+          blaze
+            .newTransaction()
+            .addReferenceInput(refInput)
+            .setValidFrom(Slot(3))
+            .addRequiredSigner(vendorSigner)
+            .addInput(
+              thirdScriptInput,
+              Data.serialize(VendorSpendRedeemer, "Withdraw"),
+            )
+            .lockAssets(
+              vendorScriptAddress,
+              makeValue(10_000_000n, ["a".repeat(56), 1n]),
+              Data.serialize(VendorDatum, datum),
+            ),
+          /Trace output_vendor_datum == VendorDatum \{ vendor: input_vendor_datum.vendor, payouts: remaining_payouts \}/,
+        );
+      });
+    });
+    test("cannot unpause future payouts", async () => {
+      await emulator.as(Vendor, async (blaze) => {
+        emulator.stepForwardToSlot(2n);
+        let datum: VendorDatum = {
+          vendor,
+          payouts: [
+            {
+              maturation: 2000n,
+              value: coreValueToContractsValue(makeValue(10_000_000n)),
+              status: "Active",
+            },
+            {
+              maturation: 10000n,
+              value: coreValueToContractsValue(makeValue(10_000_000n)),
+              status: "Active",
+            },
+          ],
+        };
+        await emulator.expectScriptFailure(
+          blaze
+            .newTransaction()
+            .addReferenceInput(refInput)
+            .setValidFrom(Slot(3))
+            .addRequiredSigner(vendorSigner)
+            .addInput(
+              fourthScriptInput,
+              Data.serialize(VendorSpendRedeemer, "Withdraw"),
+            )
+            .lockAssets(
+              vendorScriptAddress,
+              makeValue(10_000_000n),
+              Data.serialize(VendorDatum, datum),
+            ),
+          /Trace output_vendor_datum == VendorDatum \{ vendor: input_vendor_datum.vendor, payouts: remaining_payouts \}/,
+        );
+      });
+    });
+    test("cannot pause future payouts", async () => {
+      await emulator.as(Vendor, async (blaze) => {
+        emulator.stepForwardToSlot(2n);
+        let datum: VendorDatum = {
+          vendor,
+          payouts: [
+            {
+              maturation: 2000n,
+              value: coreValueToContractsValue(makeValue(10_000_000n)),
+              status: "Paused",
+            },
+            {
+              maturation: 10000n,
+              value: coreValueToContractsValue(makeValue(10_000_000n)),
+              status: "Paused",
+            },
+          ],
+        };
+        await emulator.expectScriptFailure(
+          blaze
+            .newTransaction()
+            .addReferenceInput(refInput)
+            .setValidFrom(Slot(3))
+            .addRequiredSigner(vendorSigner)
+            .addInput(
+              fourthScriptInput,
+              Data.serialize(VendorSpendRedeemer, "Withdraw"),
+            )
+            .lockAssets(
+              vendorScriptAddress,
+              makeValue(20_000_000n),
+              Data.serialize(VendorDatum, datum),
+            ),
+          /Trace output_vendor_datum == VendorDatum \{ vendor: input_vendor_datum.vendor, payouts: remaining_payouts \}/,
+        );
+      });
+    });
+    test("cannot add native assets", async () => {
+      await emulator.as(Vendor, async (blaze) => {
+        emulator.stepForwardToSlot(2n);
+        let datum: VendorDatum = {
+          vendor,
+          payouts: [
+            {
+              maturation: 2000n,
+              value: coreValueToContractsValue(makeValue(10_000_000n)),
+              status: "Paused",
+            },
+            {
+              maturation: 10000n,
+              value: coreValueToContractsValue(makeValue(10_000_000n)),
+              status: "Active",
+            },
+          ],
+        };
+        await emulator.expectScriptFailure(
+          blaze
+            .newTransaction()
+            .addReferenceInput(refInput)
+            .setValidFrom(Slot(3))
+            .addRequiredSigner(vendorSigner)
+            .addInput(
+              fourthScriptInput,
+              Data.serialize(VendorSpendRedeemer, "Withdraw"),
+            )
+            .lockAssets(
+              vendorScriptAddress,
+              makeValue(20_000_000n, ["b".repeat(56), 100n]),
+              Data.serialize(VendorDatum, datum),
+            ),
+          /        Trace equal_plus_min_ada\(expected_output_value, vendor_output.value\)/,
+        );
+      });
+    });
+  });
+
+  describe("a malicious user", () => {
+    test("cannot withdraw funds", async () => {
+      emulator.stepForwardToSlot(2n);
+      await emulator.as("MaliciousUser", async (blaze, signer) => {
+        await emulator.expectScriptFailure(
+          await withdraw(
+            config,
+            blaze,
+            new Date(Number(slot_to_unix(Slot(2)))),
+            [scriptInput],
+            [firstDatum],
+            signer,
+            [Ed25519KeyHashHex(signer.asBase()?.getPaymentCredential().hash!)],
+          ),
+          /Trace satisfied\(input_vendor_datum.vendor, extra_signatories, validity_range, withdrawals\)/,
+        );
+      });
+    });
+  });
+});

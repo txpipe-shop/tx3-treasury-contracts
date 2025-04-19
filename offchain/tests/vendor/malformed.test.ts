@@ -1,17 +1,9 @@
 import { beforeEach, describe, test } from "bun:test";
 import { Core, makeValue } from "@blaze-cardano/sdk";
-import {
-  Address,
-  AssetId,
-  Ed25519KeyHashHex,
-  RewardAccount,
-  Slot,
-} from "@blaze-cardano/core";
+import { Address, AssetId, RewardAccount } from "@blaze-cardano/core";
 import { Emulator } from "@blaze-cardano/emulator";
 import * as Data from "@blaze-cardano/data";
 import {
-  Funder,
-  fund_key,
   registryToken,
   reorganize_key,
   sampleTreasuryConfig,
@@ -22,12 +14,10 @@ import {
   coreValueToContractsValue as translateValue,
   loadTreasuryScript,
   loadVendorScript,
-  slot_to_unix,
   coreValueToContractsValue,
 } from "../../shared";
 import {
   MultisigScript,
-  TreasurySpendRedeemer,
   VendorConfiguration,
   VendorDatum,
   VendorSpendRedeemer,
@@ -35,7 +25,6 @@ import {
   type TreasuryConfiguration,
   type TreasuryTreasuryWithdraw,
 } from "../../types/contracts";
-import { fund } from "../../treasury/fund";
 import { sweep_malformed } from "../../vendor/malformed";
 
 describe("With a malformed datum", () => {
@@ -53,7 +42,6 @@ describe("With a malformed datum", () => {
   let rewardAccount: RewardAccount;
   let treasuryScript: TreasuryTreasuryWithdraw;
   let vendorScript: VendorVendorSpend;
-  let treasuryScriptAddress: Address;
   let vendorScriptAddress: Address;
   beforeEach(async () => {
     emulator = await setupEmulator();
@@ -71,7 +59,6 @@ describe("With a malformed datum", () => {
     rewardAccount = treasuryScriptManifest.rewardAccount;
     treasuryScript = treasuryScriptManifest.script;
     vendorScript = vendorScriptManifest.script;
-    treasuryScriptAddress = treasuryScriptManifest.scriptAddress;
     vendorScriptAddress = vendorScriptManifest.scriptAddress;
 
     emulator.accounts.set(rewardAccount, amount);
@@ -109,6 +96,8 @@ describe("With a malformed datum", () => {
         makeValue(500_000n, ["a".repeat(56), 1n]), // Below minUTxO to test equals_plus_min_ada
       ),
     );
+    thirdScriptInput.output().setDatum(Core.Datum.newInlineData(Data.Void()));
+    emulator.addUtxo(thirdScriptInput);
     // TODO: update blaze to allow spending null datums for plutus v3
     let vendorDatum: VendorDatum = {
       vendor: vendor,
@@ -120,22 +109,15 @@ describe("With a malformed datum", () => {
         },
       ],
     };
-    thirdScriptInput
+    fourthScriptInput = new Core.TransactionUnspentOutput(
+      new Core.TransactionInput(Core.TransactionId("1".repeat(64)), 3n),
+      new Core.TransactionOutput(vendorScriptAddress, makeValue(10_000_000n)),
+    );
+    fourthScriptInput
       .output()
       .setDatum(
         Core.Datum.newInlineData(Data.serialize(VendorDatum, vendorDatum)),
       );
-    emulator.addUtxo(thirdScriptInput);
-
-    fourthScriptInput = new Core.TransactionUnspentOutput(
-      new Core.TransactionInput(Core.TransactionId("1".repeat(64)), 2n),
-      new Core.TransactionOutput(
-        vendorScriptAddress,
-        makeValue(50_000_000n, ["b".repeat(56), 100n]), // Below minUTxO to test equals_plus_min_ada
-      ),
-    );
-    // TODO: update blaze to allow spending null datums for plutus v3
-    fourthScriptInput.output().setDatum(Core.Datum.newInlineData(Data.Void()));
     emulator.addUtxo(fourthScriptInput);
 
     let [registryPolicy, registryName] = registryToken();
@@ -171,10 +153,18 @@ describe("With a malformed datum", () => {
         );
       });
     });
+    test("can sweep with native assets, plus resolve minUTxO", async () => {
+      await emulator.as("Anyone", async (blaze) => {
+        await emulator.expectValidTransaction(
+          blaze,
+          await sweep_malformed(configs, [thirdScriptInput], blaze),
+        );
+      });
+    });
     test("cannot sweep with valid datum", async () => {
       await emulator.as("Anyone", async (blaze) => {
         await emulator.expectScriptFailure(
-          await sweep_malformed(configs, [thirdScriptInput], blaze),
+          await sweep_malformed(configs, [fourthScriptInput], blaze),
           /Trace expect\n                  inputs\n                    |> list.filter\(/,
         );
       });

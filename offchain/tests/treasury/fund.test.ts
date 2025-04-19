@@ -605,7 +605,7 @@ describe("When funding", () => {
   });
 
   describe("a malicious user", () => {
-    test("cannot reorganize UTxOs", async () => {
+    test("cannot fund projects", async () => {
       await emulator.as("MaliciousUser", async (blaze, address) => {
         await emulator.expectScriptFailure(
           await fund(

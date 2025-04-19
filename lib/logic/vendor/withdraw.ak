@@ -31,9 +31,17 @@ pub fn logic(account: Credential, transaction: Transaction) {
   expect InlineDatum(input_vendor_datum) = vendor_input.datum
   expect input_vendor_datum: VendorDatum = input_vendor_datum
 
-  let expected_payouts =
+  expect
+    satisfied(
+      input_vendor_datum.vendor,
+      extra_signatories,
+      validity_range,
+      withdrawals,
+    )?
+
+  let (expected_payouts, remaining_payouts) =
     input_vendor_datum.payouts
-      |> list.filter(
+      |> list.partition(
           fn(payout) {
             is_entirely_after(validity_range, payout.maturation) && payout.status == Active
           },
@@ -47,30 +55,30 @@ pub fn logic(account: Credential, transaction: Transaction) {
           },
         )
 
-  expect [vendor_output] =
-    outputs
-      |> list.filter(
-          fn(output) { output.address.payment_credential == account },
-        )
-  expect vendor_output.address.stake_credential == None
-
-  expect InlineDatum(output_vendor_datum) = vendor_output.datum
-  expect output_vendor_datum: VendorDatum = output_vendor_datum
-
   let expected_output_value =
     assets.merge(vendor_input.value, assets.negate(matured_value))
 
-  expect and {
-      satisfied(
-        input_vendor_datum.vendor,
-        extra_signatories,
-        validity_range,
-        withdrawals,
-      ),
-      output_vendor_datum == VendorDatum {
-        vendor: input_vendor_datum.vendor,
-        payouts: expected_payouts,
-      },
-      equal_plus_min_ada(expected_output_value, vendor_output.value),
-    }
+  if !assets.is_zero(expected_output_value) {
+    expect [vendor_output] =
+      outputs
+        |> list.filter(
+            fn(output) { output.address.payment_credential == account },
+          )
+    expect vendor_output.address.stake_credential == None
+
+    expect InlineDatum(output_vendor_datum) = vendor_output.datum
+    expect output_vendor_datum: VendorDatum = output_vendor_datum
+
+    trace output_vendor_datum
+    trace expected_payouts
+    expect and {
+        (output_vendor_datum == VendorDatum {
+          vendor: input_vendor_datum.vendor,
+          payouts: remaining_payouts,
+        })?,
+        equal_plus_min_ada(expected_output_value, vendor_output.value)?,
+      }
+  } else {
+    Void
+  }
 }

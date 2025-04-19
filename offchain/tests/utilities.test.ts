@@ -37,6 +37,7 @@ export const Sweeper = "Sweeper";
 export const Disburser = "Disburser";
 export const Funder = "Funder";
 export const Reorganizer = "Reorganizer";
+export const Vendor = "Vendor";
 
 export async function sweep_key(emulator: Emulator) {
   return (await emulator.register(Sweeper)).asBase()?.getPaymentCredential()
@@ -55,6 +56,11 @@ export async function fund_key(emulator: Emulator) {
 
 export async function reorganize_key(emulator: Emulator) {
   return (await emulator.register(Reorganizer)).asBase()?.getPaymentCredential()
+    .hash!;
+}
+
+export async function vendor_key(emulator: Emulator) {
+  return (await emulator.register(Vendor)).asBase()?.getPaymentCredential()
     .hash!;
 }
 

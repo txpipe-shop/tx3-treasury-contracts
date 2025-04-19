@@ -2,5 +2,5 @@
 set -e
 
 mkdir -p offchain/types/
-aiken build
-npx @blaze-cardano/blueprint@latest plutus.json -o ./offchain/types/contracts.ts
+aiken build -t verbose
+npx ~/proj/blaze-cardano/packages/blaze-blueprint plutus.json -o ./offchain/types/contracts.ts
