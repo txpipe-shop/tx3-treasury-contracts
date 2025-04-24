@@ -2,17 +2,13 @@ import { beforeEach, describe, test } from "bun:test";
 import { Core, makeValue } from "@blaze-cardano/sdk";
 import {
   Address,
-  AssetId,
   Ed25519KeyHashHex,
-  Ed25519PublicKeyHex,
   RewardAccount,
   Slot,
 } from "@blaze-cardano/core";
 import { Emulator } from "@blaze-cardano/emulator";
 import * as Data from "@blaze-cardano/data";
 import {
-  registryToken,
-  reorganize_key,
   sampleTreasuryConfig,
   sampleVendorConfig,
   setupEmulator,
@@ -20,7 +16,6 @@ import {
   vendor_key,
 } from "../utilities.test";
 import {
-  coreValueToContractsValue as translateValue,
   loadTreasuryScript,
   loadVendorScript,
   coreValueToContractsValue,
@@ -32,8 +27,6 @@ import {
   VendorDatum,
   VendorSpendRedeemer,
   VendorVendorSpend,
-  type TreasuryConfiguration,
-  type TreasuryTreasuryWithdraw,
 } from "../../types/contracts";
 import { withdraw } from "../../vendor/withdraw";
 
@@ -53,11 +46,9 @@ describe("When withdrawing from the vendor script", () => {
   let fifthScriptInput: Core.TransactionUnspentOutput;
   let fifthDatum: VendorDatum;
   let refInput: Core.TransactionUnspentOutput;
-  let registryInput: Core.TransactionUnspentOutput;
   let vendor: MultisigScript;
   let vendorSigner: Ed25519KeyHashHex;
   let rewardAccount: RewardAccount;
-  let treasuryScript: TreasuryTreasuryWithdraw;
   let vendorScript: VendorVendorSpend;
   let vendorScriptAddress: Address;
   beforeEach(async () => {
@@ -74,7 +65,6 @@ describe("When withdrawing from the vendor script", () => {
     );
     config = vendorConfig;
     rewardAccount = treasuryScriptManifest.rewardAccount;
-    treasuryScript = treasuryScriptManifest.script;
     vendorScript = vendorScriptManifest.script;
     vendorScriptAddress = vendorScriptManifest.scriptAddress;
 
@@ -226,15 +216,6 @@ describe("When withdrawing from the vendor script", () => {
       );
     emulator.addUtxo(fifthScriptInput);
 
-    let [registryPolicy, registryName] = registryToken();
-    registryInput = emulator.utxos().find((u) =>
-      u
-        .output()
-        .amount()
-        .multiasset()
-        ?.get(AssetId(registryPolicy + registryName)),
-    )!;
-
     refInput = emulator.lookupScript(vendorScript.Script);
   });
 
@@ -249,7 +230,6 @@ describe("When withdrawing from the vendor script", () => {
             blaze,
             new Date(Number(slot_to_unix(Slot(2)))),
             [scriptInput],
-            [firstDatum],
             vendorAddress,
             [vendorSigner],
           ),
@@ -266,7 +246,6 @@ describe("When withdrawing from the vendor script", () => {
             blaze,
             new Date(Number(slot_to_unix(Slot(101)))),
             [secondScriptInput],
-            [secondDatum],
             vendorAddress,
             [vendorSigner],
           ),
@@ -283,7 +262,6 @@ describe("When withdrawing from the vendor script", () => {
             blaze,
             new Date(Number(slot_to_unix(Slot(101)))),
             [fifthScriptInput],
-            [fifthDatum],
             vendorAddress,
             [vendorSigner],
           ),
@@ -300,7 +278,6 @@ describe("When withdrawing from the vendor script", () => {
             blaze,
             new Date(Number(slot_to_unix(Slot(3)))),
             [thirdScriptInput],
-            [thirdDatum],
             vendorAddress,
             [vendorSigner],
           ),
@@ -317,7 +294,6 @@ describe("When withdrawing from the vendor script", () => {
             blaze,
             new Date(Number(slot_to_unix(Slot(101)))),
             [thirdScriptInput],
-            [thirdDatum],
             vendorAddress,
             [vendorSigner],
           ),
@@ -334,7 +310,6 @@ describe("When withdrawing from the vendor script", () => {
             blaze,
             new Date(Number(slot_to_unix(Slot(11)))),
             [fourthScriptInput],
-            [fourthDatum],
             vendorAddress,
             [vendorSigner],
           ),
@@ -352,7 +327,6 @@ describe("When withdrawing from the vendor script", () => {
             blaze,
             new Date(Number(slot_to_unix(Slot(0)))),
             [scriptInput],
-            [firstDatum],
             vendorAddress,
             [vendorSigner],
           ),
@@ -646,7 +620,6 @@ describe("When withdrawing from the vendor script", () => {
             blaze,
             new Date(Number(slot_to_unix(Slot(2)))),
             [scriptInput],
-            [firstDatum],
             signer,
             [Ed25519KeyHashHex(signer.asBase()?.getPaymentCredential().hash!)],
           ),

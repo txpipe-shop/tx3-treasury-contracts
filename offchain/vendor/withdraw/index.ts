@@ -34,7 +34,6 @@ export async function withdraw<P extends Provider, W extends Wallet>(
   blaze: Blaze<P, W>,
   now: Date,
   inputs: TransactionUnspentOutput[],
-  datums: VendorDatum[], // TODO: parse from the input
   destination: Address,
   signers: Ed25519KeyHashHex[],
 ): Promise<TxBuilder> {
@@ -57,7 +56,10 @@ export async function withdraw<P extends Provider, W extends Wallet>(
   let totalValue = Value.zero();
   for (let idx = 0; idx < inputs.length; idx++) {
     const input = inputs[idx];
-    const datum = datums[idx];
+    const datum = Data.parse(
+      VendorDatum,
+      input.output().datum()?.asInlineData()!,
+    );
     tx = tx.addInput(input, Data.serialize(VendorSpendRedeemer, "Withdraw"));
     const newDatum: VendorDatum = {
       vendor: datum.vendor,
