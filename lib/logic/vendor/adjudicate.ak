@@ -78,28 +78,28 @@ pub fn logic(
         )
 
   expect and {
-      equal_plus_min_ada(vendor_input.value, vendor_output.value),
+      equal_plus_min_ada(vendor_input.value, vendor_output.value)?,
       or {
-        pause_permission_needed,
-        resume_permission_needed,
-      },
+        pause_permission_needed?,
+        resume_permission_needed?,
+      }?,
       or {
-        !pause_permission_needed,
+        !pause_permission_needed?,
         satisfied(
           config.permissions.pause,
           extra_signatories,
           validity_range,
           withdrawals,
-        ),
-      },
+        )?,
+      }?,
       or {
-        !resume_permission_needed,
+        !resume_permission_needed?,
         satisfied(
           config.permissions.resume,
           extra_signatories,
           validity_range,
           withdrawals,
-        ),
-      },
+        )?,
+      }?,
     }
 }

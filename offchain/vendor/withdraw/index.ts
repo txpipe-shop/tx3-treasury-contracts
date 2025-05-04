@@ -1,5 +1,4 @@
 import {
-  makeValue,
   TxBuilder,
   Value,
   type Blaze,
@@ -8,22 +7,16 @@ import {
 } from "@blaze-cardano/sdk";
 import {
   Address,
-  AssetId,
   Ed25519KeyHashHex,
-  Slot,
-  toHex,
   TransactionUnspentOutput,
 } from "@blaze-cardano/core";
 import * as Data from "@blaze-cardano/data";
 import {
   contractsValueToCoreValue,
-  loadTreasuryScript,
   loadVendorScript,
   unix_to_slot,
 } from "../../shared";
 import {
-  TreasuryConfiguration,
-  TreasurySpendRedeemer,
   VendorConfiguration,
   VendorDatum,
   VendorSpendRedeemer,

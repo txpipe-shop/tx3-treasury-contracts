@@ -38,6 +38,9 @@ export const Disburser = "Disburser";
 export const Funder = "Funder";
 export const Reorganizer = "Reorganizer";
 export const Vendor = "Vendor";
+export const Pauser = "Pauser";
+export const Resumer = "Resumer";
+export const Modifier = "Modifier";
 
 export async function sweep_key(emulator: Emulator) {
   return (await emulator.register(Sweeper)).asBase()?.getPaymentCredential()
@@ -56,6 +59,21 @@ export async function fund_key(emulator: Emulator) {
 
 export async function reorganize_key(emulator: Emulator) {
   return (await emulator.register(Reorganizer)).asBase()?.getPaymentCredential()
+    .hash!;
+}
+
+export async function pause_key(emulator: Emulator) {
+  return (await emulator.register(Pauser)).asBase()?.getPaymentCredential()
+    .hash!;
+}
+
+export async function resume_key(emulator: Emulator) {
+  return (await emulator.register(Resumer)).asBase()?.getPaymentCredential()
+    .hash!;
+}
+
+export async function modify_key(emulator: Emulator) {
+  return (await emulator.register(Modifier)).asBase()?.getPaymentCredential()
     .hash!;
 }
 
@@ -97,7 +115,9 @@ export async function sampleTreasuryConfig(
   };
 }
 
-export function sampleVendorConfig(): VendorConfiguration {
+export async function sampleVendorConfig(
+  emulator: Emulator,
+): Promise<VendorConfiguration> {
   const [policyId, _] = registryToken();
   return {
     registry_token: policyId,
@@ -105,17 +125,17 @@ export function sampleVendorConfig(): VendorConfiguration {
     permissions: {
       pause: {
         Signature: {
-          key_hash: "ab",
+          key_hash: await pause_key(emulator),
         },
       },
       resume: {
         Signature: {
-          key_hash: "ab",
+          key_hash: await resume_key(emulator),
         },
       },
       modify: {
         Signature: {
-          key_hash: "ab",
+          key_hash: await modify_key(emulator),
         },
       },
     },
@@ -222,7 +242,7 @@ export async function setupEmulator(txOuts: Core.TransactionOutput[] = []) {
   const { treasuryScript, vendorScript } = loadScripts(
     Core.NetworkId.Testnet,
     await sampleTreasuryConfig(emulator),
-    sampleVendorConfig(),
+    await sampleVendorConfig(emulator),
   );
 
   const [registryPolicy, registryName] = registryToken();

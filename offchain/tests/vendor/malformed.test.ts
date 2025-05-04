@@ -46,7 +46,7 @@ describe("With a malformed datum", () => {
   beforeEach(async () => {
     emulator = await setupEmulator();
     const treasuryConfig = await sampleTreasuryConfig(emulator);
-    const vendorConfig = sampleVendorConfig();
+    const vendorConfig = await sampleVendorConfig(emulator);
     const treasuryScriptManifest = loadTreasuryScript(
       Core.NetworkId.Testnet,
       treasuryConfig,

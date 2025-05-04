@@ -1,26 +1,15 @@
 import {
-  makeValue,
   TxBuilder,
   Value,
   type Blaze,
   type Provider,
   type Wallet,
 } from "@blaze-cardano/sdk";
-import {
-  AssetId,
-  Slot,
-  toHex,
-  TransactionUnspentOutput,
-} from "@blaze-cardano/core";
+import { AssetId, toHex, TransactionUnspentOutput } from "@blaze-cardano/core";
 import * as Data from "@blaze-cardano/data";
-import {
-  loadTreasuryScript,
-  loadVendorScript,
-  unix_to_slot,
-} from "../../shared";
+import { loadTreasuryScript, loadVendorScript } from "../../shared";
 import {
   TreasuryConfiguration,
-  TreasurySpendRedeemer,
   VendorConfiguration,
   VendorSpendRedeemer,
 } from "../../types/contracts";
