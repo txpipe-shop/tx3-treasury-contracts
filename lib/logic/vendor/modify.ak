@@ -83,18 +83,18 @@ pub fn logic(
       equal_plus_min_ada(
         unmatured_value,
         assets.merge(vendor_output_sum, treasury_output_sum),
-      ),
+      )?,
       satisfied(
         input_vendor_datum.vendor,
         extra_signatories,
         validity_range,
         withdrawals,
-      ),
+      )?,
       satisfied(
         permissions.modify,
         extra_signatories,
         validity_range,
         withdrawals,
-      ),
+      )?,
     }
 }

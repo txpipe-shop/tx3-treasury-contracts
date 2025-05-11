@@ -76,12 +76,12 @@ export function coreValueToContractsValue(amount: Value): {
   [policyId: string]: { [assetName: string]: bigint };
 } {
   const ret: { [policyId: string]: { [assetName: string]: bigint } } = {};
-  if (amount.coin() != 0n) {
+  if (amount.coin() !== 0n) {
     ret[""] = {};
     ret[""][""] = amount.coin();
   }
   for (const [assetId, amt] of amount.multiasset() ?? []) {
-    if (amt != 0n) {
+    if (amt !== 0n) {
       const policyId = assetId.slice(0, 56);
       const assetName = assetId.slice(56);
       ret[policyId] ??= {};

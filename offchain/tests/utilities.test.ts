@@ -88,8 +88,8 @@ export async function sampleTreasuryConfig(
   const [policyId, _] = registryToken();
   return {
     registry_token: policyId,
-    expiration: slot_to_unix(Slot(30)),
-    payout_upperbound: slot_to_unix(Slot(45)),
+    expiration: slot_to_unix(Slot(36 * 60 * 60 + 10)),
+    payout_upperbound: slot_to_unix(Slot(45 * 60 * 60)),
     permissions: {
       sweep: {
         Signature: {
@@ -121,7 +121,7 @@ export async function sampleVendorConfig(
   const [policyId, _] = registryToken();
   return {
     registry_token: policyId,
-    expiration: 15n * 1000n,
+    expiration: slot_to_unix(Slot(60 * 60 * 60 + 10)),
     permissions: {
       pause: {
         Signature: {
