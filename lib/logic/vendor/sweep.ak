@@ -79,11 +79,11 @@ pub fn logic(
         expect InlineDatum(out_datum) = vendor_output.datum
         expect out_datum: VendorDatum = out_datum
         and {
-          equal_plus_min_ada(matured_value, vendor_output.value),
-          out_datum == VendorDatum {
+          equal_plus_min_ada(matured_value, vendor_output.value)?,
+          (out_datum == VendorDatum {
             vendor: datum.vendor,
             payouts: expected_payouts,
-          },
+          })?,
         }
       }
     }
