@@ -9,6 +9,8 @@ import {
   pause_key,
   Pauser,
   registryToken,
+  reorganize_key,
+  Reorganizer,
   sampleTreasuryConfig,
   sampleVendorConfig,
   scriptOutput,
@@ -475,6 +477,72 @@ describe("TxPipe Audit Findings", () => {
                 90_000_000n,
                 Data.Void(),
               ),
+          );
+        });
+      });
+    });
+  });
+
+  describe("TRS-105", () => {
+    describe("the oversight committee", () => {
+      test("cannot steal malformed vendor datums", async () => {
+        const scripts = loadScripts(
+          Core.NetworkId.Testnet,
+          await sampleTreasuryConfig(emulator),
+          await sampleVendorConfig(emulator),
+        );
+        await deployScripts(emulator, scripts);
+        const treasuryRefInput = emulator.lookupScript(
+          scripts.treasuryScript.script.Script,
+        );
+        const vendorRefInput = emulator.lookupScript(
+          scripts.vendorScript.script.Script,
+        );
+        let [registryPolicy, registryName] = registryToken();
+        const registryInput = emulator.utxos().find((u) =>
+          u
+            .output()
+            .amount()
+            .multiasset()
+            ?.get(AssetId(registryPolicy + registryName)),
+        )!;
+        const malformedInput = scriptOutput(
+          emulator,
+          scripts.vendorScript,
+          makeValue(200_000_000n),
+          Data.Void(),
+        );
+        const treasuryInput = scriptOutput(
+          emulator,
+          scripts.treasuryScript,
+          makeValue(200_000_000n),
+          Data.Void(),
+        );
+        await emulator.as(Reorganizer, async (blaze) => {
+          await emulator.expectScriptFailure(
+            blaze
+              .newTransaction()
+              .addInput(
+                treasuryInput,
+                Data.serialize(TreasurySpendRedeemer, "Reorganize"),
+              )
+              .addInput(
+                malformedInput,
+                Data.serialize(VendorSpendRedeemer, "Malformed"),
+              )
+              .lockAssets(
+                scripts.treasuryScript.scriptAddress,
+                makeValue(200_000_000n),
+                Data.Void(),
+              )
+              .addRequiredSigner(
+                Ed25519KeyHashHex(await reorganize_key(emulator)),
+              )
+              .setValidFrom(Slot(0))
+              .setValidUntil(Slot(10))
+              .addReferenceInput(treasuryRefInput)
+              .addReferenceInput(vendorRefInput)
+              .addReferenceInput(registryInput),
           );
         });
       });
