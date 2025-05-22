@@ -306,12 +306,9 @@ export async function deployScripts(
   await emulator.publishScript(vendorScript.script.Script);
 }
 
-export function treasuryOutput(
+export function scriptOutput<T, C>(
   emulator: Emulator,
-  treasuryScript: CompiledScript<
-    TreasuryTreasuryWithdraw,
-    TreasuryConfiguration
-  >,
+  treasuryScript: CompiledScript<T, C>,
   value: Core.Value,
   datum?: PlutusData,
 ) {

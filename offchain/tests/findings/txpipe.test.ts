@@ -4,12 +4,17 @@ import * as Data from "@blaze-cardano/data";
 import { Emulator } from "@blaze-cardano/emulator";
 import {
   deployScripts,
+  fund_key,
+  Funder,
+  registryToken,
   sampleTreasuryConfig,
   sampleVendorConfig,
+  scriptOutput,
   setupEmulator,
-  treasuryOutput,
+  vendor_key,
 } from "../utilities.test";
 import {
+  coreValueToContractsValue,
   loadScripts,
   loadTreasuryScript,
   unix_to_slot,
@@ -20,8 +25,15 @@ import {
   TreasuryConfiguration,
   TreasurySpendRedeemer,
   TreasuryTreasuryWithdraw,
+  VendorDatum,
+  VendorSpendRedeemer,
 } from "../../types/contracts";
-import { Address, Script } from "@blaze-cardano/core";
+import {
+  Address,
+  AssetId,
+  Ed25519KeyHashHex,
+  Script,
+} from "@blaze-cardano/core";
 
 describe("TxPipe Audit Findings", () => {
   let emulator: Emulator;
@@ -54,13 +66,13 @@ describe("TxPipe Audit Findings", () => {
         );
 
         const amount = 100_000_000n;
-        const inputA = treasuryOutput(
+        const inputA = scriptOutput(
           emulator,
           scripts_1.treasuryScript,
           makeValue(amount),
           Data.Void(),
         );
-        const inputB = treasuryOutput(
+        const inputB = scriptOutput(
           emulator,
           scripts_2.treasuryScript,
           makeValue(amount),
@@ -87,7 +99,103 @@ describe("TxPipe Audit Findings", () => {
               .addReferenceInput(refInput_2)
               .setDonation(amount)
               .payLovelace(address, amount),
-            /adsfadsf/,
+          );
+        });
+      });
+    });
+  });
+
+  describe("TRS-002", () => {});
+
+  describe("TRS-101", () => {
+    describe("the oversight committee", () => {
+      test("cannot fund invalid vendor projects", async () => {
+        const scripts = loadScripts(
+          Core.NetworkId.Testnet,
+          await sampleTreasuryConfig(emulator),
+          await sampleVendorConfig(emulator),
+        );
+        await deployScripts(emulator, scripts);
+        const refInput = emulator.lookupScript(
+          scripts.treasuryScript.script.Script,
+        );
+        let [registryPolicy, registryName] = registryToken();
+        const registryInput = emulator.utxos().find((u) =>
+          u
+            .output()
+            .amount()
+            .multiasset()
+            ?.get(AssetId(registryPolicy + registryName)),
+        )!;
+
+        const treasuryInput = scriptOutput(
+          emulator,
+          scripts.treasuryScript,
+          makeValue(200_000_000n),
+          Data.Void(),
+        );
+
+        const upperBound = unix_to_slot(
+          scripts.treasuryScript.config.expiration - 10000n,
+        );
+        const fundRedeemer = {
+          Fund: {
+            amount: coreValueToContractsValue(makeValue(100_000_000n)),
+          },
+        };
+        const vendor = {
+          Signature: {
+            key_hash: await vendor_key(emulator),
+          },
+        };
+        const firstVendor: VendorDatum = {
+          vendor: vendor,
+          payouts: [
+            {
+              maturation: 0n,
+              status: "Active",
+              value: coreValueToContractsValue(makeValue(40_000_000n)),
+            },
+          ],
+        };
+        const secondVendor: VendorDatum = {
+          vendor: vendor,
+          payouts: [
+            {
+              maturation: 0n,
+              status: "Active",
+              value: coreValueToContractsValue(makeValue(60_000_000n)),
+            },
+          ],
+        };
+
+        await emulator.as(Funder, async (blaze, address) => {
+          await emulator.expectScriptFailure(
+            blaze
+              .newTransaction()
+              .addInput(
+                treasuryInput,
+                Data.serialize(TreasurySpendRedeemer, fundRedeemer),
+              )
+              .lockAssets(
+                scripts.vendorScript.scriptAddress,
+                makeValue(50_000_000n),
+                Data.serialize(VendorDatum, firstVendor),
+              )
+              .lockAssets(
+                scripts.vendorScript.scriptAddress,
+                makeValue(50_000_000n),
+                Data.serialize(VendorDatum, secondVendor),
+              )
+              .lockAssets(
+                scripts.treasuryScript.scriptAddress,
+                makeValue(100_000_000n),
+                Data.Void(),
+              )
+              .addRequiredSigner(Ed25519KeyHashHex(await fund_key(emulator)))
+              .setValidUntil(upperBound)
+              .addReferenceInput(refInput)
+              .addReferenceInput(registryInput),
           );
         });
       });
