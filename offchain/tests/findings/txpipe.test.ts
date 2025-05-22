@@ -548,4 +548,106 @@ describe("TxPipe Audit Findings", () => {
       });
     });
   });
+
+  describe("TRS-202", () => {
+    describe("the oversight committee", () => {
+      test("cannot attach a stake redeemer when sweeping vendor funds", async () => {
+        const scripts = loadScripts(
+          Core.NetworkId.Testnet,
+          await sampleTreasuryConfig(emulator),
+          await sampleVendorConfig(emulator),
+        );
+        await deployScripts(emulator, scripts);
+        const refInput = emulator.lookupScript(
+          scripts.vendorScript.script.Script,
+        );
+        let [registryPolicy, registryName] = registryToken();
+        const registryInput = emulator.utxos().find((u) =>
+          u
+            .output()
+            .amount()
+            .multiasset()
+            ?.get(AssetId(registryPolicy + registryName)),
+        )!;
+        const vendor = {
+          Signature: {
+            key_hash: await vendor_key(emulator),
+          },
+        };
+        const vendorDatum: VendorDatum = {
+          vendor: vendor,
+          payouts: [
+            {
+              maturation: 0n,
+              status: "Active",
+              value: coreValueToContractsValue(makeValue(40_000_000n)),
+            },
+            {
+              maturation: 10n,
+              status: "Paused",
+              value: coreValueToContractsValue(makeValue(40_000_000n)),
+            },
+          ],
+        };
+        const vendorInput = scriptOutput(
+          emulator,
+          scripts.vendorScript,
+          makeValue(200_000_000n),
+          Data.serialize(VendorDatum, vendorDatum),
+        );
+        const updatedDatum: VendorDatum = {
+          vendor: vendor,
+          payouts: [
+            {
+              maturation: 0n,
+              status: "Active",
+              value: coreValueToContractsValue(makeValue(40_000_000n)),
+            },
+          ],
+        };
+
+        const future = scripts.vendorScript.config.expiration * 2n;
+
+        // Advance forward by 36 hours
+        emulator.stepForwardToSlot(future);
+
+        const fullAddress = new Core.Address({
+          type: Core.AddressType.BasePaymentScriptStakeKey,
+          networkId: Core.NetworkId.Testnet,
+          paymentPart: {
+            type: Core.CredentialType.ScriptHash,
+            hash: scripts.vendorScript.script.Script.hash(),
+          },
+          delegationPart: {
+            type: Core.CredentialType.KeyHash,
+            hash: scripts.treasuryScript.script.Script.hash(), // Just use an arbitrary hash
+          },
+        });
+
+        await emulator.as("Anyone", async (blaze, address) => {
+          await emulator.expectScriptFailure(
+            blaze
+              .newTransaction()
+              .addInput(
+                vendorInput,
+                Data.serialize(VendorSpendRedeemer, "SweepVendor"),
+              )
+              .lockAssets(
+                scripts.treasuryScript.scriptAddress,
+                makeValue(160_000_000n),
+                Data.Void(),
+              )
+              .lockAssets(
+                fullAddress,
+                makeValue(40_000_000n),
+                Data.serialize(VendorDatum, updatedDatum),
+              )
+              .setValidFrom(unix_to_slot(future))
+              .addReferenceInput(refInput)
+              .addReferenceInput(registryInput),
+          );
+        });
+      });
+    });
+  });
 });
