@@ -47,7 +47,7 @@ describe("TxPipe Audit Findings", () => {
     emulator = await setupEmulator(undefined, false);
   });
 
-  describe("TRC-001", () => {
+  describe("TRS-001", () => {
     describe("anyone", () => {
       test("cannot sweep multiple treasury scripts and steal ADA", async () => {
         const scripts_1 = loadScripts(
@@ -645,6 +645,53 @@ describe("TxPipe Audit Findings", () => {
               .setValidFrom(unix_to_slot(future))
               .addReferenceInput(refInput)
               .addReferenceInput(registryInput),
+          );
+        });
+      });
+    });
+  });
+
+  describe("TRS-203", () => {
+    describe("anyone", () => {
+      test("cannot DDOS the treasury sweep", async () => {
+        const scripts = loadScripts(
+          Core.NetworkId.Testnet,
+          await sampleTreasuryConfig(emulator),
+          await sampleVendorConfig(emulator),
+        );
+        await deployScripts(emulator, scripts);
+
+        const refInput = emulator.lookupScript(
+          scripts.treasuryScript.script.Script,
+        );
+
+        const amount = 100_000_000_000_000n;
+        const input = scriptOutput(
+          emulator,
+          scripts.treasuryScript,
+          makeValue(amount),
+          Data.Void(),
+        );
+
+        const future = scripts.treasuryScript.config.expiration * 2n;
+        emulator.stepForwardToSlot(future);
+
+        await emulator.as("Anyone", async (blaze, address) => {
+          await emulator.expectScriptFailure(
+            blaze
+              .newTransaction()
+              .addInput(
+                input,
+                Data.serialize(TreasurySpendRedeemer, "SweepTreasury"),
+              )
+              .lockLovelace(
+                scripts.treasuryScript.scriptAddress,
+                amount - 1n,
+                Data.Void(),
+              )
+              .setValidFrom(unix_to_slot(future))
+              .addReferenceInput(refInput)
+              .setDonation(1n),
           );
         });
       });
