@@ -280,4 +280,204 @@ describe("TxPipe Audit Findings", () => {
       });
     });
   });
+
+  describe("TRS-103", () => {
+    describe("the oversight committee", () => {
+      test("cannot modify future payouts via malformed redeemer", async () => {
+        const scripts = loadScripts(
+          Core.NetworkId.Testnet,
+          await sampleTreasuryConfig(emulator),
+          await sampleVendorConfig(emulator),
+        );
+        await deployScripts(emulator, scripts);
+        const refInput = emulator.lookupScript(
+          scripts.vendorScript.script.Script,
+        );
+        const vendor = {
+          Signature: {
+            key_hash: await vendor_key(emulator),
+          },
+        };
+        const vendorDatum: VendorDatum = {
+          vendor: vendor,
+          payouts: [
+            {
+              maturation: 1000n,
+              status: "Active",
+              value: coreValueToContractsValue(makeValue(20_000_000n)),
+            },
+            {
+              maturation: 2000n,
+              status: "Active",
+              value: coreValueToContractsValue(makeValue(20_000_000n)),
+            },
+          ],
+        };
+        const vendorInput = scriptOutput(
+          emulator,
+          scripts.vendorScript,
+          makeValue(200_000_000n),
+          Data.serialize(VendorDatum, vendorDatum),
+        );
+        const manipulatedVendorDatum: VendorDatum = {
+          vendor: vendor,
+          payouts: [
+            {
+              maturation: 1000n,
+              status: "Paused",
+              value: coreValueToContractsValue(makeValue(20_000_000n)),
+            },
+            {
+              maturation: 2000n,
+              status: "Active",
+              value: coreValueToContractsValue(makeValue(1_000_000n)), // Payout modified
+            },
+          ],
+        };
+
+        await emulator.as(Pauser, async (blaze, address) => {
+          await emulator.expectScriptFailure(
+            blaze
+              .newTransaction()
+              .addInput(
+                vendorInput,
+                Data.serialize(VendorSpendRedeemer, {
+                  Adjudicate: {
+                    statuses: ["Paused"],
+                  },
+                }),
+              )
+              .lockAssets(
+                scripts.vendorScript.scriptAddress,
+                makeValue(200_000_000n),
+                Data.serialize(VendorDatum, manipulatedVendorDatum),
+              )
+              .addRequiredSigner(Ed25519KeyHashHex(await pause_key(emulator)))
+              .setValidFrom(Slot(0))
+              .setValidUntil(Slot(36 * 60 * 60 + 20))
+              .addReferenceInput(refInput),
+          );
+        });
+      });
+    });
+  });
+
+  describe("TRS-104", () => {
+    describe("the oversight committee", () => {
+      test("cannot steal funds via a reused vendor script", async () => {
+        const scripts_1 = loadScripts(
+          Core.NetworkId.Testnet,
+          await sampleTreasuryConfig(emulator, 1),
+          await sampleVendorConfig(emulator, 1),
+        );
+        await deployScripts(emulator, scripts_1);
+        const scripts_2 = loadScripts(
+          Core.NetworkId.Testnet,
+          await sampleTreasuryConfig(emulator, 2),
+          await sampleVendorConfig(emulator, 1), // Vendor script gets reused
+        );
+        await deployScripts(emulator, scripts_2);
+
+        const refInput_1 = emulator.lookupScript(
+          scripts_1.treasuryScript.script.Script,
+        );
+        const refInput_2 = emulator.lookupScript(
+          scripts_2.treasuryScript.script.Script,
+        );
+        let [registryPolicy1, registryName] = registryToken(1);
+        const registryInput1 = emulator.utxos().find((u) =>
+          u
+            .output()
+            .amount()
+            .multiasset()
+            ?.get(AssetId(registryPolicy1 + registryName)),
+        )!;
+        let [registryPolicy2, _] = registryToken(2);
+        const registryInput2 = emulator.utxos().find((u) =>
+          u
+            .output()
+            .amount()
+            .multiasset()
+            ?.get(AssetId(registryPolicy2 + registryName)),
+        )!;
+
+        const amount = 100_000_000n;
+        const inputA = scriptOutput(
+          emulator,
+          scripts_1.treasuryScript,
+          makeValue(amount),
+          Data.Void(),
+        );
+        const inputB = scriptOutput(
+          emulator,
+          scripts_2.treasuryScript,
+          makeValue(amount),
+          Data.Void(),
+        );
+
+        const future = scripts_1.treasuryScript.config.expiration * 2n;
+        emulator.stepForwardToSlot(future);
+
+        const vendor = {
+          Signature: {
+            key_hash: await vendor_key(emulator),
+          },
+        };
+        const vendorDatum: VendorDatum = {
+          vendor: vendor,
+          payouts: [
+            {
+              maturation: 0n,
+              status: "Active",
+              value: coreValueToContractsValue(makeValue(10_000_000n)),
+            },
+          ],
+        };
+
+        await emulator.as(Funder, async (blaze, address) => {
+          await emulator.expectScriptFailure(
+            blaze
+              .newTransaction()
+              .addInput(
+                inputA,
+                Data.serialize(TreasurySpendRedeemer, {
+                  Fund: {
+                    amount: coreValueToContractsValue(makeValue(10_000_000n)),
+                  },
+                }),
+              )
+              .addInput(
+                inputB,
+                Data.serialize(TreasurySpendRedeemer, {
+                  Fund: {
+                    amount: coreValueToContractsValue(makeValue(10_000_000n)),
+                  },
+                }),
+              )
+              .setValidUntil(unix_to_slot(1000n))
+              .addRequiredSigner(Ed25519KeyHashHex(await fund_key(emulator)))
+              .addReferenceInput(refInput_1)
+              .addReferenceInput(refInput_2)
+              .addReferenceInput(registryInput1)
+              .addReferenceInput(registryInput2)
+              .lockLovelace(
+                scripts_1.vendorScript.scriptAddress,
+                10_000_000n,
+                Data.serialize(VendorDatum, vendorDatum),
+              )
+              .lockLovelace(
+                scripts_1.treasuryScript.scriptAddress,
+                90_000_000n,
+                Data.Void(),
+              )
+              .lockLovelace(
+                scripts_2.treasuryScript.scriptAddress,
+                90_000_000n,
+                Data.Void(),
+              ),
+          );
+        });
+      });
+    });
+  });
 });
