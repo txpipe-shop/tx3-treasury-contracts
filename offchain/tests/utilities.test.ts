@@ -17,19 +17,33 @@ import {
   Slot,
   toHex,
   wordlist,
+  Script,
+  Address,
+  PlutusData,
 } from "@blaze-cardano/core";
 import { Emulator, EmulatorProvider } from "@blaze-cardano/emulator";
-import { loadScripts, slot_to_unix } from "../shared";
+import {
+  loadScripts,
+  slot_to_unix,
+  type CompiledScript,
+  type CompiledScripts,
+} from "../shared";
 import {
   ScriptHashRegistry,
+  TreasuryTreasuryWithdraw,
   type TreasuryConfiguration,
   type VendorConfiguration,
 } from "../types/contracts";
 
-export function registryToken(): [string, string] {
+export function registryTokenName(): string {
+  return toHex(Buffer.from("REGISTRY"));
+}
+
+export function registryToken(idx?: number): [string, string] {
   return [
-    "00000000000000000000000000000000000000000000000000000000",
-    toHex(Buffer.from("REGISTRY")),
+    "0000000000000000000000000000000000000000000000000000" +
+      String(idx ?? 0).padStart(4, "0"),
+    registryTokenName(),
   ];
 }
 
@@ -84,11 +98,12 @@ export async function vendor_key(emulator: Emulator) {
 
 export async function sampleTreasuryConfig(
   emulator: Emulator,
+  idx?: number,
 ): Promise<TreasuryConfiguration> {
-  const [policyId, _] = registryToken();
+  const [policyId, _] = registryToken(idx);
   return {
     registry_token: policyId,
-    expiration: slot_to_unix(Slot(36 * 60 * 60 + 10)),
+    expiration: slot_to_unix(Slot(36 * 60 * 60 + 10 * (idx ?? 0))),
     payout_upperbound: slot_to_unix(Slot(45 * 60 * 60)),
     permissions: {
       sweep: {
@@ -117,11 +132,12 @@ export async function sampleTreasuryConfig(
 
 export async function sampleVendorConfig(
   emulator: Emulator,
+  idx?: number,
 ): Promise<VendorConfiguration> {
-  const [policyId, _] = registryToken();
+  const [policyId, _] = registryToken(idx);
   return {
     registry_token: policyId,
-    expiration: slot_to_unix(Slot(60 * 60 * 60 + 10)),
+    expiration: slot_to_unix(Slot(60 * 60 * 60 + 10 * (idx ?? 0))),
     permissions: {
       pause: {
         Signature: {
@@ -146,7 +162,10 @@ export function blocks(slot: Slot): number {
   return slot / 20;
 }
 
-export async function setupEmulator(txOuts: Core.TransactionOutput[] = []) {
+export async function setupEmulator(
+  txOuts: Core.TransactionOutput[] = [],
+  deployDefaultScripts: boolean = true,
+) {
   // TODO: custom protocol parameters needed for plutus v3?
   const protocolParameters = {
     coinsPerUtxoByte: 4310,
@@ -239,13 +258,37 @@ export async function setupEmulator(txOuts: Core.TransactionOutput[] = []) {
 
   const emulator = new Emulator(txOuts, protocolParameters);
 
-  const { treasuryScript, vendorScript } = loadScripts(
-    Core.NetworkId.Testnet,
-    await sampleTreasuryConfig(emulator),
-    await sampleVendorConfig(emulator),
-  );
+  if (deployDefaultScripts) {
+    deployScripts(
+      emulator,
+      loadScripts(
+        Core.NetworkId.Testnet,
+        await sampleTreasuryConfig(emulator),
+        await sampleVendorConfig(emulator),
+      ),
+    );
+  }
 
-  const [registryPolicy, registryName] = registryToken();
+  await emulator.register("MaliciousUser");
+  await emulator.register(
+    "Anyone",
+    makeValue(5_000_000n, ["a".repeat(56), 1n]),
+  );
+  await emulator.fund("Anyone", makeValue(1000_000_000n));
+
+  return emulator;
+}
+
+export async function deployScripts(
+  emulator: Emulator,
+  scripts: CompiledScripts,
+) {
+  const { treasuryScript, vendorScript } = scripts;
+
+  const [registryPolicy, registryName] = [
+    scripts.treasuryScript.config.registry_token,
+    registryTokenName(),
+  ];
   await emulator.register(
     "Registry",
     makeValue(5_000_000n, [registryPolicy + registryName, 1n]),
@@ -261,12 +304,27 @@ export async function setupEmulator(txOuts: Core.TransactionOutput[] = []) {
 
   await emulator.publishScript(treasuryScript.script.Script);
   await emulator.publishScript(vendorScript.script.Script);
-  await emulator.register("MaliciousUser");
-  await emulator.register(
-    "Anyone",
-    makeValue(5_000_000n, ["a".repeat(56), 1n]),
-  );
-  await emulator.fund("Anyone", makeValue(1000_000_000n));
+}
 
-  return emulator;
+export function treasuryOutput(
+  emulator: Emulator,
+  treasuryScript: CompiledScript<
+    TreasuryTreasuryWithdraw,
+    TreasuryConfiguration
+  >,
+  value: Core.Value,
+  datum?: PlutusData,
+) {
+  const output = new Core.TransactionUnspentOutput(
+    new Core.TransactionInput(
+      Core.TransactionId("1".repeat(64)),
+      BigInt(emulator.utxos().length), // By using emulator.utxos().length we ensure this is unique, if a bit large
+    ),
+    new Core.TransactionOutput(treasuryScript.scriptAddress, value),
+  );
+  if (datum) {
+    output.output().setDatum(Core.Datum.newInlineData(datum));
+  }
+  emulator.addUtxo(output);
+  return output;
 }

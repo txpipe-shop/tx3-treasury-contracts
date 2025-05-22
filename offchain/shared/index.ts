@@ -5,12 +5,26 @@ import {
   VendorConfiguration,
   VendorVendorSpend,
 } from "../types/contracts";
-import { Slot, Value } from "@blaze-cardano/core";
+import {
+  Address,
+  RewardAccount,
+  Slot,
+  Value,
+  type CredentialCore,
+} from "@blaze-cardano/core";
+
+export interface CompiledScript<T, C> {
+  config: C;
+  script: T;
+  credential: CredentialCore;
+  rewardAccount?: RewardAccount;
+  scriptAddress: Address;
+}
 
 export function loadTreasuryScript(
   network: Core.NetworkId,
   config: TreasuryConfiguration,
-) {
+): CompiledScript<TreasuryTreasuryWithdraw, TreasuryConfiguration> {
   const script = new TreasuryTreasuryWithdraw(config);
   const credential = {
     type: Core.CredentialType.ScriptHash,
@@ -23,6 +37,7 @@ export function loadTreasuryScript(
     paymentPart: credential,
   });
   return {
+    config,
     script,
     credential,
     rewardAccount,
@@ -33,7 +48,7 @@ export function loadTreasuryScript(
 export function loadVendorScript(
   network: Core.NetworkId,
   config: VendorConfiguration,
-) {
+): CompiledScript<VendorVendorSpend, VendorConfiguration> {
   const script = new VendorVendorSpend(config);
   const credential = {
     type: Core.CredentialType.ScriptHash,
@@ -45,17 +60,26 @@ export function loadVendorScript(
     paymentPart: credential,
   });
   return {
+    config,
     script,
     credential,
     scriptAddress,
   };
 }
 
+export interface CompiledScripts {
+  treasuryScript: CompiledScript<
+    TreasuryTreasuryWithdraw,
+    TreasuryConfiguration
+  >;
+  vendorScript: CompiledScript<VendorVendorSpend, VendorConfiguration>;
+}
+
 export function loadScripts(
   network: Core.NetworkId,
   treasuryConfig: TreasuryConfiguration,
   vendorConfig: VendorConfiguration,
-) {
+): CompiledScripts {
   const treasuryScript = loadTreasuryScript(network, treasuryConfig);
   const vendorScript = loadVendorScript(network, vendorConfig);
   return {
