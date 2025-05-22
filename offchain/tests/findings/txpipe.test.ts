@@ -6,6 +6,8 @@ import {
   deployScripts,
   fund_key,
   Funder,
+  pause_key,
+  Pauser,
   registryToken,
   sampleTreasuryConfig,
   sampleVendorConfig,
@@ -33,6 +35,7 @@ import {
   AssetId,
   Ed25519KeyHashHex,
   Script,
+  Slot,
 } from "@blaze-cardano/core";
 
 describe("TxPipe Audit Findings", () => {
@@ -196,6 +199,82 @@ describe("TxPipe Audit Findings", () => {
               .setValidUntil(upperBound)
               .addReferenceInput(refInput)
               .addReferenceInput(registryInput),
+          );
+        });
+      });
+    });
+  });
+
+  describe("TRS-102", () => {
+    describe("the oversight committee", () => {
+      test("cannot pause rewards by manipulating validFrom", async () => {
+        const scripts = loadScripts(
+          Core.NetworkId.Testnet,
+          await sampleTreasuryConfig(emulator),
+          await sampleVendorConfig(emulator),
+        );
+        await deployScripts(emulator, scripts);
+        const refInput = emulator.lookupScript(
+          scripts.vendorScript.script.Script,
+        );
+        const vendor = {
+          Signature: {
+            key_hash: await vendor_key(emulator),
+          },
+        };
+        const vendorDatum: VendorDatum = {
+          vendor: vendor,
+          payouts: [
+            {
+              maturation: 1000n,
+              status: "Active",
+              value: coreValueToContractsValue(makeValue(40_000_000n)),
+            },
+          ],
+        };
+        const vendorInput = scriptOutput(
+          emulator,
+          scripts.vendorScript,
+          makeValue(200_000_000n),
+          Data.serialize(VendorDatum, vendorDatum),
+        );
+        const pausedVendorDatum: VendorDatum = {
+          vendor: vendor,
+          payouts: [
+            {
+              maturation: 1000n,
+              status: "Paused",
+              value: coreValueToContractsValue(makeValue(40_000_000n)),
+            },
+          ],
+        };
+
+        const lowerBound = 0n;
+
+        // Advance forward by 36 hours
+        emulator.stepForwardToSlot(36 * 60 * 60 + 10);
+
+        await emulator.as(Pauser, async (blaze, address) => {
+          await emulator.expectScriptFailure(
+            blaze
+              .newTransaction()
+              .addInput(
+                vendorInput,
+                Data.serialize(VendorSpendRedeemer, {
+                  Adjudicate: {
+                    statuses: ["Paused"],
+                  },
+                }),
+              )
+              .lockAssets(
+                scripts.vendorScript.scriptAddress,
+                makeValue(200_000_000n),
+                Data.serialize(VendorDatum, pausedVendorDatum),
+              )
+              .addRequiredSigner(Ed25519KeyHashHex(await pause_key(emulator)))
+              .setValidFrom(Slot(0))
+              .setValidUntil(Slot(36 * 60 * 60 + 20))
+              .addReferenceInput(refInput),
           );
         });
       });
