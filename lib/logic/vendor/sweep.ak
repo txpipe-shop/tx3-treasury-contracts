@@ -31,7 +31,13 @@ pub fn logic(
   expect is_entirely_after(validity_range, config.expiration)
 
   let inputs = outputs_of(inputs)
-  let treasury_input_sum = value_sum(inputs, registry.treasury, True)
+  expect
+    option.is_none(
+      inputs
+        |> list.find(
+            fn(input) { input.address.payment_credential == registry.treasury },
+          ),
+    )
 
   // We choose to only handle sweeping one UTxO at a time,
   // to simplify the contract logic
@@ -67,11 +73,7 @@ pub fn logic(
   let treasury_output_sum = value_sum(outputs, registry.treasury, False)
 
   let swept_value = assets.merge(input.value, assets.negate(matured_value))
-  expect
-    equal_plus_min_ada(
-      assets.merge(treasury_input_sum, swept_value),
-      treasury_output_sum,
-    )
+  expect equal_plus_min_ada(swept_value, treasury_output_sum)
   expect
     when expected_payouts is {
       [] -> vendor_outputs == []
