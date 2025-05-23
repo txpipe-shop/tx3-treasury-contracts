@@ -110,6 +110,69 @@ describe("TxPipe Audit Findings", () => {
     });
   });
 
+  describe("TRS-002", () => {
+    describe("anyone", () => {
+      test("cannot double-satisfy vendors with an extra withdrawal", async () => {
+        const scripts = loadScripts(
+          Core.NetworkId.Testnet,
+          await sampleTreasuryConfig(emulator),
+          await sampleVendorConfig(emulator),
+        );
+        await deployScripts(emulator, scripts);
+        const treasuryRefInput = emulator.lookupScript(
+          scripts.treasuryScript.script.Script,
+        );
+        const vendorRefInput = emulator.lookupScript(
+          scripts.vendorScript.script.Script,
+        );
+        let [registryPolicy, registryName] = registryToken();
+        const registryInput = emulator.utxos().find((u) =>
+          u
+            .output()
+            .amount()
+            .multiasset()
+            ?.get(AssetId(registryPolicy + registryName)),
+        )!;
+        const amount = 200_000_000n;
+        const malformedInput = scriptOutput(
+          emulator,
+          scripts.vendorScript,
+          makeValue(amount),
+          Data.Void(),
+        );
+        emulator.accounts.set(scripts.treasuryScript.rewardAccount!, amount);
+        await emulator.as(Reorganizer, async (blaze) => {
+          await emulator.expectScriptFailure(
+            blaze
+              .newTransaction()
+              .addWithdrawal(
+                scripts.treasuryScript.rewardAccount!,
+                amount,
+                Data.Void(),
+              )
+              .addInput(
+                malformedInput,
+                Data.serialize(VendorSpendRedeemer, "Malformed"),
+              )
+              .lockAssets(
+                scripts.treasuryScript.scriptAddress,
+                makeValue(200_000_000n),
+                Data.Void(),
+              )
+              .addRequiredSigner(
+                Ed25519KeyHashHex(await reorganize_key(emulator)),
+              )
+              .setValidFrom(Slot(0))
+              .setValidUntil(Slot(10))
+              .addReferenceInput(treasuryRefInput)
+              .addReferenceInput(vendorRefInput)
+              .addReferenceInput(registryInput),
+          );
+        });
+      });
+    });
+  });
+
   describe("TRS-002", () => {});
 
   describe("TRS-101", () => {

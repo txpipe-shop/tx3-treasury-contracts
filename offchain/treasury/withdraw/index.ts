@@ -23,7 +23,7 @@ export async function withdraw<P extends Provider, W extends Wallet>(
     throw new Error("Could not find treasury script reference on-chain");
   return blaze
     .newTransaction()
-    .addWithdrawal(rewardAccount, amount, Data.Void())
+    .addWithdrawal(rewardAccount!, amount, Data.Void())
     .addReferenceInput(refInput)
     .lockLovelace(scriptAddress, amount, Data.Void());
 }

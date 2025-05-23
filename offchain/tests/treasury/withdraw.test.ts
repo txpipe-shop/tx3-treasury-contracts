@@ -21,7 +21,7 @@ describe("When withdrawing", () => {
     emulator = await setupEmulator();
     config = await sampleTreasuryConfig(emulator);
     const treasury = loadTreasuryScript(Core.NetworkId.Testnet, config);
-    rewardAccount = treasury.rewardAccount;
+    rewardAccount = treasury.rewardAccount!;
     scriptAddress = treasury.scriptAddress;
     treasuryScript = treasury.script.Script;
     emulator.accounts.set(rewardAccount, amount);
