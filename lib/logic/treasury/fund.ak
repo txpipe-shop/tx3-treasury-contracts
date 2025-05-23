@@ -3,24 +3,20 @@ use cardano/address.{Credential}
 use cardano/assets.{Value, merge, negate}
 use cardano/transaction.{Transaction}
 use sundae/multisig.{satisfied}
-use types.{TreasuryConfiguration}
-use utilities.{
-  equal_plus_min_ada, find_script_hash_registry, outputs_of, payout_sum,
-  value_sum,
-}
+use types.{ScriptHashRegistry, TreasuryConfiguration}
+use utilities.{equal_plus_min_ada, outputs_of, payout_sum, value_sum}
 
 // Pay out funds to the vendor script, to fund a new project
 pub fn logic(
   config: TreasuryConfiguration,
   account: Credential,
   amount: Value,
+  registry: ScriptHashRegistry,
   transaction: Transaction,
 ) {
-  let TreasuryConfiguration { registry_token, expiration, permissions, .. } =
-    config
+  let TreasuryConfiguration { expiration, permissions, .. } = config
   let Transaction {
     inputs,
-    reference_inputs,
     outputs,
     validity_range,
     extra_signatories,
@@ -28,8 +24,6 @@ pub fn logic(
     ..
   } = transaction
 
-  // Find the script hash registry, so we know the vendor script hash
-  let registry = find_script_hash_registry(reference_inputs, registry_token)
   // We need to make sure that the expected amount leaves the control of the treasury script
   // This means summing up the outputs and inputs at each script
   let input_sum = value_sum(outputs_of(inputs), account, True)

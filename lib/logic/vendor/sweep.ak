@@ -4,10 +4,8 @@ use aiken/option
 use cardano/address.{Credential}
 use cardano/assets
 use cardano/transaction.{InlineDatum, Transaction}
-use types.{Active, VendorConfiguration, VendorDatum}
-use utilities.{
-  equal_plus_min_ada, find_script_hash_registry, outputs_of, value_sum,
-}
+use types.{Active, ScriptHashRegistry, VendorConfiguration, VendorDatum}
+use utilities.{equal_plus_min_ada, outputs_of, value_sum}
 
 // After the expiration, all paused, unmatured funds can be swept back to the treasury contract
 // (and thus back to the cardano treasury).
@@ -19,13 +17,10 @@ use utilities.{
 pub fn logic(
   config: VendorConfiguration,
   account: Credential,
+  registry: ScriptHashRegistry,
   transaction: Transaction,
 ) {
-  let VendorConfiguration { registry_token, .. } = config
-  let Transaction { inputs, reference_inputs, outputs, validity_range, .. } =
-    transaction
-
-  let registry = find_script_hash_registry(reference_inputs, registry_token)
+  let Transaction { inputs, outputs, validity_range, .. } = transaction
 
   // Can only sweep after the global expiration
   expect is_entirely_after(validity_range, config.expiration)
