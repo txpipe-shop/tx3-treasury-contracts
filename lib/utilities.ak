@@ -102,6 +102,7 @@ pub fn payout_sum(
                     }
                   },
                 )
+          expect equal_plus_min_ada(this_payout_sum, output.value)
           assets.merge(total, this_payout_sum)
         },
       )

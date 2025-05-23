@@ -26,8 +26,9 @@ pub fn logic(
 
   // We need to make sure that the expected amount leaves the control of the treasury script
   // This means summing up the outputs and inputs at each script
-  let input_sum = value_sum(outputs_of(inputs), account, True)
-  let input_vendor_sum = value_sum(outputs_of(inputs), registry.vendor, True)
+  let inputs = outputs_of(inputs)
+  let input_sum = value_sum(inputs, account, True)
+  let input_vendor_sum = value_sum(inputs, registry.vendor, True)
   let output_sum = value_sum(outputs, account, False)
   let output_vendor_sum = value_sum(outputs, registry.vendor, False)
 
