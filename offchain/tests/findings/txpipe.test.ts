@@ -16,22 +16,22 @@ import {
   scriptOutput,
   setupEmulator,
   vendor_key,
-} from "../utilities.test";
+} from "../utilities";
 import {
   coreValueToContractsValue,
   loadScripts,
   loadTreasuryScript,
   unix_to_slot,
   type CompiledScript,
-} from "../../shared";
-import { sweep } from "../../treasury/sweep";
+} from "../../src/shared";
+import { sweep } from "../../src/treasury/sweep";
 import {
   TreasuryConfiguration,
   TreasurySpendRedeemer,
   TreasuryTreasuryWithdraw,
   VendorDatum,
   VendorSpendRedeemer,
-} from "../../types/contracts";
+} from "../../src/types/contracts";
 import {
   Address,
   AssetId,

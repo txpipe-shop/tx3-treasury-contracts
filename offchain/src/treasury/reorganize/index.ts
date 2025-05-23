@@ -1,31 +1,31 @@
 import {
-  makeValue,
   TxBuilder,
-  Value,
   type Blaze,
   type Provider,
   type Wallet,
 } from "@blaze-cardano/sdk";
 import {
   AssetId,
+  Ed25519KeyHashHex,
   Slot,
   toHex,
   TransactionUnspentOutput,
+  Value,
 } from "@blaze-cardano/core";
 import * as Data from "@blaze-cardano/data";
-import { loadTreasuryScript, unix_to_slot } from "../../shared";
+import { loadTreasuryScript } from "../../shared";
 import {
   TreasuryConfiguration,
   TreasurySpendRedeemer,
 } from "../../types/contracts";
 
-export async function sweep<P extends Provider, W extends Wallet>(
+export async function reorganize<P extends Provider, W extends Wallet>(
   config: TreasuryConfiguration,
-  input: TransactionUnspentOutput,
   blaze: Blaze<P, W>,
-  amount?: bigint,
+  inputs: TransactionUnspentOutput[],
+  outputAmounts: Value[],
+  signers: Ed25519KeyHashHex[],
 ): Promise<TxBuilder> {
-  amount ??= input.output().amount().coin();
   const { script, scriptAddress } = loadTreasuryScript(
     blaze.provider.network,
     config,
@@ -38,15 +38,23 @@ export async function sweep<P extends Provider, W extends Wallet>(
     throw new Error("Could not find treasury script reference on-chain");
   let tx = blaze
     .newTransaction()
-    .addInput(input, Data.serialize(TreasurySpendRedeemer, "SweepTreasury"))
-    .setValidFrom(unix_to_slot(config.expiration + 1000n))
+    .setValidUntil(Slot(Number(config.expiration / 1000n) - 1))
     .addReferenceInput(registryInput)
-    .addReferenceInput(refInput)
-    .setDonation(amount);
+    .addReferenceInput(refInput);
 
-  let remainder = Value.merge(input.output().amount(), makeValue(-amount));
-  if (remainder !== Value.zero()) {
-    tx = tx.lockAssets(scriptAddress, remainder, Data.Void());
+  for (const signer of signers) {
+    tx = tx.addRequiredSigner(signer);
+  }
+
+  for (const input of inputs) {
+    tx = tx.addInput(
+      input,
+      Data.serialize(TreasurySpendRedeemer, "Reorganize"),
+    );
+  }
+
+  for (const outputAmount of outputAmounts) {
+    tx = tx.lockAssets(scriptAddress, outputAmount, Data.Void());
   }
 
   return tx;

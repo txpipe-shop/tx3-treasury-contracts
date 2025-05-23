@@ -1,5 +1,3 @@
-import { beforeEach, describe, test } from "bun:test";
-import { Core, makeValue } from "@blaze-cardano/sdk";
 import {
   Address,
   AssetId,
@@ -7,8 +5,24 @@ import {
   RewardAccount,
   Slot,
 } from "@blaze-cardano/core";
-import { Emulator } from "@blaze-cardano/emulator";
 import * as Data from "@blaze-cardano/data";
+import { Emulator } from "@blaze-cardano/emulator";
+import { Core, makeValue } from "@blaze-cardano/sdk";
+import { beforeEach, describe, test } from "bun:test";
+import {
+  coreValueToContractsValue,
+  loadTreasuryScript,
+  loadVendorScript,
+  slot_to_unix,
+} from "../../src/shared";
+import {
+  MultisigScript,
+  VendorConfiguration,
+  VendorDatum,
+  VendorSpendRedeemer,
+  VendorVendorSpend,
+} from "../../src/types/contracts";
+import { withdraw } from "../../src/vendor/withdraw";
 import {
   registryToken,
   sampleTreasuryConfig,
@@ -16,21 +30,7 @@ import {
   setupEmulator,
   Vendor,
   vendor_key,
-} from "../utilities.test";
-import {
-  loadTreasuryScript,
-  loadVendorScript,
-  coreValueToContractsValue,
-  slot_to_unix,
-} from "../../shared";
-import {
-  MultisigScript,
-  VendorConfiguration,
-  VendorDatum,
-  VendorSpendRedeemer,
-  VendorVendorSpend,
-} from "../../types/contracts";
-import { withdraw } from "../../vendor/withdraw";
+} from "../utilities";
 
 describe("When withdrawing from the vendor script", () => {
   const amount = 340_000_000_000_000n;
@@ -362,7 +362,7 @@ describe("When withdrawing from the vendor script", () => {
     });
     test("cannot steal unmatured payout", async () => {
       await emulator.as(Vendor, async (blaze) => {
-        let datum: VendorDatum = {
+        const datum: VendorDatum = {
           vendor,
           payouts: [
             {
@@ -395,7 +395,7 @@ describe("When withdrawing from the vendor script", () => {
     test("cannot leave matured payouts", async () => {
       await emulator.as(Vendor, async (blaze) => {
         emulator.stepForwardToSlot(3n);
-        let datum: VendorDatum = {
+        const datum: VendorDatum = {
           vendor,
           payouts: [
             {
@@ -435,7 +435,7 @@ describe("When withdrawing from the vendor script", () => {
     test("cannot change future payouts dates", async () => {
       await emulator.as(Vendor, async (blaze) => {
         emulator.stepForwardToSlot(2n);
-        let datum: VendorDatum = {
+        const datum: VendorDatum = {
           vendor,
           payouts: [
             {
@@ -475,7 +475,7 @@ describe("When withdrawing from the vendor script", () => {
     test("cannot change future payouts amounts", async () => {
       await emulator.as(Vendor, async (blaze) => {
         emulator.stepForwardToSlot(2n);
-        let datum: VendorDatum = {
+        const datum: VendorDatum = {
           vendor,
           payouts: [
             {
@@ -515,7 +515,7 @@ describe("When withdrawing from the vendor script", () => {
     test("cannot unpause future payouts", async () => {
       await emulator.as(Vendor, async (blaze) => {
         emulator.stepForwardToSlot(2n);
-        let datum: VendorDatum = {
+        const datum: VendorDatum = {
           vendor,
           payouts: [
             {
@@ -553,7 +553,7 @@ describe("When withdrawing from the vendor script", () => {
     test("cannot pause future payouts", async () => {
       await emulator.as(Vendor, async (blaze) => {
         emulator.stepForwardToSlot(2n);
-        let datum: VendorDatum = {
+        const datum: VendorDatum = {
           vendor,
           payouts: [
             {
@@ -591,7 +591,7 @@ describe("When withdrawing from the vendor script", () => {
     test("cannot add native assets", async () => {
       await emulator.as(Vendor, async (blaze) => {
         emulator.stepForwardToSlot(2n);
-        let datum: VendorDatum = {
+        const datum: VendorDatum = {
           vendor,
           payouts: [
             {
@@ -622,7 +622,7 @@ describe("When withdrawing from the vendor script", () => {
               makeValue(20_000_000n, ["b".repeat(56), 100n]),
               Data.serialize(VendorDatum, datum),
             ),
-          /        Trace equal_plus_min_ada\(expected_output_value, vendor_output.value\)/,
+          / {8}Trace equal_plus_min_ada\(expected_output_value, vendor_output.value\)/,
         );
       });
     });

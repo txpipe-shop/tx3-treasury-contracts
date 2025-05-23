@@ -1,21 +1,21 @@
 import { beforeEach, describe, test } from "bun:test";
-import { Core, makeValue } from "@blaze-cardano/sdk";
 import * as Data from "@blaze-cardano/data";
 import { Emulator } from "@blaze-cardano/emulator";
-import { withdraw } from "../../treasury/withdraw";
+import { withdraw } from "../../src/treasury/withdraw";
 import {
   registryToken,
   sampleTreasuryConfig,
   setupEmulator,
-} from "../utilities.test";
-import { loadTreasuryScript } from "../../shared";
-import type { TreasuryConfiguration } from "../../types/contracts";
+} from "../utilities";
+import { loadTreasuryScript } from "../../src/shared";
+import type { TreasuryConfiguration } from "../../src/types/contracts";
 import {
   AssetId,
   type Address,
   type RewardAccount,
   type Script,
 } from "@blaze-cardano/core";
+import { Core, makeValue } from "@blaze-cardano/sdk";
 
 describe("When withdrawing", () => {
   const amount = 340_000_000_000_000n;
@@ -129,8 +129,8 @@ describe("When withdrawing", () => {
       });
     });
     test("cannot attach a staking address", async () => {
-      await emulator.as("MalicuiousUser", async (blaze, address) => {
-        let fullAddress = new Core.Address({
+      await emulator.as("MalicuiousUser", async (blaze) => {
+        const fullAddress = new Core.Address({
           type: Core.AddressType.BasePaymentScriptStakeKey,
           networkId: Core.NetworkId.Testnet,
           paymentPart: {
@@ -153,7 +153,7 @@ describe("When withdrawing", () => {
       });
     });
     test("cannot spend from treasury script while withdrawing", async () => {
-      await emulator.as("MalicuiousUser", async (blaze, address) => {
+      await emulator.as("MalicuiousUser", async (blaze) => {
         const scriptUtxo = new Core.TransactionUnspentOutput(
           new Core.TransactionInput(Core.TransactionId("0".repeat(64)), 0n),
           new Core.TransactionOutput(scriptAddress, makeValue(5_000_000_000n)),

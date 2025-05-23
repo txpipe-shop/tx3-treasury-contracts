@@ -1,21 +1,13 @@
-import { beforeEach, describe, test } from "bun:test";
-import { Core, makeValue } from "@blaze-cardano/sdk";
 import { Address, AssetId, RewardAccount } from "@blaze-cardano/core";
-import { Emulator } from "@blaze-cardano/emulator";
 import * as Data from "@blaze-cardano/data";
+import { Emulator } from "@blaze-cardano/emulator";
+import { Core, makeValue } from "@blaze-cardano/sdk";
+import { beforeEach, describe, test } from "bun:test";
 import {
-  registryToken,
-  reorganize_key,
-  sampleTreasuryConfig,
-  sampleVendorConfig,
-  setupEmulator,
-} from "../utilities.test";
-import {
-  coreValueToContractsValue as translateValue,
+  coreValueToContractsValue,
   loadTreasuryScript,
   loadVendorScript,
-  coreValueToContractsValue,
-} from "../../shared";
+} from "../../src/shared";
 import {
   MultisigScript,
   VendorConfiguration,
@@ -24,8 +16,15 @@ import {
   VendorVendorSpend,
   type TreasuryConfiguration,
   type TreasuryTreasuryWithdraw,
-} from "../../types/contracts";
-import { sweep_malformed } from "../../vendor/malformed";
+} from "../../src/types/contracts";
+import { sweep_malformed } from "../../src/vendor/malformed";
+import {
+  registryToken,
+  reorganize_key,
+  sampleTreasuryConfig,
+  sampleVendorConfig,
+  setupEmulator,
+} from "../utilities";
 
 describe("With a malformed datum", () => {
   const amount = 340_000_000_000_000n;
@@ -99,7 +98,7 @@ describe("With a malformed datum", () => {
     thirdScriptInput.output().setDatum(Core.Datum.newInlineData(Data.Void()));
     emulator.addUtxo(thirdScriptInput);
     // TODO: update blaze to allow spending null datums for plutus v3
-    let vendorDatum: VendorDatum = {
+    const vendorDatum: VendorDatum = {
       vendor: vendor,
       payouts: [
         {
@@ -120,7 +119,7 @@ describe("With a malformed datum", () => {
       );
     emulator.addUtxo(fourthScriptInput);
 
-    let [registryPolicy, registryName] = registryToken();
+    const [registryPolicy, registryName] = registryToken();
     registryInput = emulator.utxos().find((u) =>
       u
         .output()
@@ -165,7 +164,7 @@ describe("With a malformed datum", () => {
       await emulator.as("Anyone", async (blaze) => {
         await emulator.expectScriptFailure(
           await sweep_malformed(configs, [fourthScriptInput], blaze),
-          /Trace expect\n                  inputs\n                    |> list.filter\(/,
+          /Trace expect\n {18}inputs\n {20}|> list.filter\(/,
         );
       });
     });
@@ -186,7 +185,7 @@ describe("With a malformed datum", () => {
     });
     test("cannot attach stake address", async () => {
       await emulator.as("Anyone", async (blaze) => {
-        let fullAddress = new Core.Address({
+        const fullAddress = new Core.Address({
           type: Core.AddressType.BasePaymentScriptStakeKey,
           networkId: Core.NetworkId.Testnet,
           paymentPart: {
@@ -208,7 +207,7 @@ describe("With a malformed datum", () => {
               Data.serialize(VendorSpendRedeemer, "Malformed"),
             )
             .lockAssets(fullAddress, makeValue(500_000_000_000n), Data.Void()),
-          /Trace expect or {\n                            allow_stake,/,
+          /Trace expect or {\n {28}allow_stake,/,
         );
       });
     });
