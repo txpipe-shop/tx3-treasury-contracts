@@ -3,7 +3,7 @@
     "source.fixAll.eslint": "always",
     "source.organizeImports": "explicit"
   },
-  "editor.formatOnSave": true, // Disable default formatter if ESLint is handling formatting
+  "editor.formatOnSave": true,
   "eslint.format.enable": true,
   "eslint.useFlatConfig": true
 }
