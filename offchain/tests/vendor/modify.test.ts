@@ -16,7 +16,7 @@ import {
   loadVendorScript,
   slot_to_unix,
   unix_to_slot,
-} from "../../shared";
+} from "../../src/shared";
 import {
   MultisigScript,
   TreasuryConfiguration,
@@ -24,8 +24,8 @@ import {
   VendorDatum,
   VendorSpendRedeemer,
   VendorVendorSpend,
-} from "../../types/contracts";
-import { cancel, modify } from "../../vendor/modify";
+} from "../../src/types/contracts";
+import { cancel, modify } from "../../src/vendor/modify";
 import {
   Modifier,
   modify_key,
@@ -35,7 +35,7 @@ import {
   setupEmulator,
   Vendor,
   vendor_key,
-} from "../utilities.test";
+} from "../utilities";
 
 describe("", () => {
   const amount = 340_000_000_000_000n;

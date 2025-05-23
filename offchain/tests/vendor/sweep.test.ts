@@ -9,7 +9,7 @@ import {
   loadVendorScript,
   slot_to_unix,
   unix_to_slot,
-} from "../../shared";
+} from "../../src/shared";
 import {
   MultisigScript,
   VendorConfiguration,
@@ -17,15 +17,15 @@ import {
   VendorSpendRedeemer,
   VendorVendorSpend,
   type TreasuryConfiguration,
-} from "../../types/contracts";
-import { sweep } from "../../vendor/sweep";
+} from "../../src/types/contracts";
+import { sweep } from "../../src/vendor/sweep";
 import {
   registryToken,
   sampleTreasuryConfig,
   sampleVendorConfig,
   setupEmulator,
   vendor_key,
-} from "../utilities.test";
+} from "../utilities";
 
 describe("", () => {
   const amount = 340_000_000_000_000n;

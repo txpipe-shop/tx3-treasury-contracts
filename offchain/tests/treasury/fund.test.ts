@@ -14,8 +14,8 @@ import {
   loadVendorScript,
   slot_to_unix,
   coreValueToContractsValue as translateValue,
-} from "../../shared";
-import { fund } from "../../treasury/fund";
+} from "../../src/shared";
+import { fund } from "../../src/treasury/fund";
 import {
   MultisigScript,
   TreasurySpendRedeemer,
@@ -24,7 +24,7 @@ import {
   VendorVendorSpend,
   type TreasuryConfiguration,
   type TreasuryTreasuryWithdraw,
-} from "../../types/contracts";
+} from "../../src/types/contracts";
 import {
   Funder,
   fund_key,
@@ -33,7 +33,7 @@ import {
   sampleTreasuryConfig,
   sampleVendorConfig,
   setupEmulator,
-} from "../utilities.test";
+} from "../utilities";
 
 describe("When funding", () => {
   const amount = 340_000_000_000_000n;

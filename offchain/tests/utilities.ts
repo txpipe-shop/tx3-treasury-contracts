@@ -2,12 +2,13 @@ import { Slot, toHex } from "@blaze-cardano/core";
 import * as Data from "@blaze-cardano/data";
 import { Emulator } from "@blaze-cardano/emulator";
 import { Core, makeValue } from "@blaze-cardano/sdk";
-import { loadScripts, slot_to_unix } from "../shared";
+
+import { loadScripts, slot_to_unix } from "../src/shared";
 import {
   ScriptHashRegistry,
   type TreasuryConfiguration,
   type VendorConfiguration,
-} from "../types/contracts";
+} from "../src/types/contracts";
 
 export function registryToken(): [string, string] {
   return [
@@ -85,7 +86,7 @@ export async function sampleTreasuryConfig(
   emulator: Emulator,
 ): Promise<TreasuryConfiguration> {
   const [policyId] = registryToken();
-  return {
+  const config = {
     registry_token: policyId,
     expiration: slot_to_unix(Slot(36 * 60 * 60 + 10)),
     payout_upperbound: slot_to_unix(Slot(45 * 60 * 60)),
@@ -112,6 +113,8 @@ export async function sampleTreasuryConfig(
       },
     },
   };
+
+  return config;
 }
 
 export async function sampleVendorConfig(

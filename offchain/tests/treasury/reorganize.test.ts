@@ -3,19 +3,19 @@ import * as Data from "@blaze-cardano/data";
 import { Emulator } from "@blaze-cardano/emulator";
 import { Core, makeValue } from "@blaze-cardano/sdk";
 import { beforeEach, describe, test } from "bun:test";
-import { loadTreasuryScript, unix_to_slot } from "../../shared";
-import { reorganize } from "../../treasury/reorganize";
+import { loadTreasuryScript, unix_to_slot } from "../../src/shared";
+import { reorganize } from "../../src/treasury/reorganize";
 import {
   TreasurySpendRedeemer,
   type TreasuryConfiguration,
   type TreasuryTreasuryWithdraw,
-} from "../../types/contracts";
+} from "../../src/types/contracts";
 import {
   reorganize_key,
   Reorganizer,
   sampleTreasuryConfig,
   setupEmulator,
-} from "../utilities.test";
+} from "../utilities";
 
 describe("When reorganizing", () => {
   const amount = 340_000_000_000_000n;

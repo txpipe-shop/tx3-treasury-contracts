@@ -7,7 +7,7 @@ import {
   coreValueToContractsValue,
   loadTreasuryScript,
   loadVendorScript,
-} from "../../shared";
+} from "../../src/shared";
 import {
   MultisigScript,
   VendorConfiguration,
@@ -16,15 +16,15 @@ import {
   VendorVendorSpend,
   type TreasuryConfiguration,
   type TreasuryTreasuryWithdraw,
-} from "../../types/contracts";
-import { sweep_malformed } from "../../vendor/malformed";
+} from "../../src/types/contracts";
+import { sweep_malformed } from "../../src/vendor/malformed";
 import {
   registryToken,
   reorganize_key,
   sampleTreasuryConfig,
   sampleVendorConfig,
   setupEmulator,
-} from "../utilities.test";
+} from "../utilities";
 
 describe("With a malformed datum", () => {
   const amount = 340_000_000_000_000n;

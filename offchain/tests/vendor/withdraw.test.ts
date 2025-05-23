@@ -13,22 +13,22 @@ import {
   loadTreasuryScript,
   loadVendorScript,
   slot_to_unix,
-} from "../../shared";
+} from "../../src/shared";
 import {
   MultisigScript,
   VendorConfiguration,
   VendorDatum,
   VendorSpendRedeemer,
   VendorVendorSpend,
-} from "../../types/contracts";
-import { withdraw } from "../../vendor/withdraw";
+} from "../../src/types/contracts";
+import { withdraw } from "../../src/vendor/withdraw";
 import {
   sampleTreasuryConfig,
   sampleVendorConfig,
   setupEmulator,
   Vendor,
   vendor_key,
-} from "../utilities.test";
+} from "../utilities";
 
 describe("When withdrawing from the vendor script", () => {
   const amount = 340_000_000_000_000n;

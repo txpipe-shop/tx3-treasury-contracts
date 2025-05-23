@@ -16,13 +16,13 @@ import {
   loadTreasuryScript,
   loadVendorScript,
   slot_to_unix,
-} from "../../shared";
+} from "../../src/shared";
 import {
   MultisigScript,
   VendorConfiguration,
   VendorDatum,
-} from "../../types/contracts";
-import { adjudicate } from "../../vendor/adjudicate";
+} from "../../src/types/contracts";
+import { adjudicate } from "../../src/vendor/adjudicate";
 import {
   pause_key,
   Pauser,
@@ -32,7 +32,7 @@ import {
   sampleVendorConfig,
   setupEmulator,
   vendor_key,
-} from "../utilities.test";
+} from "../utilities";
 
 describe("", () => {
   const amount = 340_000_000_000_000n;

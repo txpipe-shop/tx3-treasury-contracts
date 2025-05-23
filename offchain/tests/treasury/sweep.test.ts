@@ -3,13 +3,13 @@ import * as Data from "@blaze-cardano/data";
 import { Emulator } from "@blaze-cardano/emulator";
 import { Core, makeValue } from "@blaze-cardano/sdk";
 import { beforeEach, describe, test } from "bun:test";
-import { loadTreasuryScript, unix_to_slot } from "../../shared";
-import { sweep } from "../../treasury/sweep";
+import { loadTreasuryScript, unix_to_slot } from "../../src/shared";
+import { sweep } from "../../src/treasury/sweep";
 import {
   TreasuryConfiguration,
   TreasurySpendRedeemer,
-} from "../../types/contracts";
-import { sampleTreasuryConfig, setupEmulator } from "../utilities.test";
+} from "../../src/types/contracts";
+import { sampleTreasuryConfig, setupEmulator } from "../utilities";
 
 describe("When sweeping", () => {
   const amount = 340_000_000_000_000n;

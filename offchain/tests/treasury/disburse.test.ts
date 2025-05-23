@@ -12,14 +12,14 @@ import { beforeEach, describe, test } from "bun:test";
 import {
   loadTreasuryScript,
   coreValueToContractsValue as translateValue,
-} from "../../shared";
-import { disburse } from "../../treasury/disburse";
+} from "../../src/shared";
+import { disburse } from "../../src/treasury/disburse";
 import {
   TreasurySpendRedeemer,
   VendorConfiguration,
   type TreasuryConfiguration,
   type TreasuryTreasuryWithdraw,
-} from "../../types/contracts";
+} from "../../src/types/contracts";
 import {
   Disburser,
   Funder,
@@ -29,7 +29,7 @@ import {
   sampleTreasuryConfig,
   sampleVendorConfig,
   setupEmulator,
-} from "../utilities.test";
+} from "../utilities";
 
 describe("When disbursing", () => {
   const amount = 340_000_000_000_000n;
