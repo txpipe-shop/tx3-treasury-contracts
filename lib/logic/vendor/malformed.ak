@@ -1,4 +1,5 @@
 use aiken/collection/list
+use aiken/option
 use cardano/address.{Credential}
 use cardano/transaction.{InlineDatum, Transaction}
 use types.{VendorConfiguration, VendorDatum}
@@ -22,15 +23,24 @@ pub fn logic(
   // Find the script hash registry, so we know the treasury script hash
   let registry = find_script_hash_registry(reference_inputs, registry_token)
 
+  let inputs = outputs_of(inputs)
+
+  // To prevent double satisfaction, make sure there are no treasury inputs
+  expect
+    option.is_none(
+      inputs
+        |> list.find(
+            fn(input) { input.address.payment_credential == registry.treasury },
+          ),
+    )
+
   // Expect *every* input at the vendor contract to be malformed
   expect
     inputs
-      |> list.filter(
-          fn(input) { input.output.address.payment_credential == account },
-        )
+      |> list.filter(fn(input) { input.address.payment_credential == account })
       |> list.all(
           fn(input) {
-            when input.output.datum is {
+            when input.datum is {
               InlineDatum(datum) ->
                 if datum is VendorDatum {
                   False
@@ -44,7 +54,7 @@ pub fn logic(
 
   // Note: we don't need to assert the datums of the outputs,
   // because the treasury contract doesn't use a datum at all!
-  let input_sum = value_sum(outputs_of(inputs), account, True)
+  let input_sum = value_sum(inputs, account, True)
   let output_sum = value_sum(outputs, registry.treasury, False)
 
   expect equal_plus_min_ada(input_sum, output_sum)
