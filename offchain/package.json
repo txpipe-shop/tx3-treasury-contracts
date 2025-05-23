@@ -31,7 +31,7 @@
     "version": "standard-version",
     "lint": "eslint src --ignore-pattern '**/dist/**'",
     "lint:fix": "bun lint --fix",
-    "prepare": "husky"
+    "prepare": "cd .. && husky ./offchain/.husky"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
