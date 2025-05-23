@@ -1,18 +1,20 @@
+import { Slot, Value } from "@blaze-cardano/core";
 import { Core, makeValue } from "@blaze-cardano/sdk";
+import { type Cardano } from "@cardano-sdk/core";
+
 import {
   TreasuryConfiguration,
   TreasuryTreasuryWithdraw,
   VendorConfiguration,
   VendorVendorSpend,
 } from "../types/contracts";
-import { Slot, Value } from "@blaze-cardano/core";
 
 export function loadTreasuryScript(
   network: Core.NetworkId,
   config: TreasuryConfiguration,
 ) {
   const script = new TreasuryTreasuryWithdraw(config);
-  const credential = {
+  const credential: Cardano.Credential = {
     type: Core.CredentialType.ScriptHash,
     hash: script.Script.hash(),
   };
@@ -35,7 +37,7 @@ export function loadVendorScript(
   config: VendorConfiguration,
 ) {
   const script = new VendorVendorSpend(config);
-  const credential = {
+  const credential: Cardano.Credential = {
     type: Core.CredentialType.ScriptHash,
     hash: script.Script.hash(),
   };
@@ -94,7 +96,7 @@ export function coreValueToContractsValue(amount: Value): {
 export function contractsValueToCoreValue(amount: {
   [policyId: string]: { [assetName: string]: bigint };
 }): Value {
-  let values: [string, bigint][] = [];
+  const values: [string, bigint][] = [];
   for (const [policy, assets] of Object.entries(amount)) {
     if (policy == "") {
       continue;

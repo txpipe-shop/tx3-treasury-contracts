@@ -1,5 +1,3 @@
-import { beforeEach, describe, test } from "bun:test";
-import { Core, makeValue } from "@blaze-cardano/sdk";
 import {
   Address,
   Credential,
@@ -7,39 +5,39 @@ import {
   Ed25519KeyHashHex,
   HexBlob,
 } from "@blaze-cardano/core";
-import { Emulator } from "@blaze-cardano/emulator";
 import * as Data from "@blaze-cardano/data";
+import { Emulator } from "@blaze-cardano/emulator";
+import { Core, makeValue } from "@blaze-cardano/sdk";
+import { type Cardano } from "@cardano-sdk/core";
+import { beforeEach, describe, test } from "bun:test";
+
+import { loadTreasuryScript } from "../../src/shared";
+import { reorganize } from "../../src/treasury/reorganize";
+import { type TreasuryConfiguration } from "../../src/types/contracts";
 import {
   reorganize_key,
   Reorganizer,
   sampleTreasuryConfig,
   setupEmulator,
-} from "../utilities.test";
-import { loadTreasuryScript } from "../../shared";
-import {
-  VendorDatum,
-  type TreasuryConfiguration,
-  type TreasuryTreasuryWithdraw,
-} from "../../types/contracts";
-import { reorganize } from "../../treasury/reorganize";
+} from "../utilities";
 
 describe("", () => {
   const amount = 340_000_000_000_000n;
 
   let emulator: Emulator;
-  let credential: any; // TODO: type this?
+  let credential: Cardano.Credential;
   let scriptInputNoDatum: Core.TransactionUnspentOutput;
   let scriptInputRandomDatum: Core.TransactionUnspentOutput;
   let config: TreasuryConfiguration;
   let refInput: Core.TransactionUnspentOutput;
-  let treasuryScript: TreasuryTreasuryWithdraw;
+  // let treasuryScript: TreasuryTreasuryWithdraw;
   let scriptAddress: Address;
   beforeEach(async () => {
     emulator = await setupEmulator();
     config = await sampleTreasuryConfig(emulator);
     const treasury = loadTreasuryScript(Core.NetworkId.Testnet, config);
     credential = treasury.credential;
-    treasuryScript = treasury.script;
+    // treasuryScript = treasury.script;
     scriptAddress = treasury.scriptAddress;
 
     emulator.accounts.set(treasury.rewardAccount, amount);

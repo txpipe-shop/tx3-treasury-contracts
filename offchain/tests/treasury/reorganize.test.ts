@@ -1,21 +1,21 @@
-import { beforeEach, describe, test } from "bun:test";
-import { Core, makeValue } from "@blaze-cardano/sdk";
 import { Address, Ed25519KeyHashHex, RewardAccount } from "@blaze-cardano/core";
-import { Emulator } from "@blaze-cardano/emulator";
 import * as Data from "@blaze-cardano/data";
+import { Emulator } from "@blaze-cardano/emulator";
+import { Core, makeValue } from "@blaze-cardano/sdk";
+import { beforeEach, describe, test } from "bun:test";
+import { loadTreasuryScript, unix_to_slot } from "../../src/shared";
+import { reorganize } from "../../src/treasury/reorganize";
+import {
+  TreasurySpendRedeemer,
+  type TreasuryConfiguration,
+  type TreasuryTreasuryWithdraw,
+} from "../../src/types/contracts";
 import {
   reorganize_key,
   Reorganizer,
   sampleTreasuryConfig,
   setupEmulator,
-} from "../utilities.test";
-import { loadTreasuryScript, unix_to_slot } from "../../shared";
-import { reorganize } from "../../treasury/reorganize";
-import {
-  TreasurySpendRedeemer,
-  type TreasuryConfiguration,
-  type TreasuryTreasuryWithdraw,
-} from "../../types/contracts";
+} from "../utilities";
 
 describe("When reorganizing", () => {
   const amount = 340_000_000_000_000n;
@@ -213,7 +213,7 @@ describe("When reorganizing", () => {
     });
 
     test("cannot attach staking address", async () => {
-      let fullAddress = new Core.Address({
+      const fullAddress = new Core.Address({
         type: Core.AddressType.BasePaymentScriptStakeKey,
         networkId: Core.NetworkId.Testnet,
         paymentPart: {
@@ -243,13 +243,13 @@ describe("When reorganizing", () => {
               scriptInput.output().amount(),
               Data.Void(),
             ),
-          /Trace expect or {\n                            allow_stake,/,
+          /Trace expect or {\n {28}allow_stake,/,
         );
       });
     });
 
     test("cannot add native assets", async () => {
-      await emulator.as(Reorganizer, async (blaze, address) => {
+      await emulator.as(Reorganizer, async (blaze) => {
         await emulator.fund(
           Reorganizer,
           makeValue(2_000_000n, ["b".repeat(56), 1n]),

@@ -1,13 +1,12 @@
+import * as Data from "@blaze-cardano/data";
 import {
   TxBuilder,
   type Blaze,
   type Provider,
   type Wallet,
 } from "@blaze-cardano/sdk";
-import * as Data from "@blaze-cardano/data";
 import { loadTreasuryScript } from "../../shared";
 import type { TreasuryConfiguration } from "../../types/contracts";
-import { HexBlob, PlutusData } from "@blaze-cardano/core";
 
 export async function withdraw<P extends Provider, W extends Wallet>(
   config: TreasuryConfiguration,

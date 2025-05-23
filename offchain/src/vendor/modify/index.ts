@@ -1,11 +1,4 @@
 import {
-  TxBuilder,
-  Value,
-  type Blaze,
-  type Provider,
-  type Wallet,
-} from "@blaze-cardano/sdk";
-import {
   AssetId,
   Ed25519KeyHashHex,
   toHex,
@@ -13,13 +6,19 @@ import {
 } from "@blaze-cardano/core";
 import * as Data from "@blaze-cardano/data";
 import {
+  TxBuilder,
+  Value,
+  type Blaze,
+  type Provider,
+  type Wallet,
+} from "@blaze-cardano/sdk";
+import {
   contractsValueToCoreValue,
   loadTreasuryScript,
   loadVendorScript,
   unix_to_slot,
 } from "../../shared";
 import {
-  PayoutStatus,
   TreasuryConfiguration,
   VendorConfiguration,
   VendorDatum,
@@ -46,7 +45,7 @@ export async function modify<P extends Provider, W extends Wallet>(
   const refInput = await blaze.provider.resolveScriptRef(vendorScript.Script);
   if (!refInput)
     throw new Error("Could not find vendor script reference on-chain");
-  let thirty_six_hours = 36n * 60n * 60n * 1000n;
+  const thirty_six_hours = 36n * 60n * 60n * 1000n;
   let tx = blaze
     .newTransaction()
     .addReferenceInput(registryInput)
@@ -65,7 +64,7 @@ export async function modify<P extends Provider, W extends Wallet>(
       contractsValueToCoreValue(payout.value),
     );
   }
-  let remainder = Value.merge(
+  const remainder = Value.merge(
     input.output().amount(),
     Value.negate(vendorOutput),
   );
@@ -92,15 +91,17 @@ export async function cancel<P extends Provider, W extends Wallet>(
     blaze.provider.network,
     configs.treasury,
   );
-  const { scriptAddress: vendorScriptAddress, script: vendorScript } =
-    loadVendorScript(blaze.provider.network, configs.vendor);
+  const { script: vendorScript } = loadVendorScript(
+    blaze.provider.network,
+    configs.vendor,
+  );
   const registryInput = await blaze.provider.getUnspentOutputByNFT(
     AssetId(configs.vendor.registry_token + toHex(Buffer.from("REGISTRY"))),
   );
   const refInput = await blaze.provider.resolveScriptRef(vendorScript.Script);
   if (!refInput)
     throw new Error("Could not find vendor script reference on-chain");
-  let thirty_six_hours = 36n * 60n * 60n * 1000n;
+  const thirty_six_hours = 36n * 60n * 60n * 1000n;
   let tx = blaze
     .newTransaction()
     .addReferenceInput(registryInput)

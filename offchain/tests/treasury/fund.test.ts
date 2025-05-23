@@ -1,5 +1,3 @@
-import { beforeEach, describe, test } from "bun:test";
-import { Core, makeValue } from "@blaze-cardano/sdk";
 import {
   Address,
   AssetId,
@@ -7,23 +5,17 @@ import {
   RewardAccount,
   Slot,
 } from "@blaze-cardano/core";
-import { Emulator } from "@blaze-cardano/emulator";
 import * as Data from "@blaze-cardano/data";
+import { Emulator } from "@blaze-cardano/emulator";
+import { Core, makeValue } from "@blaze-cardano/sdk";
+import { beforeEach, describe, test } from "bun:test";
 import {
-  Funder,
-  fund_key,
-  registryToken,
-  reorganize_key,
-  sampleTreasuryConfig,
-  sampleVendorConfig,
-  setupEmulator,
-} from "../utilities.test";
-import {
-  coreValueToContractsValue as translateValue,
   loadTreasuryScript,
   loadVendorScript,
   slot_to_unix,
-} from "../../shared";
+  coreValueToContractsValue as translateValue,
+} from "../../src/shared";
+import { fund } from "../../src/treasury/fund";
 import {
   MultisigScript,
   TreasurySpendRedeemer,
@@ -32,8 +24,16 @@ import {
   VendorVendorSpend,
   type TreasuryConfiguration,
   type TreasuryTreasuryWithdraw,
-} from "../../types/contracts";
-import { fund } from "../../treasury/fund";
+} from "../../src/types/contracts";
+import {
+  Funder,
+  fund_key,
+  registryToken,
+  reorganize_key,
+  sampleTreasuryConfig,
+  sampleVendorConfig,
+  setupEmulator,
+} from "../utilities";
 
 describe("When funding", () => {
   const amount = 340_000_000_000_000n;
@@ -121,7 +121,7 @@ describe("When funding", () => {
     fourthScriptInput.output().setDatum(Core.Datum.newInlineData(Data.Void()));
     emulator.addUtxo(fourthScriptInput);
 
-    let [registryPolicy, registryName] = registryToken();
+    const [registryPolicy, registryName] = registryToken();
     registryInput = emulator.utxos().find((u) =>
       u
         .output()
@@ -270,7 +270,7 @@ describe("When funding", () => {
         });
       });
       test("cannot attach stake address to vendor script", async () => {
-        let fullAddress = new Core.Address({
+        const fullAddress = new Core.Address({
           type: Core.AddressType.BasePaymentScriptStakeKey,
           networkId: Core.NetworkId.Testnet,
           paymentPart: {
@@ -283,7 +283,7 @@ describe("When funding", () => {
           },
         });
         await emulator.as(Funder, async (blaze) => {
-          let value = translateValue(makeValue(10_000_000n));
+          const value = translateValue(makeValue(10_000_000n));
           const datum: VendorDatum = {
             vendor,
             payouts: [
@@ -321,12 +321,12 @@ describe("When funding", () => {
                 makeValue(499_990_000_000n),
                 Data.Void(),
               ),
-            /Trace expect or {\n                            allow_stake/,
+            /Trace expect or {\n {28}allow_stake/,
           );
         });
       });
       test("cannot attach stake address to change", async () => {
-        let fullAddress = new Core.Address({
+        const fullAddress = new Core.Address({
           type: Core.AddressType.BasePaymentScriptStakeKey,
           networkId: Core.NetworkId.Testnet,
           paymentPart: {
@@ -339,7 +339,7 @@ describe("When funding", () => {
           },
         });
         await emulator.as(Funder, async (blaze) => {
-          let value = translateValue(makeValue(10_000_000n));
+          const value = translateValue(makeValue(10_000_000n));
           const datum: VendorDatum = {
             vendor,
             payouts: [
@@ -377,13 +377,13 @@ describe("When funding", () => {
                 makeValue(499_990_000_000n),
                 Data.Void(),
               ),
-            /Trace expect or {\n                            allow_stake/,
+            /Trace expect or {\n {28}allow_stake/,
           );
         });
       });
       test("cannot steal funds", async () => {
         await emulator.as(Funder, async (blaze) => {
-          let value = translateValue(makeValue(1_000_000n));
+          const value = translateValue(makeValue(1_000_000n));
           const datum: VendorDatum = {
             vendor,
             payouts: [
@@ -422,7 +422,7 @@ describe("When funding", () => {
       });
       test("cannot mismatch redeemer and datum payout", async () => {
         await emulator.as(Funder, async (blaze) => {
-          let value = translateValue(makeValue(1_000_000n));
+          const value = translateValue(makeValue(1_000_000n));
           const datum: VendorDatum = {
             vendor,
             payouts: [
@@ -466,7 +466,7 @@ describe("When funding", () => {
       });
       test("cannot mismatch redeemer and actual payout", async () => {
         await emulator.as(Funder, async (blaze) => {
-          let value = translateValue(makeValue(1_000_000n));
+          const value = translateValue(makeValue(1_000_000n));
           const datum: VendorDatum = {
             vendor,
             payouts: [
@@ -510,7 +510,7 @@ describe("When funding", () => {
       });
       test("cannot fund past expiration", async () => {
         await emulator.as(Funder, async (blaze) => {
-          let value = translateValue(makeValue(1_000_000n));
+          const value = translateValue(makeValue(1_000_000n));
           const datum: VendorDatum = {
             vendor,
             payouts: [
@@ -559,7 +559,7 @@ describe("When funding", () => {
       });
       test("cannot fund a new project", async () => {
         await emulator.as(Funder, async (blaze) => {
-          let value = translateValue(makeValue(1_000_000n));
+          const value = translateValue(makeValue(1_000_000n));
           const datum: VendorDatum = {
             vendor,
             payouts: [

@@ -1,30 +1,15 @@
-import { beforeEach, describe, test } from "bun:test";
-import { Core, makeValue } from "@blaze-cardano/sdk";
-import {
-  Address,
-  AssetId,
-  Ed25519KeyHashHex,
-  RewardAccount,
-  Slot,
-} from "@blaze-cardano/core";
-import { Emulator } from "@blaze-cardano/emulator";
+import { Address, AssetId, RewardAccount, Slot } from "@blaze-cardano/core";
 import * as Data from "@blaze-cardano/data";
+import { Emulator } from "@blaze-cardano/emulator";
+import { Core, makeValue } from "@blaze-cardano/sdk";
+import { beforeEach, describe, test } from "bun:test";
 import {
-  registryToken,
-  reorganize_key,
-  sampleTreasuryConfig,
-  sampleVendorConfig,
-  setupEmulator,
-  vendor_key,
-} from "../utilities.test";
-import {
-  coreValueToContractsValue as translateValue,
+  coreValueToContractsValue,
   loadTreasuryScript,
   loadVendorScript,
-  coreValueToContractsValue,
   slot_to_unix,
   unix_to_slot,
-} from "../../shared";
+} from "../../src/shared";
 import {
   MultisigScript,
   VendorConfiguration,
@@ -32,10 +17,15 @@ import {
   VendorSpendRedeemer,
   VendorVendorSpend,
   type TreasuryConfiguration,
-  type TreasuryTreasuryWithdraw,
-} from "../../types/contracts";
-import { sweep_malformed } from "../../vendor/malformed";
-import { sweep } from "../../vendor/sweep";
+} from "../../src/types/contracts";
+import { sweep } from "../../src/vendor/sweep";
+import {
+  registryToken,
+  sampleTreasuryConfig,
+  sampleVendorConfig,
+  setupEmulator,
+  vendor_key,
+} from "../utilities";
 
 describe("", () => {
   const amount = 340_000_000_000_000n;
@@ -232,7 +222,7 @@ describe("", () => {
       );
     emulator.addUtxo(fifthScriptInput);
 
-    let [registryPolicy, registryName] = registryToken();
+    const [registryPolicy, registryName] = registryToken();
     registryInput = emulator.utxos().find((u) =>
       u
         .output()

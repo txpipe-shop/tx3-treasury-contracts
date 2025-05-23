@@ -1,5 +1,3 @@
-import { beforeEach, describe, test } from "bun:test";
-import { Core, makeValue } from "@blaze-cardano/sdk";
 import {
   Address,
   AssetId,
@@ -7,33 +5,18 @@ import {
   RewardAccount,
   Slot,
   Transaction,
-  TransactionId,
-  TransactionInput,
-  TransactionUnspentOutput,
 } from "@blaze-cardano/core";
-import { Emulator } from "@blaze-cardano/emulator";
 import * as Data from "@blaze-cardano/data";
+import { Emulator } from "@blaze-cardano/emulator";
+import { Core, makeValue } from "@blaze-cardano/sdk";
+import { beforeEach, describe, test } from "bun:test";
 import {
-  Modifier,
-  modify_key,
-  pause_key,
-  Pauser,
-  registryToken,
-  resume_key,
-  Resumer,
-  sampleTreasuryConfig,
-  sampleVendorConfig,
-  setupEmulator,
-  Vendor,
-  vendor_key,
-} from "../utilities.test";
-import {
+  coreValueToContractsValue,
   loadTreasuryScript,
   loadVendorScript,
-  coreValueToContractsValue,
   slot_to_unix,
   unix_to_slot,
-} from "../../shared";
+} from "../../src/shared";
 import {
   MultisigScript,
   TreasuryConfiguration,
@@ -41,10 +24,18 @@ import {
   VendorDatum,
   VendorSpendRedeemer,
   VendorVendorSpend,
-} from "../../types/contracts";
-import { withdraw } from "../../vendor/withdraw";
-import { adjudicate } from "../../vendor/adjudicate";
-import { cancel, modify } from "../../vendor/modify";
+} from "../../src/types/contracts";
+import { cancel, modify } from "../../src/vendor/modify";
+import {
+  Modifier,
+  modify_key,
+  registryToken,
+  sampleTreasuryConfig,
+  sampleVendorConfig,
+  setupEmulator,
+  Vendor,
+  vendor_key,
+} from "../utilities";
 
 describe("", () => {
   const amount = 340_000_000_000_000n;
@@ -235,7 +226,7 @@ describe("", () => {
       );
     emulator.addUtxo(fifthScriptInput);
 
-    let [registryPolicy, registryName] = registryToken();
+    const [registryPolicy, registryName] = registryToken();
     registryInput = emulator.utxos().find((u) =>
       u
         .output()
@@ -275,7 +266,7 @@ describe("", () => {
       test("efficiently", async () => {
         let signedTx: Transaction;
         await emulator.as(Modifier, async (blaze) => {
-          let new_datum: VendorDatum = {
+          const new_datum: VendorDatum = {
             vendor: vendor,
             payouts: [
               {
@@ -313,7 +304,7 @@ describe("", () => {
       test("reclaiming some", async () => {
         let signedTx: Transaction;
         await emulator.as(Modifier, async (blaze) => {
-          let new_datum: VendorDatum = {
+          const new_datum: VendorDatum = {
             vendor: vendor,
             payouts: [
               {
@@ -350,7 +341,7 @@ describe("", () => {
       });
       test("with native tokens", async () => {
         let signedTx: Transaction;
-        let new_datum: VendorDatum = {
+        const new_datum: VendorDatum = {
           vendor: vendor,
           payouts: [
             {
