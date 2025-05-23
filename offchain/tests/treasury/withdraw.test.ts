@@ -3,10 +3,19 @@ import { Core, makeValue } from "@blaze-cardano/sdk";
 import * as Data from "@blaze-cardano/data";
 import { Emulator } from "@blaze-cardano/emulator";
 import { withdraw } from "../../treasury/withdraw";
-import { sampleTreasuryConfig, setupEmulator } from "../utilities.test";
+import {
+  registryToken,
+  sampleTreasuryConfig,
+  setupEmulator,
+} from "../utilities.test";
 import { loadTreasuryScript } from "../../shared";
 import type { TreasuryConfiguration } from "../../types/contracts";
-import type { Address, RewardAccount, Script } from "@blaze-cardano/core";
+import {
+  AssetId,
+  type Address,
+  type RewardAccount,
+  type Script,
+} from "@blaze-cardano/core";
 
 describe("When withdrawing", () => {
   const amount = 340_000_000_000_000n;
@@ -16,6 +25,7 @@ describe("When withdrawing", () => {
   let scriptAddress: Address;
   let treasuryScript: Script;
   let config: TreasuryConfiguration;
+  let registryInput: Core.TransactionUnspentOutput;
   let refInput: Core.TransactionUnspentOutput;
   beforeEach(async () => {
     emulator = await setupEmulator();
@@ -25,6 +35,15 @@ describe("When withdrawing", () => {
     scriptAddress = treasury.scriptAddress;
     treasuryScript = treasury.script.Script;
     emulator.accounts.set(rewardAccount, amount);
+    let [registryPolicy, registryName] = registryToken();
+    registryInput = emulator.utxos().find((u) =>
+      u
+        .output()
+        .amount()
+        .multiasset()
+        ?.get(AssetId(registryPolicy + registryName)),
+    )!;
+
     refInput = emulator.lookupScript(treasury.script.Script);
   });
 
@@ -44,7 +63,8 @@ describe("When withdrawing", () => {
           blaze
             .newTransaction()
             .addWithdrawal(rewardAccount, amount, Data.Void())
-            .addReferenceInput(refInput!)
+            .addReferenceInput(registryInput)
+            .addReferenceInput(refInput)
             .lockLovelace(scriptAddress, amount / 2n, Data.Void())
             .lockLovelace(scriptAddress, amount / 2n, Data.Void()),
         );
@@ -57,7 +77,8 @@ describe("When withdrawing", () => {
           blaze
             .newTransaction()
             .addWithdrawal(rewardAccount, amount, Data.Void())
-            .addReferenceInput(refInput!)
+            .addReferenceInput(registryInput)
+            .addReferenceInput(refInput)
             .lockAssets(
               scriptAddress,
               makeValue(amount, ["a".repeat(56), 1n]),
@@ -73,7 +94,8 @@ describe("When withdrawing", () => {
           blaze
             .newTransaction()
             .addWithdrawal(rewardAccount, amount, Data.Void())
-            .addReferenceInput(refInput!)
+            .addReferenceInput(registryInput)
+            .addReferenceInput(refInput)
             .lockLovelace(scriptAddress, amount, Data.Void()),
         );
       });
@@ -87,7 +109,8 @@ describe("When withdrawing", () => {
           blaze
             .newTransaction()
             .addWithdrawal(rewardAccount, amount, Data.Void())
-            .addReferenceInput(refInput!)
+            .addReferenceInput(registryInput)
+            .addReferenceInput(refInput)
             .payLovelace(address, amount, Data.Void()),
         );
       });
@@ -98,7 +121,8 @@ describe("When withdrawing", () => {
           blaze
             .newTransaction()
             .addWithdrawal(rewardAccount, amount, Data.Void())
-            .addReferenceInput(refInput!)
+            .addReferenceInput(registryInput)
+            .addReferenceInput(refInput)
             .lockLovelace(scriptAddress, amount / 2n, Data.Void())
             .payLovelace(address, amount / 2n, Data.Void()),
         );
@@ -122,7 +146,8 @@ describe("When withdrawing", () => {
           blaze
             .newTransaction()
             .addWithdrawal(rewardAccount, amount, Data.Void())
-            .addReferenceInput(refInput!)
+            .addReferenceInput(registryInput)
+            .addReferenceInput(refInput)
             .lockLovelace(fullAddress, amount, Data.Void()),
         );
       });
@@ -138,7 +163,8 @@ describe("When withdrawing", () => {
           blaze
             .newTransaction()
             .addWithdrawal(rewardAccount, amount)
-            .addReferenceInput(refInput!)
+            .addReferenceInput(registryInput)
+            .addReferenceInput(refInput)
             .addInput(scriptUtxo)
             .lockLovelace(scriptAddress, amount + 5_000_000_000n, Data.Void()),
         );

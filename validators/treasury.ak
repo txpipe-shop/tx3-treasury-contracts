@@ -52,7 +52,9 @@ validator treasury(config: TreasuryConfiguration) {
   // without a staking address; this is how the funds are moved out of the reward account
   // after a treasury withdrawal
   withdraw(_, account: Credential, self: Transaction) {
-    withdraw.logic(self.withdrawals, account, self.inputs, self.outputs)
+    let registry =
+      find_script_hash_registry(self.reference_inputs, config.registry_token)
+    withdraw.logic(self.withdrawals, account, registry, self)
   }
 
   // (n.b. We could just use `else` for these, but it's clearer to make things explicit)
