@@ -2,6 +2,7 @@ import { beforeEach, describe, test } from "bun:test";
 import { Core, makeValue } from "@blaze-cardano/sdk";
 import {
   Address,
+  AssetId,
   Ed25519KeyHashHex,
   RewardAccount,
   Slot,
@@ -15,6 +16,7 @@ import * as Data from "@blaze-cardano/data";
 import {
   pause_key,
   Pauser,
+  registryToken,
   resume_key,
   Resumer,
   sampleTreasuryConfig,
@@ -54,6 +56,7 @@ describe("", () => {
   let fifthScriptInput: Core.TransactionUnspentOutput;
   let fifthDatum: VendorDatum;
   let refInput: Core.TransactionUnspentOutput;
+  let registryInput: Core.TransactionUnspentOutput;
   let vendor: MultisigScript;
   let pauseSigner: Ed25519KeyHashHex;
   let resumeSigner: Ed25519KeyHashHex;
@@ -73,7 +76,7 @@ describe("", () => {
       vendorConfig,
     );
     config = vendorConfig;
-    rewardAccount = treasuryScriptManifest.rewardAccount;
+    rewardAccount = treasuryScriptManifest.rewardAccount!;
     vendorScript = vendorScriptManifest.script;
     vendorScriptAddress = vendorScriptManifest.scriptAddress;
 
@@ -225,7 +228,14 @@ describe("", () => {
         Core.Datum.newInlineData(Data.serialize(VendorDatum, fifthDatum)),
       );
     emulator.addUtxo(fifthScriptInput);
-
+    let [registryPolicy, registryName] = registryToken();
+    registryInput = emulator.utxos().find((u) =>
+      u
+        .output()
+        .amount()
+        .multiasset()
+        ?.get(AssetId(registryPolicy + registryName)),
+    )!;
     refInput = emulator.lookupScript(vendorScript.Script);
   });
 
