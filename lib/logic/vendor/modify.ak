@@ -6,7 +6,7 @@ use cardano/assets
 use cardano/transaction.{InlineDatum, Transaction}
 use sundae/multisig.{satisfied}
 use types.{Active, ScriptHashRegistry, VendorConfiguration, VendorDatum}
-use utilities.{equal_plus_min_ada, outputs_of, value_sum}
+use utilities.{equal_plus_min_ada, outputs_of, payout_sum, value_sum}
 
 // The vendor and the oversight committee can agree to modify or cancel a project
 // Specifically, this logic ensures:
@@ -49,7 +49,7 @@ pub fn logic(
       |> list.filter(fn(input) { input.address.payment_credential == account })
   expect InlineDatum(input_vendor_datum) = input.datum
   expect input_vendor_datum: VendorDatum = input_vendor_datum
-
+  //
   // Sum up the matured / unsweepable payouts
   // We do this rather than summing up the unmatured payouts so we can deal with minUTxO surplus more easily
   let matured_value =
@@ -73,6 +73,18 @@ pub fn logic(
         )
   let vendor_output_sum = value_sum(vendor_outputs, account, False)
   let treasury_output_sum = value_sum(outputs, registry.treasury, False)
+
+  // Make sure the payouts are properly funded, each is before the maximum payout date,
+  // and the size constraints are respected
+  expect _ =
+    payout_sum(
+      vendor_outputs,
+      account,
+      fn(_, p) {
+        expect p.maturation <= config.expiration
+        True
+      },
+    )
 
   let unmatured_value = assets.merge(input.value, assets.negate(matured_value))
   expect and {

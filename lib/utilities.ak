@@ -91,18 +91,28 @@ pub fn payout_sum(
           // The datum must be well formed
           expect InlineDatum(datum) = output.datum
           expect datum: VendorDatum = datum
-          let this_payout_sum =
+          let (this_payout_sum, payout_count) =
             datum.payouts
               |> list.foldl(
-                  assets.zero,
+                  (assets.zero, 0),
                   fn(payout, acc) {
+                    let value = assets.from_asset_list(payout.value)
+                    // Benchmarking shows that if we allow more than 4 tokens in the value, we can exceed execution units
+                    // on the sweep / withdraw operations quickly, leaving funds locked forever; this leaves room for
+                    // ADA + USDM + USDA + one other and if we really need more, we can split them over multiple payouts
+                    expect 4 >= ( value |> assets.flatten |> list.length )
                     if filter(datum, payout) {
-                      assets.merge(acc, assets.from_asset_list(payout.value))
+                      (assets.merge(acc.1st, value), acc.2nd + 1)
                     } else {
-                      acc
+                      (acc.1st, acc.2nd + 1)
                     }
                   },
                 )
+          // Benchmarking shows that if we allow more than 35 payouts, we can exceed execution units
+          // on the sweep / withdraw operations quickly, leaving funds locked forever; this leaves room for
+          // payouts twice per month, which should be plenty, and if we really need more we can do two separate funded projects
+          expect payout_count <= 24
+          // Ensure that the output has enough funds to cover the payout
           expect equal_plus_min_ada(this_payout_sum, output.value)
           assets.merge(total, this_payout_sum)
         },
