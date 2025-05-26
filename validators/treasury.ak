@@ -34,9 +34,9 @@ validator treasury(config: TreasuryConfiguration) {
 
     when redeemer is {
       // Funds can be swept back to the treasury after the expiration
-      SweepTreasury { .. } -> sweep.logic(config, account, self)
+      SweepTreasury { .. } -> sweep.logic(config, account, registry, self)
       // UTxOs at the treasury address can be reorganized, such as splitting or merging them
-      Reorganize { .. } -> reorganize.logic(config, account, self)
+      Reorganize { .. } -> reorganize.logic(config, account, registry, self)
       // Funds can be used to fund a new vendor project
       Fund { amount } ->
         fund.logic(config, account, from_asset_list(amount), registry, self)

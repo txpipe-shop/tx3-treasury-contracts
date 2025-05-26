@@ -1,9 +1,11 @@
+use aiken/collection/list
 use aiken/interval.{is_entirely_after}
+use aiken/option
 use cardano/address.{Credential}
 use cardano/assets.{lovelace_of, without_lovelace}
 use cardano/transaction.{Transaction}
 use sundae/multisig.{satisfied}
-use types.{TreasuryConfiguration}
+use types.{ScriptHashRegistry, TreasuryConfiguration}
 use utilities.{outputs_of, value_sum}
 
 // Check whether the funds are swept back to the treasury correctly
@@ -11,6 +13,7 @@ use utilities.{outputs_of, value_sum}
 pub fn logic(
   config: TreasuryConfiguration,
   account: Credential,
+  registry: ScriptHashRegistry,
   transaction: Transaction,
 ) {
   let Transaction {
@@ -22,7 +25,8 @@ pub fn logic(
     treasury_donation,
     ..
   } = transaction
-  let input_sum = value_sum(outputs_of(inputs), account, True)
+  let inputs = outputs_of(inputs)
+  let input_sum = value_sum(inputs, account, True)
   let output_sum = value_sum(outputs, account, False)
 
   // Any ADA from the inputs that *isn't* retained in the outputs, must be donated to the treasury
@@ -37,6 +41,15 @@ pub fn logic(
   // We check against donation - input_lovelace, rather than output_lovelace, *just in case* 5 ADA isn't enough for minUTxO
   // in such cases, the transaction submitter would just need to cover any extra minUTxO requirements
   expect input_lovelace - donation <= 5_000_000
+
+  // Prevent double-satisfaction shenanigans
+  expect
+    option.is_none(
+      inputs
+        |> list.find(
+            fn(input) { input.address.payment_credential == registry.vendor },
+          ),
+    )
 
   // Funds can be swept back to the treasury by anyone after the deadline,
   // or with permissions from the oversight committee early
