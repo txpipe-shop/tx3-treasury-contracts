@@ -35,7 +35,7 @@ describe("When withdrawing", () => {
     scriptAddress = treasury.scriptAddress;
     treasuryScript = treasury.script.Script;
     emulator.accounts.set(rewardAccount, amount);
-    let [registryPolicy, registryName] = registryToken();
+    const [registryPolicy, registryName] = registryToken();
     registryInput = emulator.utxos().find((u) =>
       u
         .output()

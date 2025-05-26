@@ -1,6 +1,5 @@
 import {
   Address,
-  AssetId,
   Ed25519KeyHashHex,
   RewardAccount,
   Slot,
@@ -22,13 +21,11 @@ import {
   MultisigScript,
   VendorConfiguration,
   VendorDatum,
-  VendorVendorSpend,
 } from "../../src/types/contracts";
 import { adjudicate } from "../../src/vendor/adjudicate";
 import {
   pause_key,
   Pauser,
-  registryToken,
   resume_key,
   Resumer,
   sampleTreasuryConfig,
@@ -52,13 +49,10 @@ describe("", () => {
   let fourthDatum: VendorDatum;
   let fifthScriptInput: Core.TransactionUnspentOutput;
   let fifthDatum: VendorDatum;
-  let refInput: Core.TransactionUnspentOutput;
-  let registryInput: Core.TransactionUnspentOutput;
   let vendor: MultisigScript;
   let pauseSigner: Ed25519KeyHashHex;
   let resumeSigner: Ed25519KeyHashHex;
   let rewardAccount: RewardAccount;
-  let vendorScript: VendorVendorSpend;
   let vendorScriptAddress: Address;
 
   beforeEach(async () => {
@@ -75,7 +69,6 @@ describe("", () => {
     );
     config = vendorConfig;
     rewardAccount = treasuryScriptManifest.rewardAccount!;
-    vendorScript = vendorScriptManifest.script;
     vendorScriptAddress = vendorScriptManifest.scriptAddress;
 
     emulator.accounts.set(rewardAccount, amount);
@@ -226,15 +219,6 @@ describe("", () => {
         Core.Datum.newInlineData(Data.serialize(VendorDatum, fifthDatum)),
       );
     emulator.addUtxo(fifthScriptInput);
-    let [registryPolicy, registryName] = registryToken();
-    registryInput = emulator.utxos().find((u) =>
-      u
-        .output()
-        .amount()
-        .multiasset()
-        ?.get(AssetId(registryPolicy + registryName)),
-    )!;
-    refInput = emulator.lookupScript(vendorScript.Script);
   });
 
   describe("the oversight committee", () => {
@@ -445,11 +429,7 @@ describe("", () => {
               new Date(Number(slot_to_unix(Slot(0)))),
               fourthScriptInput,
               ["Active", "Paused", "Paused"],
-              [
-                Ed25519KeyHashHex(
-                  signer.asBase()?.getPaymentCredential().hash!,
-                ),
-              ],
+              [Ed25519KeyHashHex(signer.asBase()!.getPaymentCredential().hash)],
             ),
             /Trace satisfied\(config.permissions.pause, extra_signatories, validity_range, withdrawals\)/,
           );
@@ -464,11 +444,7 @@ describe("", () => {
               new Date(Number(slot_to_unix(Slot(0)))),
               fourthScriptInput,
               ["Active", "Active", "Active"],
-              [
-                Ed25519KeyHashHex(
-                  signer.asBase()?.getPaymentCredential().hash!,
-                ),
-              ],
+              [Ed25519KeyHashHex(signer.asBase()!.getPaymentCredential().hash)],
             ),
             /Trace satisfied\(config.permissions.resume, extra_signatories, validity_range, withdrawals\)/,
           );

@@ -471,11 +471,7 @@ describe("", () => {
               new Date(Number(slot_to_unix(Slot(0)))),
               scriptInput,
               fourthDatum,
-              [
-                Ed25519KeyHashHex(
-                  signer.asBase()?.getPaymentCredential().hash!,
-                ),
-              ],
+              [Ed25519KeyHashHex(signer.asBase()!.getPaymentCredential().hash)],
             ),
             /Trace satisfied\(permissions.modify, extra_signatories, validity_range, withdrawals\)/,
           );
@@ -489,11 +485,7 @@ describe("", () => {
               blaze,
               new Date(Number(slot_to_unix(Slot(0)))),
               scriptInput,
-              [
-                Ed25519KeyHashHex(
-                  signer.asBase()?.getPaymentCredential().hash!,
-                ),
-              ],
+              [Ed25519KeyHashHex(signer.asBase()!.getPaymentCredential().hash)],
             ),
             /Trace satisfied\(permissions.modify, extra_signatories, validity_range, withdrawals\)/,
           );
@@ -513,11 +505,7 @@ describe("", () => {
               new Date(Number(slot_to_unix(Slot(0)))),
               fourthScriptInput,
               firstDatum,
-              [
-                Ed25519KeyHashHex(
-                  signer.asBase()?.getPaymentCredential().hash!,
-                ),
-              ],
+              [Ed25519KeyHashHex(signer.asBase()!.getPaymentCredential().hash)],
             ),
             /Trace satisfied\(input_vendor_datum.vendor, extra_signatories, validity_range, withdrawals\)/,
           );
@@ -531,11 +519,7 @@ describe("", () => {
               blaze,
               new Date(Number(slot_to_unix(Slot(0)))),
               fourthScriptInput,
-              [
-                Ed25519KeyHashHex(
-                  signer.asBase()?.getPaymentCredential().hash!,
-                ),
-              ],
+              [Ed25519KeyHashHex(signer.asBase()!.getPaymentCredential().hash)],
             ),
             /Trace satisfied\(input_vendor_datum.vendor, extra_signatories, validity_range, withdrawals\)/,
           );

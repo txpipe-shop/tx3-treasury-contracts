@@ -71,7 +71,7 @@ describe("When reorganizing", () => {
     thirdScriptInput.output().setDatum(Core.Datum.newInlineData(Data.Void()));
     emulator.addUtxo(thirdScriptInput);
 
-    let [registryPolicy, registryName] = registryToken();
+    const [registryPolicy, registryName] = registryToken();
     registryInput = emulator.utxos().find((u) =>
       u
         .output()
@@ -338,7 +338,7 @@ describe("When reorganizing", () => {
             blaze,
             [scriptInput],
             [makeValue(100_000_000_000n), makeValue(400_000_000_000n)],
-            [Ed25519KeyHashHex(address.asBase()?.getPaymentCredential().hash!)],
+            [Ed25519KeyHashHex(address.asBase()!.getPaymentCredential().hash)],
           ),
           /Trace satisfied\(config.permissions.reorganize/,
         );

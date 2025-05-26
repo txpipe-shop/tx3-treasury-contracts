@@ -218,7 +218,7 @@ describe("When withdrawing from the vendor script", () => {
         Core.Datum.newInlineData(Data.serialize(VendorDatum, fifthDatum)),
       );
     emulator.addUtxo(fifthScriptInput);
-    let [registryPolicy, registryName] = registryToken();
+    const [registryPolicy, registryName] = registryToken();
     registryInput = emulator.utxos().find((u) =>
       u
         .output()
@@ -639,7 +639,7 @@ describe("When withdrawing from the vendor script", () => {
             new Date(Number(slot_to_unix(Slot(2)))),
             [scriptInput],
             signer,
-            [Ed25519KeyHashHex(signer.asBase()?.getPaymentCredential().hash!)],
+            [Ed25519KeyHashHex(signer.asBase()!.getPaymentCredential().hash)],
           ),
           /Trace satisfied\(input_vendor_datum.vendor, extra_signatories, validity_range, withdrawals\)/,
         );

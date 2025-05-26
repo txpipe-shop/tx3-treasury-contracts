@@ -58,7 +58,7 @@ export async function withdraw<P extends Provider, W extends Wallet>(
     const input = inputs[idx];
     const datum = Data.parse(
       VendorDatum,
-      input.output().datum()?.asInlineData(),
+      input.output().datum()!.asInlineData()!,
     );
     tx = tx.addInput(input, Data.serialize(VendorSpendRedeemer, "Withdraw"));
     const newDatum: VendorDatum = {

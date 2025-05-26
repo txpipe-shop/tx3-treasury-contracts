@@ -63,7 +63,7 @@ describe("When sweeping", () => {
       .output()
       .setDatum(Core.Datum.newInlineData(Data.Void()));
     emulator.addUtxo(withAssetScriptInput);
-    let [registryPolicy, registryName] = registryToken();
+    const [registryPolicy, registryName] = registryToken();
     registryInput = emulator.utxos().find((u) =>
       u
         .output()

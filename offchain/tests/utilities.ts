@@ -1,26 +1,14 @@
 import * as Data from "@blaze-cardano/data";
+import { Slot, toHex, PlutusData } from "@blaze-cardano/core";
+import { Emulator } from "@blaze-cardano/emulator";
 import {
-  Bip32PrivateKey,
-  Ed25519KeyHashHex,
-  getBurnAddress,
-  mnemonicToEntropy,
-  Slot,
-  toHex,
-  wordlist,
-  Script,
-  Address,
-  PlutusData,
-} from "@blaze-cardano/core";
-import { Emulator, EmulatorProvider } from "@blaze-cardano/emulator";
-import {
+  ICompiledScript,
+  ICompiledScripts,
   loadScripts,
   slot_to_unix,
-  type CompiledScript,
-  type CompiledScripts,
 } from "../src/shared";
 import {
   ScriptHashRegistry,
-  TreasuryTreasuryWithdraw,
   type TreasuryConfiguration,
   type VendorConfiguration,
 } from "../src/types/contracts";
@@ -31,11 +19,9 @@ export function registryTokenName(): string {
 }
 
 export function registryToken(idx?: number): [string, string] {
-  return [
-    "0000000000000000000000000000000000000000000000000000" +
-      String(idx ?? 0).padStart(4, "0"),
-    registryTokenName(),
-  ];
+  const idx_string = String(idx ?? 0).padStart(4, "0");
+  const policyId = `0000000000000000000000000000000000000000000000000000${idx_string}`;
+  return [policyId, registryTokenName()];
 }
 
 export const Sweeper = "Sweeper";
@@ -50,57 +36,57 @@ export const Modifier = "Modifier";
 export async function sweep_key(
   emulator: Emulator,
 ): Promise<Core.Hash28ByteBase16> {
-  return (await emulator.register(Sweeper)).asBase()?.getPaymentCredential()
-    .hash!;
+  return (await emulator.register(Sweeper)).asBase()!.getPaymentCredential()
+    .hash;
 }
 
 export async function disburse_key(
   emulator: Emulator,
 ): Promise<Core.Hash28ByteBase16> {
-  return (await emulator.register(Disburser)).asBase()?.getPaymentCredential()
-    .hash!;
+  return (await emulator.register(Disburser)).asBase()!.getPaymentCredential()
+    .hash;
 }
 
 export async function fund_key(
   emulator: Emulator,
 ): Promise<Core.Hash28ByteBase16> {
-  return (await emulator.register(Funder)).asBase()?.getPaymentCredential()
-    .hash!;
+  return (await emulator.register(Funder)).asBase()!.getPaymentCredential()
+    .hash;
 }
 
 export async function reorganize_key(
   emulator: Emulator,
 ): Promise<Core.Hash28ByteBase16> {
-  return (await emulator.register(Reorganizer)).asBase()?.getPaymentCredential()
-    .hash!;
+  return (await emulator.register(Reorganizer)).asBase()!.getPaymentCredential()
+    .hash;
 }
 
 export async function pause_key(
   emulator: Emulator,
 ): Promise<Core.Hash28ByteBase16> {
-  return (await emulator.register(Pauser)).asBase()?.getPaymentCredential()
-    .hash!;
+  return (await emulator.register(Pauser)).asBase()!.getPaymentCredential()
+    .hash;
 }
 
 export async function resume_key(
   emulator: Emulator,
 ): Promise<Core.Hash28ByteBase16> {
-  return (await emulator.register(Resumer)).asBase()?.getPaymentCredential()
-    .hash!;
+  return (await emulator.register(Resumer)).asBase()!.getPaymentCredential()
+    .hash;
 }
 
 export async function modify_key(
   emulator: Emulator,
 ): Promise<Core.Hash28ByteBase16> {
-  return (await emulator.register(Modifier)).asBase()?.getPaymentCredential()
-    .hash!;
+  return (await emulator.register(Modifier)).asBase()!.getPaymentCredential()
+    .hash;
 }
 
 export async function vendor_key(
   emulator: Emulator,
 ): Promise<Core.Hash28ByteBase16> {
-  return (await emulator.register(Vendor)).asBase()?.getPaymentCredential()
-    .hash!;
+  return (await emulator.register(Vendor)).asBase()!.getPaymentCredential()
+    .hash;
 }
 
 export async function sampleTreasuryConfig(
@@ -288,7 +274,7 @@ export async function setupEmulator(
 
 export async function deployScripts(
   emulator: Emulator,
-  scripts: CompiledScripts,
+  scripts: ICompiledScripts,
 ) {
   const { treasuryScript, vendorScript } = scripts;
 
@@ -315,7 +301,7 @@ export async function deployScripts(
 
 export function scriptOutput<T, C>(
   emulator: Emulator,
-  treasuryScript: CompiledScript<T, C>,
+  script: ICompiledScript<T, C>,
   value: Core.Value,
   datum?: PlutusData,
 ): Core.TransactionUnspentOutput {
@@ -324,7 +310,7 @@ export function scriptOutput<T, C>(
       Core.TransactionId("1".repeat(64)),
       BigInt(emulator.utxos().length), // By using emulator.utxos().length we ensure this is unique, if a bit large
     ),
-    new Core.TransactionOutput(treasuryScript.scriptAddress, value),
+    new Core.TransactionOutput(script.scriptAddress, value),
   );
   if (datum) {
     output.output().setDatum(Core.Datum.newInlineData(datum));

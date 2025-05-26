@@ -20,29 +20,17 @@ import {
 import {
   coreValueToContractsValue,
   loadScripts,
-  loadTreasuryScript,
   unix_to_slot,
-  type CompiledScript,
 } from "../../src/shared";
-import { sweep } from "../../src/treasury/sweep";
 import {
-  TreasuryConfiguration,
   TreasurySpendRedeemer,
-  TreasuryTreasuryWithdraw,
   VendorDatum,
   VendorSpendRedeemer,
 } from "../../src/types/contracts";
-import {
-  Address,
-  AssetId,
-  Ed25519KeyHashHex,
-  Script,
-  Slot,
-} from "@blaze-cardano/core";
+import { AssetId, Ed25519KeyHashHex, Slot } from "@blaze-cardano/core";
 
 describe("TxPipe Audit Findings", () => {
   let emulator: Emulator;
-  let config: TreasuryConfiguration;
   beforeEach(async () => {
     emulator = await setupEmulator(undefined, false);
   });
@@ -125,7 +113,7 @@ describe("TxPipe Audit Findings", () => {
         const vendorRefInput = emulator.lookupScript(
           scripts.vendorScript.script.Script,
         );
-        let [registryPolicy, registryName] = registryToken();
+        const [registryPolicy, registryName] = registryToken();
         const registryInput = emulator.utxos().find((u) =>
           u
             .output()
@@ -187,7 +175,7 @@ describe("TxPipe Audit Findings", () => {
         const refInput = emulator.lookupScript(
           scripts.treasuryScript.script.Script,
         );
-        let [registryPolicy, registryName] = registryToken();
+        const [registryPolicy, registryName] = registryToken();
         const registryInput = emulator.utxos().find((u) =>
           u
             .output()
@@ -237,7 +225,7 @@ describe("TxPipe Audit Findings", () => {
           ],
         };
 
-        await emulator.as(Funder, async (blaze, address) => {
+        await emulator.as(Funder, async (blaze) => {
           await emulator.expectScriptFailure(
             blaze
               .newTransaction()
@@ -314,12 +302,10 @@ describe("TxPipe Audit Findings", () => {
           ],
         };
 
-        const lowerBound = 0n;
-
         // Advance forward by 36 hours
         emulator.stepForwardToSlot(36 * 60 * 60 + 10);
 
-        await emulator.as(Pauser, async (blaze, address) => {
+        await emulator.as(Pauser, async (blaze) => {
           await emulator.expectScriptFailure(
             blaze
               .newTransaction()
@@ -400,7 +386,7 @@ describe("TxPipe Audit Findings", () => {
           ],
         };
 
-        await emulator.as(Pauser, async (blaze, address) => {
+        await emulator.as(Pauser, async (blaze) => {
           await emulator.expectScriptFailure(
             blaze
               .newTransaction()
@@ -449,7 +435,7 @@ describe("TxPipe Audit Findings", () => {
         const refInput_2 = emulator.lookupScript(
           scripts_2.treasuryScript.script.Script,
         );
-        let [registryPolicy1, registryName] = registryToken(1);
+        const [registryPolicy1, registryName] = registryToken(1);
         const registryInput1 = emulator.utxos().find((u) =>
           u
             .output()
@@ -457,7 +443,7 @@ describe("TxPipe Audit Findings", () => {
             .multiasset()
             ?.get(AssetId(registryPolicy1 + registryName)),
         )!;
-        let [registryPolicy2, _] = registryToken(2);
+        const [registryPolicy2] = registryToken(2);
         const registryInput2 = emulator.utxos().find((u) =>
           u
             .output()
@@ -499,7 +485,7 @@ describe("TxPipe Audit Findings", () => {
           ],
         };
 
-        await emulator.as(Funder, async (blaze, address) => {
+        await emulator.as(Funder, async (blaze) => {
           await emulator.expectScriptFailure(
             blaze
               .newTransaction()
@@ -561,7 +547,7 @@ describe("TxPipe Audit Findings", () => {
         const vendorRefInput = emulator.lookupScript(
           scripts.vendorScript.script.Script,
         );
-        let [registryPolicy, registryName] = registryToken();
+        const [registryPolicy, registryName] = registryToken();
         const registryInput = emulator.utxos().find((u) =>
           u
             .output()
@@ -624,7 +610,7 @@ describe("TxPipe Audit Findings", () => {
         const refInput = emulator.lookupScript(
           scripts.vendorScript.script.Script,
         );
-        let [registryPolicy, registryName] = registryToken();
+        const [registryPolicy, registryName] = registryToken();
         const registryInput = emulator.utxos().find((u) =>
           u
             .output()
@@ -687,7 +673,7 @@ describe("TxPipe Audit Findings", () => {
           },
         });
 
-        await emulator.as("Anyone", async (blaze, address) => {
+        await emulator.as("Anyone", async (blaze) => {
           await emulator.expectScriptFailure(
             blaze
               .newTransaction()
@@ -739,7 +725,7 @@ describe("TxPipe Audit Findings", () => {
         const future = scripts.treasuryScript.config.expiration * 2n;
         emulator.stepForwardToSlot(future);
 
-        await emulator.as("Anyone", async (blaze, address) => {
+        await emulator.as("Anyone", async (blaze) => {
           await emulator.expectScriptFailure(
             blaze
               .newTransaction()

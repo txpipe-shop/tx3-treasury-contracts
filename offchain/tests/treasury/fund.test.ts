@@ -619,7 +619,7 @@ describe("When funding", () => {
                 amount: makeValue(10_000_000_000n),
               },
             ],
-            [Ed25519KeyHashHex(address.asBase()?.getPaymentCredential().hash!)],
+            [Ed25519KeyHashHex(address.asBase()!.getPaymentCredential().hash)],
           ),
           /Trace satisfied\(permissions.fund/,
         );
