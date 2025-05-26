@@ -156,4 +156,63 @@ describe("MLabs Audit Findings", () => {
       });
     });
   });
+
+  describe("3.6", () => {
+    test("can steal from the treasury reward account through double satisfaction", async () => {
+      const config = loadScripts(
+        Core.NetworkId.Testnet,
+        await sampleTreasuryConfig(emulator),
+        await sampleVendorConfig(emulator),
+      );
+      await deployScripts(emulator, config);
+
+      const withdrawAmount = 340_000_000_000n;
+      emulator.accounts.set(
+        config.treasuryScript.rewardAccount!,
+        withdrawAmount,
+      );
+
+      const vendorInput = scriptOutput(
+        emulator,
+        config.vendorScript,
+        makeValue(500_000_000_000n),
+        Data.Void(),
+      );
+
+      const treasuryRefInput = emulator.lookupScript(
+        config.treasuryScript.script.Script,
+      );
+      const vendorRefInput = emulator.lookupScript(
+        config.vendorScript.script.Script,
+      );
+      const registryInput = findRegistryInput(emulator);
+      await emulator.as("MaliciousUser", async (blaze, addr) => {
+        await emulator.expectScriptFailure(
+          blaze
+            .newTransaction()
+            // Sweep
+            .addWithdrawal(
+              config.treasuryScript.rewardAccount!,
+              withdrawAmount,
+              Data.Void(),
+            )
+            .addReferenceInput(treasuryRefInput)
+            .payLovelace(addr, withdrawAmount, Data.Void())
+            // Malformed
+            .addReferenceInput(registryInput)
+            .addReferenceInput(vendorRefInput)
+            .addInput(
+              vendorInput,
+              Data.serialize(VendorSpendRedeemer, "Malformed"),
+            )
+            .lockAssets(
+              config.treasuryScript.scriptAddress,
+              vendorInput.output().amount(),
+              Data.Void(),
+            ),
+          /Trace expect None =\s*inputs\s*|> list.find\(\s*fn\(input\) {\s*or {\s*input.address.payment_credential == registry.treasury,/,
+        );
+      });
+    });
+  });
 });
