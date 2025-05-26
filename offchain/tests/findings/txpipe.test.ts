@@ -4,6 +4,7 @@ import * as Data from "@blaze-cardano/data";
 import { Emulator } from "@blaze-cardano/emulator";
 import {
   deployScripts,
+  findRegistryInput,
   fund_key,
   Funder,
   pause_key,
@@ -75,6 +76,8 @@ describe("TxPipe Audit Findings", () => {
         const future = scripts_1.treasuryScript.config.expiration * 2n;
         emulator.stepForwardToSlot(future);
 
+        const registryInput1 = findRegistryInput(emulator, 1);
+        const registryInput2 = findRegistryInput(emulator, 2);
         await emulator.as("Anyone", async (blaze, address) => {
           await emulator.expectScriptFailure(
             blaze
@@ -90,8 +93,11 @@ describe("TxPipe Audit Findings", () => {
               .setValidFrom(unix_to_slot(future))
               .addReferenceInput(refInput_1)
               .addReferenceInput(refInput_2)
+              .addReferenceInput(registryInput1)
+              .addReferenceInput(registryInput2)
               .setDonation(amount)
               .payLovelace(address, amount),
+            /expect\s*inputs\s*|> list.all\(\s*fn\(input\) {\s*when input.output.address.payment_credential is {/,
           );
         });
       });
@@ -113,14 +119,7 @@ describe("TxPipe Audit Findings", () => {
         const vendorRefInput = emulator.lookupScript(
           scripts.vendorScript.script.Script,
         );
-        const [registryPolicy, registryName] = registryToken();
-        const registryInput = emulator.utxos().find((u) =>
-          u
-            .output()
-            .amount()
-            .multiasset()
-            ?.get(AssetId(registryPolicy + registryName)),
-        )!;
+        const registryInput = findRegistryInput(emulator);
         const amount = 200_000_000n;
         const malformedInput = scriptOutput(
           emulator,
@@ -155,13 +154,12 @@ describe("TxPipe Audit Findings", () => {
               .addReferenceInput(treasuryRefInput)
               .addReferenceInput(vendorRefInput)
               .addReferenceInput(registryInput),
+            /expect None =\s*inputs\s*|> list.find\(\s*fn(input) {\s*or {\s*/,
           );
         });
       });
     });
   });
-
-  describe("TRS-002", () => {});
 
   describe("TRS-101", () => {
     describe("the oversight committee", () => {
@@ -252,6 +250,7 @@ describe("TxPipe Audit Findings", () => {
               .setValidUntil(upperBound)
               .addReferenceInput(refInput)
               .addReferenceInput(registryInput),
+            /expect equal_plus_min_ada\(this_payout_sum, output.value\)/,
           );
         });
       });
@@ -270,6 +269,7 @@ describe("TxPipe Audit Findings", () => {
         const refInput = emulator.lookupScript(
           scripts.vendorScript.script.Script,
         );
+        const registryInput = findRegistryInput(emulator);
         const vendor = {
           Signature: {
             key_hash: await vendor_key(emulator),
@@ -325,7 +325,9 @@ describe("TxPipe Audit Findings", () => {
               .addRequiredSigner(Ed25519KeyHashHex(await pause_key(emulator)))
               .setValidFrom(Slot(0))
               .setValidUntil(Slot(36 * 60 * 60 + 20))
-              .addReferenceInput(refInput),
+              .addReferenceInput(refInput)
+              .addReferenceInput(registryInput),
+            /Trace interval_length_at_most\(validity_range, thirty_six_hours\) \? False/,
           );
         });
       });
@@ -344,6 +346,7 @@ describe("TxPipe Audit Findings", () => {
         const refInput = emulator.lookupScript(
           scripts.vendorScript.script.Script,
         );
+        const registryInput = findRegistryInput(emulator);
         const vendor = {
           Signature: {
             key_hash: await vendor_key(emulator),
@@ -405,8 +408,10 @@ describe("TxPipe Audit Findings", () => {
               )
               .addRequiredSigner(Ed25519KeyHashHex(await pause_key(emulator)))
               .setValidFrom(Slot(0))
-              .setValidUntil(Slot(36 * 60 * 60 + 20))
-              .addReferenceInput(refInput),
+              .setValidUntil(Slot(36 * 60 * 60))
+              .addReferenceInput(refInput)
+              .addReferenceInput(registryInput),
+            /Trace expect list.length\(input_vendor_datum.payouts\) == list.length\(statuses\)/,
           );
         });
       });
@@ -526,6 +531,7 @@ describe("TxPipe Audit Findings", () => {
                 90_000_000n,
                 Data.Void(),
               ),
+            /Trace expect\s*inputs\s*|> list\.all\(\s*fn\(input\) {\s*when input\.output\.address\.payment_credential/,
           );
         });
       });
@@ -592,6 +598,7 @@ describe("TxPipe Audit Findings", () => {
               .addReferenceInput(treasuryRefInput)
               .addReferenceInput(vendorRefInput)
               .addReferenceInput(registryInput),
+            /Trace expect\s*option.is_none\(\s*inputs\s*|> list.find\(\s*fn\(input\) { input.address.payment_credential == registry.treasury },/,
           );
         });
       });
@@ -694,6 +701,7 @@ describe("TxPipe Audit Findings", () => {
               .setValidFrom(unix_to_slot(future))
               .addReferenceInput(refInput)
               .addReferenceInput(registryInput),
+            /Trace expect option.is_none\(vendor_output.address.stake_credential\)/,
           );
         });
       });
@@ -713,6 +721,7 @@ describe("TxPipe Audit Findings", () => {
         const refInput = emulator.lookupScript(
           scripts.treasuryScript.script.Script,
         );
+        const registryInput = findRegistryInput(emulator);
 
         const amount = 100_000_000_000_000n;
         const input = scriptOutput(
@@ -740,7 +749,9 @@ describe("TxPipe Audit Findings", () => {
               )
               .setValidFrom(unix_to_slot(future))
               .addReferenceInput(refInput)
+              .addReferenceInput(registryInput)
               .setDonation(1n),
+            /Trace expect input_lovelace - donation <= 5_000_000/,
           );
         });
       });

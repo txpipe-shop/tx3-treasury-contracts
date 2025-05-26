@@ -1,5 +1,5 @@
 import * as Data from "@blaze-cardano/data";
-import { Slot, toHex, PlutusData } from "@blaze-cardano/core";
+import { Slot, toHex, PlutusData, AssetId } from "@blaze-cardano/core";
 import { Emulator } from "@blaze-cardano/emulator";
 import {
   ICompiledScript,
@@ -317,4 +317,18 @@ export function scriptOutput<T, C>(
   }
   emulator.addUtxo(output);
   return output;
+}
+
+export function findRegistryInput(
+  emulator: Emulator,
+  idx?: number,
+): Core.TransactionUnspentOutput {
+  const [registryPolicy, registryName] = registryToken(idx);
+  return emulator.utxos().find((u) =>
+    u
+      .output()
+      .amount()
+      .multiasset()
+      ?.get(AssetId(registryPolicy + registryName)),
+  )!;
 }

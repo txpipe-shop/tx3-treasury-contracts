@@ -4,7 +4,9 @@ use cardano/address.{Credential}
 use cardano/transaction.{InlineDatum, Transaction}
 use sundae/multisig.{satisfied}
 use types.{Active, Paused, PayoutStatus, VendorConfiguration, VendorDatum}
-use utilities.{equal_plus_min_ada, outputs_of}
+use utilities.{
+  equal_plus_min_ada, interval_length_at_most, outputs_of, thirty_six_hours,
+}
 
 // The oversight committee can pause a specific payouts during a dispute
 // Specifically, this logic enforces that:
@@ -54,6 +56,8 @@ pub fn logic(
       output_vendor_datum.payouts,
     )
 
+  expect list.length(input_vendor_datum.payouts) == list.length(statuses)
+
   let (pause_permission_needed, resume_permission_needed) =
     input_vendor_datum.payouts
       |> list.zip(output_vendor_datum.payouts)
@@ -78,6 +82,7 @@ pub fn logic(
         )
 
   expect and {
+      interval_length_at_most(validity_range, thirty_six_hours)?,
       equal_plus_min_ada(vendor_input.value, vendor_output.value)?,
       or {
         pause_permission_needed?,

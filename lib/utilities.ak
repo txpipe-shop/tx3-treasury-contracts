@@ -1,4 +1,5 @@
 use aiken/collection/list
+use aiken/interval.{Finite, Interval}
 use aiken/option
 use cardano/address.{Credential, Script, VerificationKey}
 use cardano/assets.{PolicyId, Value, lovelace_of, without_lovelace}
@@ -106,4 +107,13 @@ pub fn payout_sum(
           assets.merge(total, this_payout_sum)
         },
       )
+}
+
+pub const thirty_six_hours: Int = 36 * 60 * 60 * 1000
+
+pub fn interval_length_at_most(interval: Interval<Int>, length: Int) -> Bool {
+  when (interval.upper_bound.bound_type, interval.lower_bound.bound_type) is {
+    (Finite(b), Finite(a)) -> b - a <= length
+    _ -> False
+  }
 }
