@@ -11,7 +11,10 @@ import {
   setupEmulator,
 } from "../utilities";
 import { loadScripts, unix_to_slot } from "../../src/shared";
-import { TreasurySpendRedeemer } from "../../src/types/contracts";
+import {
+  TreasurySpendRedeemer,
+  VendorSpendRedeemer,
+} from "../../src/types/contracts";
 
 describe("MLabs Audit Findings", () => {
   let emulator: Emulator;
@@ -84,6 +87,71 @@ describe("MLabs Audit Findings", () => {
             )
             .setDonation(500_000_000_000n),
           /trace expect\s*inputs\s*|> list.all\(\s*fn\(input\) {\s*when input.output.address.payment_credential is {/,
+        );
+      });
+    });
+  });
+
+  describe("3.5", () => {
+    test("can steal funds meant to be swept through double satisfaction", async () => {
+      const treasuryConfig = loadScripts(
+        Core.NetworkId.Testnet,
+        await sampleTreasuryConfig(emulator),
+        await sampleVendorConfig(emulator),
+      );
+      const treasuryInput = scriptOutput(
+        emulator,
+        treasuryConfig.treasuryScript,
+        makeValue(500_000_000_000n),
+        Data.Void(),
+      );
+
+      await deployScripts(emulator, treasuryConfig);
+      const treasuryRefInput = emulator.lookupScript(
+        treasuryConfig.treasuryScript.script.Script,
+      );
+      const vendorRefInput = emulator.lookupScript(
+        treasuryConfig.vendorScript.script.Script,
+      );
+      const registryInput = findRegistryInput(emulator);
+      const vendorInput = scriptOutput(
+        emulator,
+        treasuryConfig.vendorScript,
+        makeValue(500_000_000_000n),
+        Data.Void(),
+      );
+      emulator.stepForwardToUnix(
+        treasuryConfig.treasuryScript.config.expiration + 1n,
+      );
+      await emulator.as("MaliciousUser", async (blaze) => {
+        await emulator.expectScriptFailure(
+          blaze
+            .newTransaction()
+            // Sweep
+            .addInput(
+              treasuryInput,
+              Data.serialize(TreasurySpendRedeemer, "SweepTreasury"),
+            )
+            .setValidFrom(
+              unix_to_slot(
+                treasuryConfig.treasuryScript.config.expiration + 1000n,
+              ),
+            )
+            .addReferenceInput(treasuryRefInput)
+            .setDonation(500_000_000_000n)
+            // Malformed
+            .addReferenceInput(registryInput)
+            .addReferenceInput(vendorRefInput)
+            .addInput(
+              vendorInput,
+              Data.serialize(VendorSpendRedeemer, "Malformed"),
+            )
+            .lockAssets(
+              treasuryConfig.treasuryScript.scriptAddress,
+              vendorInput.output().amount(),
+              Data.Void(),
+            ),
+          /expect\s*option.is_none\(\s*inputs\s*|> list.find\(\s*fn(input) { input.address.payment_credential == registry.treasury }/,
         );
       });
     });
