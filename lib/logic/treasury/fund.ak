@@ -42,8 +42,15 @@ pub fn logic(
     payout_sum(
       outputs,
       registry.vendor,
-      fn(_, p) {
-        expect p.maturation <= config.expiration
+      fn(v, p) {
+        // Ensure the vendor also signs the contract
+        // This ensures they consent to the work, but also prevents accidentally
+        // locking funds with a nonsensical vendor multisig
+        expect
+          satisfied(v.vendor, extra_signatories, validity_range, withdrawals)
+        // Ensure payouts are bounded, so the oversight committee doesn't create
+        // a project that lasts 20 years
+        expect p.maturation <= config.payout_upperbound
         True
       },
     )

@@ -40,7 +40,7 @@ describe("", () => {
     // treasuryScript = treasury.script;
     scriptAddress = treasury.scriptAddress;
 
-    emulator.accounts.set(treasury.rewardAccount, amount);
+    emulator.accounts.set(treasury.rewardAccount!, amount);
 
     scriptInputNoDatum = new Core.TransactionUnspentOutput(
       new Core.TransactionInput(Core.TransactionId("1".repeat(64)), 0n),

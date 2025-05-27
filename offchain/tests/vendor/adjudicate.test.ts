@@ -3,7 +3,6 @@ import {
   Ed25519KeyHashHex,
   RewardAccount,
   Slot,
-  Transaction,
   TransactionId,
   TransactionInput,
 } from "@blaze-cardano/core";
@@ -377,9 +376,8 @@ describe("", () => {
     });
     describe("can pause and resume", () => {
       test("in the same transaction", async () => {
-        let signedTx: Transaction;
-        await emulator.as(Resumer, async (blaze) => {
-          const tx = await adjudicate(
+        const tx = await emulator.as(Resumer, async (blaze) => {
+          return adjudicate(
             config,
             blaze,
             new Date(Number(slot_to_unix(Slot(0)))),
@@ -387,17 +385,8 @@ describe("", () => {
             ["Active", "Active", "Paused"],
             [resumeSigner, pauseSigner],
           );
-          const completedTx = await tx.complete();
-          signedTx = completedTx;
         });
-        await emulator.as(Resumer, async (blaze) => {
-          signedTx = await blaze.signTransaction(signedTx);
-        });
-        await emulator.as(Pauser, async (blaze) => {
-          signedTx = await blaze.signTransaction(signedTx);
-        });
-        const txId = await emulator.submitTransaction(signedTx!);
-        emulator.awaitTransactionConfirmation(txId);
+        await emulator.expectValidMultisignedTransaction([Resumer, Pauser], tx);
       });
     });
 

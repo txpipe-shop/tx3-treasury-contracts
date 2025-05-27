@@ -247,6 +247,7 @@ describe("TxPipe Audit Findings", () => {
                 Data.Void(),
               )
               .addRequiredSigner(Ed25519KeyHashHex(await fund_key(emulator)))
+              .addRequiredSigner(Ed25519KeyHashHex(await vendor_key(emulator)))
               .setValidUntil(upperBound)
               .addReferenceInput(refInput)
               .addReferenceInput(registryInput),

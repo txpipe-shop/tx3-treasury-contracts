@@ -29,6 +29,7 @@ export const Disburser = "Disburser";
 export const Funder = "Funder";
 export const Reorganizer = "Reorganizer";
 export const Vendor = "Vendor";
+export const NewVendor = "NewVendor";
 export const Pauser = "Pauser";
 export const Resumer = "Resumer";
 export const Modifier = "Modifier";
@@ -86,6 +87,12 @@ export async function vendor_key(
   emulator: Emulator,
 ): Promise<Core.Hash28ByteBase16> {
   return (await emulator.register(Vendor)).asBase()!.getPaymentCredential()
+    .hash;
+}
+export async function new_vendor_key(
+  emulator: Emulator,
+): Promise<Core.Hash28ByteBase16> {
+  return (await emulator.register(NewVendor)).asBase()!.getPaymentCredential()
     .hash;
 }
 

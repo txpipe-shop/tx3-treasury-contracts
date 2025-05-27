@@ -80,7 +80,17 @@ pub fn logic(
     payout_sum(
       vendor_outputs,
       account,
-      fn(_, p) {
+      fn(v, p) {
+        // Ensure the vendor also signs the contract
+        // This ensures they consent to the work, but also prevents accidentally
+        // locking funds with a nonsensical vendor multisig
+        expect
+          satisfied(v.vendor, extra_signatories, validity_range, withdrawals)
+        // Ensure payouts are bounded, so the oversight committee doesn't create
+        // a project that lasts 20 years
+        // NOTE: technically config.expiration is different than the constraint enforced when funding
+        // meaning the funding could be extended slightly; We deem this acceptable compared to the
+        // challenge of getting the payout_upperbound passed into this method
         expect p.maturation <= config.expiration
         True
       },
