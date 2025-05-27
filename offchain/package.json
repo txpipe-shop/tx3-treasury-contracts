@@ -45,7 +45,7 @@
     "@babel/plugin-proposal-class-properties": "^7.18.6",
     "@babel/preset-env": "^7.24.7",
     "@babel/preset-typescript": "^7.24.7",
-    "@blaze-cardano/emulator": "^0.3.24",
+    "@blaze-cardano/emulator": "^0.3.25",
     "@sundaeswap/babel-preset": "^2.0.15",
     "@sundaeswap/eslint-config": "^2.0.15",
     "@types/bun": "latest",

@@ -14,6 +14,8 @@ import {
   vendor_key,
   modify_key,
   Modifier,
+  pause_key,
+  Pauser,
 } from "../utilities";
 import {
   coreValueToContractsValue,
@@ -322,7 +324,10 @@ describe("MLabs Audit Findings", () => {
           treasuryInput,
           vendor,
           schedule,
-          [Core.Ed25519KeyHashHex(await fund_key(emulator))],
+          [
+            Core.Ed25519KeyHashHex(await fund_key(emulator)),
+            Core.Ed25519KeyHashHex(await vendor_key(emulator)),
+          ],
         );
         emulator.expectScriptFailure(tx, /Trace expect payout_count <= 24/);
       });
@@ -357,7 +362,10 @@ describe("MLabs Audit Findings", () => {
           treasuryInput,
           vendor,
           schedule,
-          [Core.Ed25519KeyHashHex(await fund_key(emulator))],
+          [
+            Core.Ed25519KeyHashHex(await fund_key(emulator)),
+            Core.Ed25519KeyHashHex(await vendor_key(emulator)),
+          ],
         );
         emulator.expectScriptFailure(
           tx,
@@ -462,6 +470,81 @@ describe("MLabs Audit Findings", () => {
     });
   });
 
+  describe("3.8", () => {
+    test("cannot modify payouts that have matured more than 36 hours ago", async () => {
+      const scripts = loadScripts(
+        Core.NetworkId.Testnet,
+        await sampleTreasuryConfig(emulator),
+        await sampleVendorConfig(emulator),
+      );
+      await deployScripts(emulator, scripts);
+      const refInput = emulator.lookupScript(
+        scripts.vendorScript.script.Script,
+      );
+      const registryInput = findRegistryInput(emulator);
+      const vendor = {
+        Signature: {
+          key_hash: await vendor_key(emulator),
+        },
+      };
+      const vendorDatum: VendorDatum = {
+        vendor: vendor,
+        payouts: [
+          {
+            maturation: 1000n,
+            status: "Active",
+            value: coreValueToContractsValue(makeValue(40_000_000n)),
+          },
+        ],
+      };
+      const vendorInput = scriptOutput(
+        emulator,
+        scripts.vendorScript,
+        makeValue(200_000_000n),
+        Data.serialize(VendorDatum, vendorDatum),
+      );
+      const pausedVendorDatum: VendorDatum = {
+        vendor: vendor,
+        payouts: [
+          {
+            maturation: 1000n,
+            status: "Paused",
+            value: coreValueToContractsValue(makeValue(40_000_000n)),
+          },
+        ],
+      };
+
+      // Advance forward by 36 hours
+      emulator.stepForwardToSlot(36 * 60 * 60 + 10);
+
+      await emulator.as(Pauser, async (blaze) => {
+        await emulator.expectScriptFailure(
+          blaze
+            .newTransaction()
+            .addInput(
+              vendorInput,
+              Data.serialize(VendorSpendRedeemer, {
+                Adjudicate: {
+                  statuses: ["Paused"],
+                },
+              }),
+            )
+            .lockAssets(
+              scripts.vendorScript.scriptAddress,
+              makeValue(200_000_000n),
+              Data.serialize(VendorDatum, pausedVendorDatum),
+            )
+            .addRequiredSigner(Ed25519KeyHashHex(await pause_key(emulator)))
+            .setValidFrom(Core.Slot(0))
+            .setValidUntil(Core.Slot(36 * 60 * 60 + 20))
+            .addReferenceInput(refInput)
+            .addReferenceInput(registryInput),
+          /Trace interval_length_at_most\(validity_range, thirty_six_hours\) \? False/,
+        );
+      });
+    });
+  });
+
   describe("3.10", () => {
     test("cannot create underfunded project during modification", async () => {
       const config = loadScripts(
@@ -529,6 +612,98 @@ describe("MLabs Audit Findings", () => {
             .addRequiredSigner(modifySigner)
             .addRequiredSigner(vendorSigner),
           /Trace expect equal_plus_min_ada\(this_payout_sum, output.value\)/,
+        );
+      });
+    });
+  });
+
+  describe("3.11", () => {
+    test("cannot create a vendor project with an invalid vendor", async () => {
+      const configs = loadScripts(
+        Core.NetworkId.Testnet,
+        await sampleTreasuryConfig(emulator),
+        await sampleVendorConfig(emulator),
+      );
+      await deployScripts(emulator, configs);
+      const treasuryInput = scriptOutput(
+        emulator,
+        configs.treasuryScript,
+        makeValue(100_000_000n),
+        Data.Void(),
+      );
+      const vendor: MultisigScript = {
+        // AnyOf uses list.any, so an empty list always fails
+        AnyOf: {
+          scripts: [],
+        },
+      };
+      await emulator.as(Funder, async (blaze) => {
+        emulator.expectScriptFailure(
+          await fund(
+            {
+              treasury: configs.treasuryScript.config,
+              vendor: configs.vendorScript.config,
+            },
+            blaze,
+            treasuryInput,
+            vendor,
+            [
+              {
+                date: new Date(Number(slot_to_unix(Core.Slot(10)))),
+                amount: makeValue(100_000_000n),
+              },
+            ],
+            [Ed25519KeyHashHex(await fund_key(emulator))],
+          ),
+          /Trace expect\s*satisfied\(v.vendor,/,
+        );
+      });
+    });
+    test("cannot create a vendor project with a payout past the payout upperbound", async () => {
+      const configs = loadScripts(
+        Core.NetworkId.Testnet,
+        await sampleTreasuryConfig(emulator),
+        await sampleVendorConfig(emulator),
+      );
+      await deployScripts(emulator, configs);
+      const treasuryInput = scriptOutput(
+        emulator,
+        configs.treasuryScript,
+        makeValue(100_000_000n),
+        Data.Void(),
+      );
+      const vendor: MultisigScript = {
+        // AnyOf uses list.any, so an empty list always fails
+        Signature: {
+          key_hash: await vendor_key(emulator),
+        },
+      };
+      await emulator.as(Funder, async (blaze) => {
+        emulator.expectScriptFailure(
+          await fund(
+            {
+              treasury: configs.treasuryScript.config,
+              vendor: configs.vendorScript.config,
+            },
+            blaze,
+            treasuryInput,
+            vendor,
+            [
+              {
+                date: new Date(
+                  Number(
+                    configs.treasuryScript.config.payout_upperbound + 1000n,
+                  ),
+                ),
+                amount: makeValue(100_000_000n),
+              },
+            ],
+            [
+              Ed25519KeyHashHex(await fund_key(emulator)),
+              Ed25519KeyHashHex(await vendor_key(emulator)),
+            ],
+          ),
+          /Trace expect p.maturation <= config.payout_upperbound/,
         );
       });
     });
