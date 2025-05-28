@@ -1,5 +1,3 @@
-import { beforeEach, describe, test } from "bun:test";
-import { Core, makeValue } from "@blaze-cardano/sdk";
 import {
   Address,
   AssetId,
@@ -7,8 +5,21 @@ import {
   RewardAccount,
   Slot,
 } from "@blaze-cardano/core";
-import { Emulator } from "@blaze-cardano/emulator";
 import * as Data from "@blaze-cardano/data";
+import { Emulator } from "@blaze-cardano/emulator";
+import { Core, makeValue } from "@blaze-cardano/sdk";
+import { beforeEach, describe, test } from "bun:test";
+import {
+  loadTreasuryScript,
+  coreValueToContractsValue as translateValue,
+} from "../../src/shared";
+import { disburse } from "../../src/treasury/disburse";
+import {
+  TreasurySpendRedeemer,
+  VendorConfiguration,
+  type TreasuryConfiguration,
+  type TreasuryTreasuryWithdraw,
+} from "../../src/types/contracts";
 import {
   Disburser,
   Funder,
@@ -18,19 +29,7 @@ import {
   sampleTreasuryConfig,
   sampleVendorConfig,
   setupEmulator,
-} from "../utilities.test";
-import {
-  coreValueToContractsValue as translateValue,
-  loadTreasuryScript,
-  loadVendorScript,
-} from "../../shared";
-import {
-  TreasurySpendRedeemer,
-  VendorConfiguration,
-  type TreasuryConfiguration,
-  type TreasuryTreasuryWithdraw,
-} from "../../types/contracts";
-import { disburse } from "../../treasury/disburse";
+} from "../utilities";
 
 describe("When disbursing", () => {
   const amount = 340_000_000_000_000n;
@@ -51,7 +50,7 @@ describe("When disbursing", () => {
     const treasuryConfig = await sampleTreasuryConfig(emulator);
     const vendorConfig = await sampleVendorConfig(emulator);
     const treasury = loadTreasuryScript(Core.NetworkId.Testnet, treasuryConfig);
-    const vendorScript = loadVendorScript(Core.NetworkId.Testnet, vendorConfig);
+    // const vendorScript = loadVendorScript(Core.NetworkId.Testnet, vendorConfig);
     configs = { treasury: treasuryConfig, vendor: vendorConfig };
     rewardAccount = treasury.rewardAccount;
     treasuryScript = treasury.script;
@@ -101,7 +100,7 @@ describe("When disbursing", () => {
     fourthScriptInput.output().setDatum(Core.Datum.newInlineData(Data.Void()));
     emulator.addUtxo(fourthScriptInput);
 
-    let [registryPolicy, registryName] = registryToken();
+    const [registryPolicy, registryName] = registryToken();
     registryInput = emulator.utxos().find((u) =>
       u
         .output()
@@ -184,7 +183,7 @@ describe("When disbursing", () => {
         });
       });
       test("cannot attach stake address to change", async () => {
-        let fullAddress = new Core.Address({
+        const fullAddress = new Core.Address({
           type: Core.AddressType.BasePaymentScriptStakeKey,
           networkId: Core.NetworkId.Testnet,
           paymentPart: {
@@ -197,7 +196,7 @@ describe("When disbursing", () => {
           },
         });
         await emulator.as(Funder, async (blaze, address) => {
-          let value = translateValue(makeValue(10_000_000n));
+          const value = translateValue(makeValue(10_000_000n));
           await emulator.expectScriptFailure(
             blaze
               .newTransaction()
@@ -221,7 +220,7 @@ describe("When disbursing", () => {
                 makeValue(499_990_000_000n),
                 Data.Void(),
               ),
-            /Trace expect or {\n                            allow_stake/,
+            /Trace expect or {\n {28}allow_stake/,
           );
         });
       });

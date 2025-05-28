@@ -1,30 +1,14 @@
-import { expect } from "bun:test";
-import {
-  Blaze,
-  Core,
-  HotWallet,
-  makeValue,
-  Provider,
-  TxBuilder,
-  Wallet,
-} from "@blaze-cardano/sdk";
+import { Slot, toHex } from "@blaze-cardano/core";
 import * as Data from "@blaze-cardano/data";
-import {
-  Bip32PrivateKey,
-  Ed25519KeyHashHex,
-  getBurnAddress,
-  mnemonicToEntropy,
-  Slot,
-  toHex,
-  wordlist,
-} from "@blaze-cardano/core";
-import { Emulator, EmulatorProvider } from "@blaze-cardano/emulator";
-import { loadScripts, slot_to_unix } from "../shared";
+import { Emulator } from "@blaze-cardano/emulator";
+import { Core, makeValue } from "@blaze-cardano/sdk";
+
+import { loadScripts, slot_to_unix } from "../src/shared";
 import {
   ScriptHashRegistry,
   type TreasuryConfiguration,
   type VendorConfiguration,
-} from "../types/contracts";
+} from "../src/types/contracts";
 
 export function registryToken(): [string, string] {
   return [
@@ -42,42 +26,58 @@ export const Pauser = "Pauser";
 export const Resumer = "Resumer";
 export const Modifier = "Modifier";
 
-export async function sweep_key(emulator: Emulator) {
+export async function sweep_key(
+  emulator: Emulator,
+): Promise<Core.Hash28ByteBase16> {
   return (await emulator.register(Sweeper)).asBase()?.getPaymentCredential()
     .hash!;
 }
 
-export async function disburse_key(emulator: Emulator) {
+export async function disburse_key(
+  emulator: Emulator,
+): Promise<Core.Hash28ByteBase16> {
   return (await emulator.register(Disburser)).asBase()?.getPaymentCredential()
     .hash!;
 }
 
-export async function fund_key(emulator: Emulator) {
+export async function fund_key(
+  emulator: Emulator,
+): Promise<Core.Hash28ByteBase16> {
   return (await emulator.register(Funder)).asBase()?.getPaymentCredential()
     .hash!;
 }
 
-export async function reorganize_key(emulator: Emulator) {
+export async function reorganize_key(
+  emulator: Emulator,
+): Promise<Core.Hash28ByteBase16> {
   return (await emulator.register(Reorganizer)).asBase()?.getPaymentCredential()
     .hash!;
 }
 
-export async function pause_key(emulator: Emulator) {
+export async function pause_key(
+  emulator: Emulator,
+): Promise<Core.Hash28ByteBase16> {
   return (await emulator.register(Pauser)).asBase()?.getPaymentCredential()
     .hash!;
 }
 
-export async function resume_key(emulator: Emulator) {
+export async function resume_key(
+  emulator: Emulator,
+): Promise<Core.Hash28ByteBase16> {
   return (await emulator.register(Resumer)).asBase()?.getPaymentCredential()
     .hash!;
 }
 
-export async function modify_key(emulator: Emulator) {
+export async function modify_key(
+  emulator: Emulator,
+): Promise<Core.Hash28ByteBase16> {
   return (await emulator.register(Modifier)).asBase()?.getPaymentCredential()
     .hash!;
 }
 
-export async function vendor_key(emulator: Emulator) {
+export async function vendor_key(
+  emulator: Emulator,
+): Promise<Core.Hash28ByteBase16> {
   return (await emulator.register(Vendor)).asBase()?.getPaymentCredential()
     .hash!;
 }
@@ -85,8 +85,8 @@ export async function vendor_key(emulator: Emulator) {
 export async function sampleTreasuryConfig(
   emulator: Emulator,
 ): Promise<TreasuryConfiguration> {
-  const [policyId, _] = registryToken();
-  return {
+  const [policyId] = registryToken();
+  const config = {
     registry_token: policyId,
     expiration: slot_to_unix(Slot(36 * 60 * 60 + 10)),
     payout_upperbound: slot_to_unix(Slot(45 * 60 * 60)),
@@ -113,12 +113,14 @@ export async function sampleTreasuryConfig(
       },
     },
   };
+
+  return config;
 }
 
 export async function sampleVendorConfig(
   emulator: Emulator,
 ): Promise<VendorConfiguration> {
-  const [policyId, _] = registryToken();
+  const [policyId] = registryToken();
   return {
     registry_token: policyId,
     expiration: slot_to_unix(Slot(60 * 60 * 60 + 10)),

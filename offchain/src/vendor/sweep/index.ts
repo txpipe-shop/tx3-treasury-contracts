@@ -1,3 +1,5 @@
+import { AssetId, toHex, TransactionUnspentOutput } from "@blaze-cardano/core";
+import * as Data from "@blaze-cardano/data";
 import {
   TxBuilder,
   Value,
@@ -5,8 +7,6 @@ import {
   type Provider,
   type Wallet,
 } from "@blaze-cardano/sdk";
-import { AssetId, toHex, TransactionUnspentOutput } from "@blaze-cardano/core";
-import * as Data from "@blaze-cardano/data";
 import {
   contractsValueToCoreValue,
   loadTreasuryScript,
@@ -38,7 +38,7 @@ export async function sweep<P extends Provider, W extends Wallet>(
   const refInput = await blaze.provider.resolveScriptRef(vendorScript.Script);
   if (!refInput)
     throw new Error("Could not find vendor script reference on-chain");
-  let thirtSixHours = 36n * 60n * 60n * 1000n;
+  const thirtSixHours = 36n * 60n * 60n * 1000n;
   let tx = blaze
     .newTransaction()
     .addReferenceInput(registryInput)
@@ -49,17 +49,17 @@ export async function sweep<P extends Provider, W extends Wallet>(
   let value = Value.zero();
   for (const input of inputs) {
     tx = tx.addInput(input, Data.serialize(VendorSpendRedeemer, "SweepVendor"));
-    let datum = Data.parse(
+    const datum = Data.parse(
       VendorDatum,
       input.output().datum()!.asInlineData()!,
     );
     datum.payouts = datum.payouts.filter(
       (p) => p.maturation < now.valueOf() && p.status === "Active",
     );
-    let carryThrough = Value.sum(
+    const carryThrough = Value.sum(
       datum.payouts.map((p) => contractsValueToCoreValue(p.value)),
     );
-    let remainder = Value.merge(
+    const remainder = Value.merge(
       input.output().amount(),
       Value.negate(carryThrough),
     );

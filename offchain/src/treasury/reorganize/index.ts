@@ -1,17 +1,16 @@
 import {
-  makeValue,
-  TxBuilder,
-  type Blaze,
-  type Provider,
-  type Wallet,
-} from "@blaze-cardano/sdk";
-import {
   Ed25519KeyHashHex,
   Slot,
   TransactionUnspentOutput,
   Value,
 } from "@blaze-cardano/core";
 import * as Data from "@blaze-cardano/data";
+import {
+  TxBuilder,
+  type Blaze,
+  type Provider,
+  type Wallet,
+} from "@blaze-cardano/sdk";
 import { loadTreasuryScript } from "../../shared";
 import {
   TreasuryConfiguration,

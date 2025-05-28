@@ -1,5 +1,3 @@
-import { beforeEach, describe, test } from "bun:test";
-import { Core, makeValue } from "@blaze-cardano/sdk";
 import {
   Address,
   Ed25519KeyHashHex,
@@ -8,10 +6,23 @@ import {
   Transaction,
   TransactionId,
   TransactionInput,
-  TransactionUnspentOutput,
 } from "@blaze-cardano/core";
-import { Emulator } from "@blaze-cardano/emulator";
 import * as Data from "@blaze-cardano/data";
+import { Emulator } from "@blaze-cardano/emulator";
+import { Core, makeValue } from "@blaze-cardano/sdk";
+import { beforeEach, describe, test } from "bun:test";
+import {
+  coreValueToContractsValue,
+  loadTreasuryScript,
+  loadVendorScript,
+  slot_to_unix,
+} from "../../src/shared";
+import {
+  MultisigScript,
+  VendorConfiguration,
+  VendorDatum,
+} from "../../src/types/contracts";
+import { adjudicate } from "../../src/vendor/adjudicate";
 import {
   pause_key,
   Pauser,
@@ -21,22 +32,7 @@ import {
   sampleVendorConfig,
   setupEmulator,
   vendor_key,
-} from "../utilities.test";
-import {
-  loadTreasuryScript,
-  loadVendorScript,
-  coreValueToContractsValue,
-  slot_to_unix,
-} from "../../shared";
-import {
-  MultisigScript,
-  VendorConfiguration,
-  VendorDatum,
-  VendorSpendRedeemer,
-  VendorVendorSpend,
-} from "../../types/contracts";
-import { withdraw } from "../../vendor/withdraw";
-import { adjudicate } from "../../vendor/adjudicate";
+} from "../utilities";
 
 describe("", () => {
   const amount = 340_000_000_000_000n;
@@ -53,13 +49,14 @@ describe("", () => {
   let fourthDatum: VendorDatum;
   let fifthScriptInput: Core.TransactionUnspentOutput;
   let fifthDatum: VendorDatum;
-  let refInput: Core.TransactionUnspentOutput;
+  // let refInput: Core.TransactionUnspentOutput | undefined;
   let vendor: MultisigScript;
   let pauseSigner: Ed25519KeyHashHex;
   let resumeSigner: Ed25519KeyHashHex;
   let rewardAccount: RewardAccount;
-  let vendorScript: VendorVendorSpend;
+  // let vendorScript: VendorVendorSpend;
   let vendorScriptAddress: Address;
+
   beforeEach(async () => {
     emulator = await setupEmulator();
     const treasuryConfig = await sampleTreasuryConfig(emulator);
@@ -74,7 +71,7 @@ describe("", () => {
     );
     config = vendorConfig;
     rewardAccount = treasuryScriptManifest.rewardAccount;
-    vendorScript = vendorScriptManifest.script;
+    // vendorScript = vendorScriptManifest.script;
     vendorScriptAddress = vendorScriptManifest.scriptAddress;
 
     emulator.accounts.set(rewardAccount, amount);
@@ -226,13 +223,13 @@ describe("", () => {
       );
     emulator.addUtxo(fifthScriptInput);
 
-    refInput = emulator.lookupScript(vendorScript.Script);
+    // refInput = emulator.lookupScript(vendorScript.Script);
   });
 
   describe("the oversight committee", () => {
     describe("can pause", () => {
       test("one payout", async () => {
-        await emulator.as(Pauser, async (blaze, vendorAddress) => {
+        await emulator.as(Pauser, async (blaze) => {
           await emulator.expectValidTransaction(
             blaze,
             await adjudicate(
@@ -247,7 +244,7 @@ describe("", () => {
         });
       });
       test("all payouts", async () => {
-        await emulator.as(Pauser, async (blaze, vendorAddress) => {
+        await emulator.as(Pauser, async (blaze) => {
           await emulator.expectValidTransaction(
             blaze,
             await adjudicate(
@@ -262,7 +259,7 @@ describe("", () => {
         });
       });
       test("some payouts", async () => {
-        await emulator.as(Pauser, async (blaze, vendorAddress) => {
+        await emulator.as(Pauser, async (blaze) => {
           await emulator.expectValidTransaction(
             blaze,
             await adjudicate(
@@ -277,7 +274,7 @@ describe("", () => {
         });
       });
       test("unmatured payouts", async () => {
-        await emulator.as(Pauser, async (blaze, vendorAddress) => {
+        await emulator.as(Pauser, async (blaze) => {
           emulator.stepForwardToSlot(Slot(2));
           await emulator.expectValidTransaction(
             blaze,
@@ -295,7 +292,7 @@ describe("", () => {
     });
     describe("cannot pause", () => {
       test("matured payouts", async () => {
-        await emulator.as(Pauser, async (blaze, vendorAddress) => {
+        await emulator.as(Pauser, async (blaze) => {
           emulator.stepForwardToSlot(Slot(2));
           await emulator.expectScriptFailure(
             await adjudicate(
@@ -313,7 +310,7 @@ describe("", () => {
     });
     describe("can resume", () => {
       test("one payout", async () => {
-        await emulator.as(Resumer, async (blaze, vendorAddress) => {
+        await emulator.as(Resumer, async (blaze) => {
           await emulator.expectValidTransaction(
             blaze,
             await adjudicate(
@@ -367,7 +364,7 @@ describe("", () => {
         });
       });
       test("matured payouts", async () => {
-        await emulator.as(Resumer, async (blaze, vendorAddress) => {
+        await emulator.as(Resumer, async (blaze) => {
           emulator.stepForwardToSlot(10);
           await emulator.expectValidTransaction(
             blaze,

@@ -1,3 +1,5 @@
+import { TransactionUnspentOutput } from "@blaze-cardano/core";
+import * as Data from "@blaze-cardano/data";
 import {
   makeValue,
   TxBuilder,
@@ -6,10 +8,11 @@ import {
   type Provider,
   type Wallet,
 } from "@blaze-cardano/sdk";
-import { Slot, TransactionUnspentOutput } from "@blaze-cardano/core";
-import * as Data from "@blaze-cardano/data";
 import { loadTreasuryScript, unix_to_slot } from "../../shared";
-import { TreasuryConfiguration, TreasurySpendRedeemer } from "../../types/contracts";
+import {
+  TreasuryConfiguration,
+  TreasurySpendRedeemer,
+} from "../../types/contracts";
 
 export async function sweep<P extends Provider, W extends Wallet>(
   config: TreasuryConfiguration,
@@ -32,13 +35,9 @@ export async function sweep<P extends Provider, W extends Wallet>(
     .addReferenceInput(refInput)
     .setDonation(amount);
 
-  let remainder = Value.merge(input.output().amount(), makeValue(-amount));
+  const remainder = Value.merge(input.output().amount(), makeValue(-amount));
   if (remainder !== Value.zero()) {
-    tx = tx.lockAssets(
-      scriptAddress,
-      remainder,
-      Data.Void(),
-    );
+    tx = tx.lockAssets(scriptAddress, remainder, Data.Void());
   }
 
   return tx;

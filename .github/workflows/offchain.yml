@@ -1,0 +1,71 @@
+name: CI/CD (Offchain)
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  id-token: write # required to use OIDC authentication
+  contents: write # required to checkout and push to the repo
+
+jobs:
+  Publish:
+    name: Lint + Test + Publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v1
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      # Git Identity
+      - name: Git Identity
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install dependencies
+        run: |
+          cd offchain
+          bun install --frozen-lockfile
+
+      - name: Lint
+        run: |
+          cd offchain
+          bun lint
+
+      - name: Test
+        run: |
+          cd offchain
+          bun test
+
+      - name: Build
+        run: |
+          cd offchain
+          bun run build
+
+      # Bump Versions (reinstate after release)
+      # - name: Bump versions
+      #   run: |
+      #     cd offchain
+      #     bun version
+
+      # Pull latest changes and rebase before pushing
+      # - name: Pull and Push changes
+      #   run: |
+      #     git pull --rebase --no-verify origin main
+      #     git push --follow-tags --no-verify origin main
+
+      - name: Configure npm authentication
+        run: npm config set //registry.npmjs.org/:_authToken ${{ secrets.NPM_TOKEN }}
+
+      # Create Release
+      - name: Publish
+        run: |
+          cd offchain
+          npm publish
