@@ -1,4 +1,4 @@
-import { input, select } from "@inquirer/prompts";
+import { input, password, select } from "@inquirer/prompts";
 import type { MultisigScript } from "../types/contracts";
 import { Address, AddressType, CredentialType } from "@blaze-cardano/core";
 import clipboard from "clipboardy";
@@ -162,7 +162,7 @@ export async function getProvider(): Promise<Provider> {
             });
             return new Blockfrost({
                 network: bfNetwork,
-                projectId: await input({
+                projectId: await password({
                     message: "Enter the Blockfrost project ID",
                 }),
             });
@@ -176,7 +176,7 @@ export async function getProvider(): Promise<Provider> {
             });
             return new Maestro({
                 network: mNetwork,
-                apiKey: await input({
+                apiKey: await password({
                     message: "Enter the Maestro API key",
                 }),
             });
