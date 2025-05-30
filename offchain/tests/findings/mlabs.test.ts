@@ -1159,4 +1159,52 @@ describe("MLabs Audit Findings", () => {
     });
   });
 
+  describe("3.17", () => {
+    test("cannot DOS the treasury UTxOs after expiration", async () => {
+      const scripts = loadScripts(
+        Core.NetworkId.Testnet,
+        await sampleTreasuryConfig(emulator),
+        await sampleVendorConfig(emulator),
+      );
+      await deployScripts(emulator, scripts);
+
+      const refInput = emulator.lookupScript(
+        scripts.treasuryScript.script.Script,
+      );
+      const registryInput = findRegistryInput(emulator);
+
+      const amount = 100_000_000_000_000n;
+      const input = scriptOutput(
+        emulator,
+        scripts.treasuryScript,
+        makeValue(amount),
+        Data.Void(),
+      );
+
+      const future = scripts.treasuryScript.config.expiration * 2n;
+      emulator.stepForwardToSlot(future);
+
+      await emulator.as("Anyone", async (blaze) => {
+        await emulator.expectScriptFailure(
+          blaze
+            .newTransaction()
+            .addInput(
+              input,
+              Data.serialize(TreasurySpendRedeemer, "SweepTreasury"),
+            )
+            .lockLovelace(
+              scripts.treasuryScript.scriptAddress,
+              amount - 1n,
+              Data.Void(),
+            )
+            .setValidFrom(unix_to_slot(future))
+            .addReferenceInput(refInput)
+            .addReferenceInput(registryInput)
+            .setDonation(1n),
+          /Trace expect input_lovelace - donation <= 5_000_000/,
+        );
+      });
+    });
+  });
+
 });
