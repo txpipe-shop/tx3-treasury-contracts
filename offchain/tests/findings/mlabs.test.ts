@@ -695,7 +695,6 @@ describe("MLabs Audit Findings", () => {
         Data.Void(),
       );
       const vendor: MultisigScript = {
-        // AnyOf uses list.any, so an empty list always fails
         Signature: {
           key_hash: await vendor_key(emulator),
         },
@@ -730,4 +729,129 @@ describe("MLabs Audit Findings", () => {
       });
     });
   });
+
+  describe("3.12", () => {
+    test("cannot modify a vendor project to have an invalid vendor", async () => {
+      const configs = loadScripts(
+        Core.NetworkId.Testnet,
+        await sampleTreasuryConfig(emulator),
+        await sampleVendorConfig(emulator),
+      );
+      await deployScripts(emulator, configs);
+      const validVendor: MultisigScript = {
+        Signature: {
+          key_hash: await vendor_key(emulator),
+        },
+      };
+      const invalidVendor: MultisigScript = {
+        // AnyOf uses list.any, so an empty list always fails
+        AnyOf: {
+          scripts: [],
+        },
+      };
+      const vendorDatum: VendorDatum = {
+        vendor: validVendor,
+        payouts: [
+          {
+            maturation: 0n,
+            status: "Active",
+            value: coreValueToContractsValue(makeValue(100_000_000n)),
+          },
+        ],
+      };
+      const invalidVendorDatum: VendorDatum = {
+        vendor: invalidVendor,
+        payouts: vendorDatum.payouts,
+      };
+      const vendorInput = scriptOutput(
+        emulator,
+        configs.vendorScript,
+        makeValue(100_000_000n),
+        Data.serialize(VendorDatum, vendorDatum),
+      );
+      await emulator.as(Funder, async (blaze) => {
+        await emulator.expectScriptFailure(
+          await modify(
+            {
+              treasury: configs.treasuryScript.config,
+              vendor: configs.vendorScript.config,
+            },
+            blaze,
+            new Date(Number(slot_to_unix(Core.Slot(0)))),
+            vendorInput,
+            invalidVendorDatum,
+            [
+              Ed25519KeyHashHex(await fund_key(emulator)),
+              Ed25519KeyHashHex(await vendor_key(emulator)),
+            ],
+          ),
+          /Trace expect\s*satisfied\(v.vendor,/,
+        );
+      });
+    });
+    test("cannot modify a vendor project to have a payout past the payout upperbound", async () => {
+      const configs = loadScripts(
+        Core.NetworkId.Testnet,
+        await sampleTreasuryConfig(emulator),
+        await sampleVendorConfig(emulator),
+      );
+      await deployScripts(emulator, configs);
+      const validVendor: MultisigScript = {
+        Signature: {
+          key_hash: await vendor_key(emulator),
+        },
+      };
+      const vendorDatum: VendorDatum = {
+        vendor: validVendor,
+        payouts: [
+          {
+            maturation: 0n,
+            status: "Active",
+            value: coreValueToContractsValue(makeValue(100_000_000n)),
+          },
+        ],
+      };
+      const vendorInput = scriptOutput(
+        emulator,
+        configs.vendorScript,
+        makeValue(100_000_000n),
+        Data.serialize(VendorDatum, vendorDatum),
+      );
+      const newVendorDatum: VendorDatum = {
+        vendor: validVendor,
+        payouts: [
+          {
+            maturation: configs.treasuryScript.config.payout_upperbound * 2n,
+            status: "Active",
+            value: coreValueToContractsValue(makeValue(100_000_000n)),
+          },
+        ],
+      };
+      await emulator.as(Funder, async (blaze) => {
+        emulator.expectScriptFailure(
+          await modify(
+            {
+              treasury: configs.treasuryScript.config,
+              vendor: configs.vendorScript.config,
+            },
+            blaze,
+            new Date(Number(slot_to_unix(Core.Slot(0)))),
+            vendorInput,
+            newVendorDatum,
+            [
+              Ed25519KeyHashHex(await fund_key(emulator)),
+              Ed25519KeyHashHex(await vendor_key(emulator)),
+            ],
+          ),
+          // Note: becauae of the awkwardness of getting payout_upperbound into the vendor script
+          // we accept the use of config.expiration here; this is envisioned to be a short time
+          // after the payout upper bound, so technically the committee and the vendor could
+          // delay the sweep of funds by a small amount; but this is expected to be relatively small
+          // and doesn't meaningfully change the security of the contracts
+          /Trace expect p.maturation <= config.expiration/,
+        );
+      });
+    });
+  });
+
 });
