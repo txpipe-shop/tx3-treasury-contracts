@@ -985,4 +985,82 @@ describe("MLabs Audit Findings", () => {
     });
   });
 
+  describe("3.15", () => {
+    test("cannot attach different staking credential to unswept value in vendor contracts", async () => {
+      const scripts = loadScripts(
+        Core.NetworkId.Testnet,
+        await sampleTreasuryConfig(emulator),
+        await sampleVendorConfig(emulator),
+      );
+      await deployScripts(emulator, scripts);
+      const refInput = emulator.lookupScript(
+        scripts.vendorScript.script.Script,
+      );
+      const registryInput = findRegistryInput(emulator);
+      const vendor = {
+        Signature: {
+          key_hash: await vendor_key(emulator),
+        },
+      };
+      const vendorDatum: VendorDatum = {
+        vendor: vendor,
+        payouts: [
+          {
+            maturation: 1000n,
+            status: "Active",
+            value: coreValueToContractsValue(makeValue(40_000_000n)),
+          },
+        ],
+      };
+      const vendorInput = scriptOutput(
+        emulator,
+        scripts.vendorScript,
+        makeValue(200_000_000n),
+        Data.serialize(VendorDatum, vendorDatum),
+      );
+
+      const now = unix_to_slot(scripts.vendorScript.config.expiration * 2n);
+      emulator.stepForwardToSlot(now);
+
+      const fullAddress = new Core.Address({
+        type: Core.AddressType.BasePaymentScriptStakeKey,
+        networkId: Core.NetworkId.Testnet,
+        paymentPart: {
+          type: Core.CredentialType.ScriptHash,
+          hash: scripts.vendorScript.script.Script.hash(),
+        },
+        delegationPart: {
+          type: Core.CredentialType.KeyHash,
+          hash: scripts.treasuryScript.script.Script.hash(), // Just use an arbitrary hash
+        },
+      });
+
+      await emulator.as("Anyone", async (blaze) => {
+        emulator.expectScriptFailure(
+          blaze
+            .newTransaction()
+            .addReferenceInput(refInput)
+            .addReferenceInput(registryInput)
+            .setValidFrom(Core.Slot(now))
+            .setValidUntil(Core.Slot(now + 10))
+            .addInput(
+              vendorInput,
+              Data.serialize(VendorSpendRedeemer, "SweepVendor"),
+            )
+            .lockAssets(
+              scripts.treasuryScript.scriptAddress,
+              makeValue(160_000_000n),
+              Data.Void(),
+            )
+            .lockAssets(
+              fullAddress,
+              makeValue(40_000_000n),
+              Data.serialize(VendorDatum, vendorDatum),
+            ),
+          /Trace expect vendor_output.address.stake_credential == Some\(Inline\(account\)\)/,
+        );
+      });
+    });
+  });
+
 });
