@@ -1063,15 +1063,18 @@ describe("MLabs Audit Findings", () => {
     });
   });
 
-  describe.skip("3.16 - skipped awaiting clarification", () => {
-    test("not required to provide extra minADA when sweeping asset-only payouts", async () => {
+  describe("3.16 - skipped awaiting clarification", () => {
+    test("not forced to provide extra minADA when sweeping asset-only vendor payouts, because spending treasury input is impossible", async () => {
       const scripts = loadScripts(
         Core.NetworkId.Testnet,
         await sampleTreasuryConfig(emulator),
         await sampleVendorConfig(emulator),
       );
       await deployScripts(emulator, scripts);
-      const refInput = emulator.lookupScript(
+      const treasuryRefInput = emulator.lookupScript(
+        scripts.treasuryScript.script.Script,
+      );
+      const vendorRefInput = emulator.lookupScript(
         scripts.vendorScript.script.Script,
       );
       const registryInput = findRegistryInput(emulator);
@@ -1128,25 +1131,26 @@ describe("MLabs Audit Findings", () => {
       emulator.stepForwardToSlot(now);
 
       await emulator.as("Anyone", async (blaze) => {
-        emulator.expectValidTransaction(
-          blaze,
+        emulator.expectScriptFailure(
           blaze
             .newTransaction()
-            .addReferenceInput(refInput)
+            .addReferenceInput(treasuryRefInput)
+            .addReferenceInput(vendorRefInput)
             .addReferenceInput(registryInput)
             .setValidFrom(Core.Slot(now))
             .setValidUntil(Core.Slot(now + 10))
             .addInput(
               treasuryInput,
-              Data.serialize(TreasurySpendRedeemer, "Reorganize"),
+              Data.serialize(TreasurySpendRedeemer, "SweepTreasury"),
             )
+            .setDonation(1_000_000n)
             .addInput(
               vendorInput,
               Data.serialize(VendorSpendRedeemer, "SweepVendor"),
             )
             .lockAssets(
               scripts.treasuryScript.scriptAddress,
-              makeValue(1_409_370n, ["a".repeat(56), 50n]),
+              makeValue(4_000_000n, ["a".repeat(56), 50n]),
               Data.Void(),
             )
             .lockAssets(
@@ -1154,6 +1158,7 @@ describe("MLabs Audit Findings", () => {
               makeValue(1_409_370n, ["a".repeat(56), 50n]),
               Data.serialize(VendorDatum, newVendorDatum),
             ),
+          /Trace expect\s*option.is_none\(\s*inputs\s*|> list.find\(fn\(input\) { input.address.payment_credential == registry.vendor },/,
         );
       });
     });
