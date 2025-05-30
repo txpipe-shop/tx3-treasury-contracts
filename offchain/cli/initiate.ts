@@ -2,9 +2,9 @@ import { AssetName, Datum, PolicyId, TransactionId, TransactionInput, Transactio
 import { serialize, Void } from "@blaze-cardano/data";
 import { Blaze, Core } from "@blaze-cardano/sdk";
 import { input, select } from "@inquirer/prompts";
-import { contractsValueToCoreValue } from "src/shared";
-import { OneshotOneshotMint, ScriptHashRegistry, TreasuryTreasurySpend, VendorVendorSpend } from "../types/contracts";
-import { getMultiSigScript, getProvider, getWallet, transactionDialog } from "./shared";
+import { contractsValueToCoreValue } from "../src/shared";
+import { OneshotOneshotMint, ScriptHashRegistry, TreasuryTreasurySpend, VendorVendorSpend } from "../src/types/contracts";
+import { getProvider, getTreasuryConfig, getVendorConfig, getWallet, transactionDialog } from "./shared";
 
 export async function initiate(): Promise<void> {
     const bootstrapUtxo = {
@@ -21,36 +21,12 @@ export async function initiate(): Promise<void> {
     const registry_token = oneshotScript.Script;
     console.log(`Registry token policy ID: ${registry_token.hash()}`);
 
-    const treasuryConfig = {
-        registry_token: registry_token.hash(),
-        permissions: {
-            reorganize: await getMultiSigScript("Multisig for treasury reorganize"),
-            sweep: await getMultiSigScript("Multisig for treasury sweep"),
-            fund: await getMultiSigScript("Multisig for treasury fund"),
-            disburse: await getMultiSigScript("Multisig for treasury disburse"),
-        },
-        expiration: BigInt(await input({
-            message: "Enter the expiration time (in seconds since epoch)",
-        })),
-        payout_upperbound: BigInt(await input({
-            message: "Enter the payout upper bound (in lovelace)",
-        })),
-    };
+    const treasuryConfig = await getTreasuryConfig(registry_token.hash());
 
     const treasuryScript = new TreasuryTreasurySpend(treasuryConfig).Script;
     console.log(`Treasury script policy ID: ${treasuryScript.hash()}`);
 
-    const vendorConfig = {
-        registry_token: registry_token.hash(),
-        permissions: {
-            pause: await getMultiSigScript("Multisig for vendor pause"),
-            resume: await getMultiSigScript("Multisig for vendor resume"),
-            modify: await getMultiSigScript("Multisig for vendor modify"),
-        },
-        expiration: BigInt(await input({
-            message: "Enter the expiration time (in seconds since epoch)",
-        })),
-    };
+    const vendorConfig = await getVendorConfig(registry_token.hash());
 
     const vendorScript = new VendorVendorSpend(vendorConfig).Script;
     console.log(`Vendor script policy ID: ${vendorScript.hash()}`);

@@ -1,8 +1,8 @@
-import { input, password, select } from "@inquirer/prompts";
-import type { MultisigScript } from "../types/contracts";
-import { Address, AddressType, CredentialType } from "@blaze-cardano/core";
-import clipboard from "clipboardy";
+import { Address, CredentialType } from "@blaze-cardano/core";
 import { Blockfrost, ColdWallet, Core, Maestro, Wallet, type Provider } from "@blaze-cardano/sdk";
+import { input, password, select } from "@inquirer/prompts";
+import clipboard from "clipboardy";
+import type { MultisigScript, TreasuryConfiguration, VendorConfiguration } from "../src/types/contracts";
 
 export async function getMultiSigScript(title: string): Promise<MultisigScript> {
     console.log(`\n${title}`);
@@ -193,4 +193,46 @@ export async function getWallet(
     }));
     const wallet = new ColdWallet(address, provider.network, provider);
     return wallet;
+}
+
+export async function getTreasuryConfig(registry_token_policy: string | undefined): Promise<TreasuryConfiguration> {
+    if (!registry_token_policy) {
+        registry_token_policy = await input({
+            message: "Enter the registry token policy ID",
+        });
+    }
+    return {
+        registry_token: registry_token_policy!,
+        permissions: {
+            reorganize: await getMultiSigScript("Multisig for treasury reorganize"),
+            sweep: await getMultiSigScript("Multisig for treasury sweep"),
+            fund: await getMultiSigScript("Multisig for treasury fund"),
+            disburse: await getMultiSigScript("Multisig for treasury disburse"),
+        },
+        expiration: BigInt(await input({
+            message: "Enter the expiration time (in seconds since epoch)",
+        })),
+        payout_upperbound: BigInt(await input({
+            message: "Enter the payout upper bound (in lovelace)",
+        })),
+    };
+}
+
+export async function getVendorConfig(registry_token_policy: string | undefined): Promise<VendorConfiguration> {
+    if (!registry_token_policy) {
+        registry_token_policy = await input({
+            message: "Enter the registry token policy ID",
+        });
+    }
+    return {
+        registry_token: registry_token_policy!,
+        permissions: {
+            pause: await getMultiSigScript("Multisig for vendor pause"),
+            resume: await getMultiSigScript("Multisig for vendor resume"),
+            modify: await getMultiSigScript("Multisig for vendor modify"),
+        },
+        expiration: BigInt(await input({
+            message: "Enter the expiration time (in seconds since epoch)",
+        })),
+    };
 }
