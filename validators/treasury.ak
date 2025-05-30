@@ -11,7 +11,9 @@ use types.{
   Disburse, Fund, Reorganize, SweepTreasury, TreasuryConfiguration,
   TreasurySpendRedeemer,
 }
-use utilities.{ensure_compliant_scripts, find_script_hash_registry}
+use utilities.{
+  ensure_compliant_scripts, ensure_no_ref_scripts, find_script_hash_registry,
+}
 
 /// A treasury script to hold funds withdrawn from the Cardano treasury
 validator treasury(config: TreasuryConfiguration) {
@@ -31,6 +33,7 @@ validator treasury(config: TreasuryConfiguration) {
     let registry =
       find_script_hash_registry(self.reference_inputs, config.registry_token)
     ensure_compliant_scripts(self.inputs, registry)
+    ensure_no_ref_scripts(self.outputs)
 
     when redeemer is {
       // Funds can be swept back to the treasury after the expiration
@@ -52,6 +55,7 @@ validator treasury(config: TreasuryConfiguration) {
   // without a staking address; this is how the funds are moved out of the reward account
   // after a treasury withdrawal
   withdraw(_, account: Credential, self: Transaction) {
+    ensure_no_ref_scripts(self.outputs)
     let registry =
       find_script_hash_registry(self.reference_inputs, config.registry_token)
     withdraw.logic(self.withdrawals, account, registry, self)

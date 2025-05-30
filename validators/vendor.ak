@@ -8,7 +8,9 @@ use types.{
   Adjudicate, Malformed, Modify, SweepVendor, VendorConfiguration, VendorDatum,
   VendorSpendRedeemer, Withdraw,
 }
-use utilities.{ensure_compliant_scripts, find_script_hash_registry}
+use utilities.{
+  ensure_compliant_scripts, ensure_no_ref_scripts, find_script_hash_registry,
+}
 
 /// A vendor script, for an ongoing project with an owner
 validator vendor(config: VendorConfiguration) {
@@ -23,6 +25,7 @@ validator vendor(config: VendorConfiguration) {
     let registry =
       find_script_hash_registry(self.reference_inputs, config.registry_token)
     ensure_compliant_scripts(self.inputs, registry)
+    ensure_no_ref_scripts(self.outputs)
 
     when redeemer is {
       Withdraw -> withdraw.logic(account, self)

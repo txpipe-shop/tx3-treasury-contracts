@@ -45,6 +45,12 @@ pub fn ensure_compliant_scripts(
         )
 }
 
+pub fn ensure_no_ref_scripts(outputs: List<Output>) {
+  expect
+    outputs
+      |> list.all(fn(output) { option.is_none(output.reference_script) })
+}
+
 // Get the output of each input
 pub fn outputs_of(inputs: List<Input>) -> List<Output> {
   list.map(inputs, fn(input) { input.output })
