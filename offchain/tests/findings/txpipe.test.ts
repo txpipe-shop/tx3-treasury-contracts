@@ -758,4 +758,91 @@ describe("TxPipe Audit Findings", () => {
       });
     });
   });
+
+  // Note: we only test this for the unpermissioned actions, but they're enforced on all operations
+  describe("TRS-204", () => {
+    describe("anyone", () => {
+      test("cannot attach script references when withdrawing from reward account", async () => {
+        const scripts = loadScripts(
+          Core.NetworkId.Testnet,
+          await sampleTreasuryConfig(emulator),
+          await sampleVendorConfig(emulator),
+        );
+        await deployScripts(emulator, scripts);
+        emulator.accounts.set(
+          scripts.treasuryScript.rewardAccount!,
+          5_000_000n,
+        );
+
+        const refInput = emulator.lookupScript(
+          scripts.treasuryScript.script.Script,
+        );
+        const registryInput = findRegistryInput(emulator);
+
+        await emulator.as("Anyone", async (blaze) => {
+          await emulator.expectScriptFailure(
+            blaze
+              .newTransaction()
+              .addWithdrawal(
+                scripts.treasuryScript.rewardAccount!,
+                5_000_000n,
+                Data.Void(),
+              )
+              .lockLovelace(
+                scripts.treasuryScript.scriptAddress,
+                5_000_000n,
+                Data.Void(),
+                scripts.treasuryScript.script.Script,
+              )
+              .addReferenceInput(refInput)
+              .addReferenceInput(registryInput),
+            /Trace expect\s*outputs\s*|> list.all\(fn\(output\) { option.is_none\(output.reference_script\) }\)/,
+          );
+        });
+      });
+      test("cannot attach script references when sweeping malformed funds", async () => {
+        const scripts = loadScripts(
+          Core.NetworkId.Testnet,
+          await sampleTreasuryConfig(emulator),
+          await sampleVendorConfig(emulator),
+        );
+        await deployScripts(emulator, scripts);
+
+        const refInput = emulator.lookupScript(
+          scripts.vendorScript.script.Script,
+        );
+        const registryInput = findRegistryInput(emulator);
+        const vendorOutput = scriptOutput(
+          emulator,
+          scripts.vendorScript,
+          makeValue(5_000_000n),
+          Data.Void(),
+        );
+
+        const future = scripts.treasuryScript.config.expiration * 2n;
+        emulator.stepForwardToSlot(future);
+
+        await emulator.as("Anyone", async (blaze) => {
+          await emulator.expectScriptFailure(
+            blaze
+              .newTransaction()
+              .addInput(
+                vendorOutput,
+                Data.serialize(VendorSpendRedeemer, "Malformed"),
+              )
+              .lockLovelace(
+                scripts.treasuryScript.scriptAddress,
+                5_000_000n,
+                Data.Void(),
+                scripts.treasuryScript.script.Script,
+              )
+              .setValidFrom(unix_to_slot(future))
+              .addReferenceInput(refInput)
+              .addReferenceInput(registryInput),
+            /Trace expect\s*outputs\s*|> list.all\(fn\(output\) { option.is_none\(output.reference_script\) }\)/,
+          );
+        });
+      });
+    });
+  });
 });
