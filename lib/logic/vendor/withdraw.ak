@@ -69,8 +69,6 @@ pub fn logic(account: Credential, transaction: Transaction) {
     expect InlineDatum(output_vendor_datum) = vendor_output.datum
     expect output_vendor_datum: VendorDatum = output_vendor_datum
 
-    trace output_vendor_datum
-    trace expected_payouts
     expect and {
         (output_vendor_datum == VendorDatum {
           vendor: input_vendor_datum.vendor,
