@@ -16,6 +16,9 @@ import {
   Modifier,
   pause_key,
   Pauser,
+  Vendor,
+  Reorganizer,
+  reorganize_key,
 } from "../utilities";
 import {
   coreValueToContractsValue,
@@ -40,7 +43,7 @@ describe("MLabs Audit Findings", () => {
   });
 
   describe("3.4", () => {
-    test("cannot steal funds meant to be swept through double satisfaction", async () => {
+    test("cannot steal funds meant to be swept through double satisfaction with other treasury instances", async () => {
       const treasuryConfig1 = loadScripts(
         Core.NetworkId.Testnet,
         await sampleTreasuryConfig(emulator, 1),
@@ -110,7 +113,7 @@ describe("MLabs Audit Findings", () => {
   });
 
   describe("3.5", () => {
-    test("cannot steal funds meant to be swept through double satisfaction", async () => {
+    test("cannot steal funds double satisfied during sweep using malformed vendor datums", async () => {
       const treasuryConfig = loadScripts(
         Core.NetworkId.Testnet,
         await sampleTreasuryConfig(emulator),
@@ -470,8 +473,8 @@ describe("MLabs Audit Findings", () => {
     });
   });
 
-  describe("3.8", () => {
-    test("cannot modify payouts that have matured more than 36 hours ago", async () => {
+  describe("3.9", () => {
+    test("is not forced to steal native assets when modifying", async () => {
       const scripts = loadScripts(
         Core.NetworkId.Testnet,
         await sampleTreasuryConfig(emulator),
@@ -488,60 +491,79 @@ describe("MLabs Audit Findings", () => {
         },
       };
       const vendorDatum: VendorDatum = {
-        vendor: vendor,
+        vendor,
         payouts: [
           {
             maturation: 1000n,
+            value: coreValueToContractsValue(makeValue(10_000_000n)),
             status: "Active",
-            value: coreValueToContractsValue(makeValue(40_000_000n)),
+          },
+          {
+            maturation: 2000n,
+            value: coreValueToContractsValue(
+              makeValue(10_000_000n, ["a".repeat(56), 1n]),
+            ),
+            status: "Active",
+          },
+          {
+            maturation: 10000n,
+            value: coreValueToContractsValue(makeValue(10_000_000n)),
+            status: "Active",
           },
         ],
       };
       const vendorInput = scriptOutput(
         emulator,
         scripts.vendorScript,
-        makeValue(200_000_000n),
+        makeValue(30_000_000n, ["a".repeat(56), 1n]),
         Data.serialize(VendorDatum, vendorDatum),
       );
-      const pausedVendorDatum: VendorDatum = {
-        vendor: vendor,
-        payouts: [
-          {
-            maturation: 1000n,
-            status: "Paused",
-            value: coreValueToContractsValue(makeValue(40_000_000n)),
-          },
-        ],
-      };
+      const tx = await emulator.as(Modifier, async (blaze) => {
+        const now = new Date(Number(slot_to_unix(Core.Slot(3))));
 
-      // Advance forward by 36 hours
-      emulator.stepForwardToSlot(36 * 60 * 60 + 10);
+        emulator.stepForwardToSlot(3);
 
-      await emulator.as(Pauser, async (blaze) => {
-        await emulator.expectScriptFailure(
-          blaze
-            .newTransaction()
-            .addInput(
-              vendorInput,
-              Data.serialize(VendorSpendRedeemer, {
-                Adjudicate: {
-                  statuses: ["Paused"],
-                },
-              }),
-            )
-            .lockAssets(
-              scripts.vendorScript.scriptAddress,
-              makeValue(200_000_000n),
-              Data.serialize(VendorDatum, pausedVendorDatum),
-            )
-            .addRequiredSigner(Ed25519KeyHashHex(await pause_key(emulator)))
-            .setValidFrom(Core.Slot(0))
-            .setValidUntil(Core.Slot(36 * 60 * 60 + 20))
-            .addReferenceInput(refInput)
-            .addReferenceInput(registryInput),
-          /Trace interval_length_at_most\(validity_range, thirty_six_hours\) \? False/,
-        );
+        const newDatum: VendorDatum = {
+          vendor: vendor,
+          payouts: [
+            {
+              maturation: 1000n,
+              value: coreValueToContractsValue(makeValue(10_000_000n)),
+              status: "Active",
+            },
+            {
+              maturation: 2000n,
+              value: coreValueToContractsValue(
+                makeValue(10_000_000n, ["a".repeat(56), 1n]),
+              ),
+              status: "Active",
+            },
+            {
+              maturation: 11000n,
+              value: coreValueToContractsValue(makeValue(10_000_000n)),
+              status: "Active",
+            },
+          ],
+        };
+
+        return blaze
+          .newTransaction()
+          .addReferenceInput(registryInput)
+          .addReferenceInput(refInput)
+          .setValidFrom(unix_to_slot(BigInt(now.valueOf())))
+          .setValidUntil(
+            unix_to_slot(BigInt(now.valueOf()) + 36n * 60n * 60n * 1000n),
+          )
+          .addInput(vendorInput, Data.serialize(VendorSpendRedeemer, "Modify"))
+          .addRequiredSigner(Ed25519KeyHashHex(await modify_key(emulator)))
+          .addRequiredSigner(Ed25519KeyHashHex(await vendor_key(emulator)))
+          .lockAssets(
+            scripts.vendorScript.scriptAddress,
+            makeValue(30_000_000n, ["a".repeat(56), 1n]),
+            Data.serialize(VendorDatum, newDatum),
+          );
       });
+      await emulator.expectValidMultisignedTransaction([Modifier, Vendor], tx);
     });
   });
 
