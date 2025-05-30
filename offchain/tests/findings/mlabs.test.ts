@@ -929,4 +929,60 @@ describe("MLabs Audit Findings", () => {
     });
   });
 
+  describe("3.14", () => {
+    test("cannot steal treasury funds while reorganizing using malformed vendor funds", async () => {
+      const scripts = loadScripts(
+        Core.NetworkId.Testnet,
+        await sampleTreasuryConfig(emulator),
+        await sampleVendorConfig(emulator),
+      );
+      await deployScripts(emulator, scripts);
+      const treasuryRefInput = emulator.lookupScript(
+        scripts.treasuryScript.script.Script,
+      );
+      const vendorRefInput = emulator.lookupScript(
+        scripts.vendorScript.script.Script,
+      );
+      const registryInput = findRegistryInput(emulator);
+      const vendorOutput = scriptOutput(
+        emulator,
+        scripts.vendorScript,
+        makeValue(5_000_000n),
+        Data.Void(),
+      );
+      const treasuryOutput = scriptOutput(
+        emulator,
+        scripts.treasuryScript,
+        makeValue(5_000_000n),
+        Data.Void(),
+      );
+      emulator.as(Reorganizer, async (blaze) => {
+        await emulator.expectScriptFailure(
+          blaze
+            .newTransaction()
+            .addReferenceInput(treasuryRefInput)
+            .addReferenceInput(vendorRefInput)
+            .addReferenceInput(registryInput)
+            .addInput(
+              treasuryOutput,
+              Data.serialize(TreasurySpendRedeemer, "Reorganize"),
+            )
+            .addInput(
+              vendorOutput,
+              Data.serialize(VendorSpendRedeemer, "Malformed"),
+            )
+            .lockAssets(
+              scripts.treasuryScript.scriptAddress,
+              makeValue(5_000_000n),
+              Data.Void(),
+            )
+            .addRequiredSigner(
+              Ed25519KeyHashHex(await reorganize_key(emulator)),
+            ),
+          /Trace expect\s*option.is_none\(\s*inputs\s*|> list.find\(\s*fn\(input\) \{ input.address.payment_credential == registry.vendor \},/,
+        );
+      });
+    });
+  });
+
 });
