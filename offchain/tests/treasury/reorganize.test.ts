@@ -1,13 +1,13 @@
-import { beforeEach, describe, test } from "bun:test";
-import { Core, makeValue } from "@blaze-cardano/sdk";
 import {
   Address,
   AssetId,
   Ed25519KeyHashHex,
   RewardAccount,
 } from "@blaze-cardano/core";
-import { Emulator } from "@blaze-cardano/emulator";
 import * as Data from "@blaze-cardano/data";
+import { Emulator } from "@blaze-cardano/emulator";
+import { Core, makeValue } from "@blaze-cardano/sdk";
+import { beforeEach, describe, test } from "bun:test";
 import { loadTreasuryScript, unix_to_slot } from "../../src/shared";
 import { reorganize } from "../../src/treasury/reorganize";
 import {
@@ -231,7 +231,7 @@ describe("When reorganizing", () => {
       });
     });
 
-    test("cannot attach staking address", async () => {
+    test("cannot attach a different staking address", async () => {
       const fullAddress = new Core.Address({
         type: Core.AddressType.BasePaymentScriptStakeKey,
         networkId: Core.NetworkId.Testnet,
@@ -263,7 +263,7 @@ describe("When reorganizing", () => {
               scriptInput.output().amount(),
               Data.Void(),
             ),
-          /Trace expect or {\n {28}allow_stake,/,
+          /Trace expect or {\s*allow_different_stake,/,
         );
       });
     });

@@ -161,6 +161,9 @@ describe("TxPipe Audit Findings", () => {
     });
   });
 
+  // Note: TRS-003 has no tests currently because blaze doesn't support delegating to dreps yet
+  // The code is simple enough, please review it carefully
+
   describe("TRS-101", () => {
     describe("the oversight committee", () => {
       test("cannot fund invalid vendor projects", async () => {
@@ -608,7 +611,7 @@ describe("TxPipe Audit Findings", () => {
 
   describe("TRS-202", () => {
     describe("the oversight committee", () => {
-      test("cannot attach a stake redeemer when sweeping vendor funds", async () => {
+      test("cannot attach a different stake address when sweeping vendor funds", async () => {
         const scripts = loadScripts(
           Core.NetworkId.Testnet,
           await sampleTreasuryConfig(emulator),
@@ -702,7 +705,7 @@ describe("TxPipe Audit Findings", () => {
               .setValidFrom(unix_to_slot(future))
               .addReferenceInput(refInput)
               .addReferenceInput(registryInput),
-            /Trace expect option.is_none\(vendor_output.address.stake_credential\)/,
+            /Trace expect vendor_output.address.stake_credential == Some\(Inline\(account\)\)/,
           );
         });
       });
@@ -711,7 +714,7 @@ describe("TxPipe Audit Findings", () => {
 
   describe("TRS-203", () => {
     describe("anyone", () => {
-      test("cannot DDOS the treasury sweep", async () => {
+      test("cannot DOS the treasury sweep", async () => {
         const scripts = loadScripts(
           Core.NetworkId.Testnet,
           await sampleTreasuryConfig(emulator),

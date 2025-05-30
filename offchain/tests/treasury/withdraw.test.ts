@@ -128,9 +128,9 @@ describe("When withdrawing", () => {
         );
       });
     });
-    test("cannot attach a staking address", async () => {
+    test("cannot attach an arbitrary stake address", async () => {
       await emulator.as("MalicuiousUser", async (blaze) => {
-        const fullAddress = new Core.Address({
+        const differentStakeAddress = new Core.Address({
           type: Core.AddressType.BasePaymentScriptStakeKey,
           networkId: Core.NetworkId.Testnet,
           paymentPart: {
@@ -139,7 +139,7 @@ describe("When withdrawing", () => {
           },
           delegationPart: {
             type: Core.CredentialType.KeyHash,
-            hash: treasuryScript.hash(), // Just use an arbitrary hash
+            hash: treasuryScript.hash(), // Just use an arbitrary hash, since this is a KeyHash credential
           },
         });
         await emulator.expectScriptFailure(
@@ -148,7 +148,7 @@ describe("When withdrawing", () => {
             .addWithdrawal(rewardAccount, amount, Data.Void())
             .addReferenceInput(registryInput)
             .addReferenceInput(refInput)
-            .lockLovelace(fullAddress, amount, Data.Void()),
+            .lockLovelace(differentStakeAddress, amount, Data.Void()),
         );
       });
     });

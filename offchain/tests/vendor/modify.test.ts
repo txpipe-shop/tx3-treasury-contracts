@@ -470,7 +470,7 @@ describe("", () => {
               )
               .addRequiredSigner(modifySigner)
               .addRequiredSigner(vendorSigner),
-            /Trace equal_plus_min_ada\(unmatured_value, assets.merge\(vendor_output_sum, treasury_output_sum\)\)/,
+            /Trace greater_than_or_equal_to\(retained_funds, treasury_owned_funds\)/,
           );
         });
       });

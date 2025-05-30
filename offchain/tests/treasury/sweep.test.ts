@@ -12,7 +12,12 @@ import {
   TreasuryConfiguration,
   TreasurySpendRedeemer,
 } from "../../src/types/contracts";
-import { Address, AssetId, Script } from "@blaze-cardano/core";
+import {
+  Address,
+  AssetId,
+  Hash28ByteBase16,
+  Script,
+} from "@blaze-cardano/core";
 import { Core, makeValue } from "@blaze-cardano/sdk";
 
 describe("When sweeping", () => {
@@ -242,7 +247,7 @@ describe("When sweeping", () => {
           },
           delegationPart: {
             type: Core.CredentialType.KeyHash,
-            hash: treasuryScript.hash(), // Just use an arbitrary hash
+            hash: Hash28ByteBase16("0".repeat(56)), // Just use an arbitrary hash, since this is a key hash
           },
         });
         await emulator.as("MaliciousUser", async (blaze) => {
@@ -262,7 +267,7 @@ describe("When sweeping", () => {
               .addReferenceInput(registryInput)
               .addReferenceInput(refInput)
               .setDonation(withAssetScriptInput.output().amount().coin()),
-            /option.is_none\(output.address.stake_credential\)/,
+            /Trace expect or {\s*allow_different_stake,/,
           );
         });
       });

@@ -183,7 +183,7 @@ describe("With a malformed datum", () => {
         );
       });
     });
-    test("cannot attach stake address", async () => {
+    test("cannot attach different stake address", async () => {
       await emulator.as("Anyone", async (blaze) => {
         const fullAddress = new Core.Address({
           type: Core.AddressType.BasePaymentScriptStakeKey,
@@ -207,7 +207,7 @@ describe("With a malformed datum", () => {
               Data.serialize(VendorSpendRedeemer, "Malformed"),
             )
             .lockAssets(fullAddress, makeValue(500_000_000_000n), Data.Void()),
-          /Trace expect or {\n {28}allow_stake,/,
+          /Trace expect or {\s*allow_different_stake,/,
         );
       });
     });
