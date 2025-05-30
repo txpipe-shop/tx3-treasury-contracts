@@ -1063,4 +1063,100 @@ describe("MLabs Audit Findings", () => {
     });
   });
 
+  describe.skip("3.16 - skipped awaiting clarification", () => {
+    test("not required to provide extra minADA when sweeping asset-only payouts", async () => {
+      const scripts = loadScripts(
+        Core.NetworkId.Testnet,
+        await sampleTreasuryConfig(emulator),
+        await sampleVendorConfig(emulator),
+      );
+      await deployScripts(emulator, scripts);
+      const refInput = emulator.lookupScript(
+        scripts.vendorScript.script.Script,
+      );
+      const registryInput = findRegistryInput(emulator);
+      const vendor = {
+        Signature: {
+          key_hash: await vendor_key(emulator),
+        },
+      };
+      const vendorDatum: VendorDatum = {
+        vendor: vendor,
+        payouts: [
+          {
+            maturation: 2000n,
+            status: "Paused",
+            value: coreValueToContractsValue(
+              makeValue(0n, ["a".repeat(56), 50n]),
+            ),
+          },
+          {
+            maturation: 10000n,
+            status: "Active",
+            value: coreValueToContractsValue(
+              makeValue(0n, ["a".repeat(56), 50n]),
+            ),
+          },
+        ],
+      };
+      const treasuryInput = scriptOutput(
+        emulator,
+        scripts.treasuryScript,
+        makeValue(5_000_000n),
+        Data.Void(),
+      );
+      const vendorInput = scriptOutput(
+        emulator,
+        scripts.vendorScript,
+        makeValue(1_409_370n, ["a".repeat(56), 100n]),
+        Data.serialize(VendorDatum, vendorDatum),
+      );
+      const newVendorDatum: VendorDatum = {
+        vendor: vendor,
+        payouts: [
+          {
+            maturation: 10000n,
+            status: "Active",
+            value: coreValueToContractsValue(
+              makeValue(0n, ["a".repeat(56), 50n]),
+            ),
+          },
+        ],
+      };
+
+      const now = unix_to_slot(scripts.vendorScript.config.expiration * 2n);
+      emulator.stepForwardToSlot(now);
+
+      await emulator.as("Anyone", async (blaze) => {
+        emulator.expectValidTransaction(
+          blaze,
+          blaze
+            .newTransaction()
+            .addReferenceInput(refInput)
+            .addReferenceInput(registryInput)
+            .setValidFrom(Core.Slot(now))
+            .setValidUntil(Core.Slot(now + 10))
+            .addInput(
+              treasuryInput,
+              Data.serialize(TreasurySpendRedeemer, "Reorganize"),
+            )
+            .addInput(
+              vendorInput,
+              Data.serialize(VendorSpendRedeemer, "SweepVendor"),
+            )
+            .lockAssets(
+              scripts.treasuryScript.scriptAddress,
+              makeValue(1_409_370n, ["a".repeat(56), 50n]),
+              Data.Void(),
+            )
+            .lockAssets(
+              scripts.vendorScript.scriptAddress,
+              makeValue(1_409_370n, ["a".repeat(56), 50n]),
+              Data.serialize(VendorDatum, newVendorDatum),
+            ),
+        );
+      });
+    });
+  });
+
 });
