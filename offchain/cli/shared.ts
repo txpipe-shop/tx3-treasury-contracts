@@ -1,8 +1,9 @@
-import { Address, CredentialType } from "@blaze-cardano/core";
-import { Blockfrost, ColdWallet, Core, Maestro, Wallet, type Provider } from "@blaze-cardano/sdk";
+import { Address, CredentialType, HexBlob, PlutusData, Script, Transaction } from "@blaze-cardano/core";
+import { parse } from "@blaze-cardano/data";
+import { Blaze, Blockfrost, ColdWallet, Core, Maestro, Wallet, type Provider } from "@blaze-cardano/sdk";
 import { input, password, select } from "@inquirer/prompts";
 import clipboard from "clipboardy";
-import type { MultisigScript, TreasuryConfiguration, VendorConfiguration } from "../src/types/contracts";
+import { MultisigScript, TreasuryConfiguration, VendorConfiguration } from "../src/types/contracts";
 
 export async function getMultiSigScript(title: string): Promise<MultisigScript> {
     console.log(`\n${title}`);
@@ -196,43 +197,85 @@ export async function getWallet(
 }
 
 export async function getTreasuryConfig(registry_token_policy: string | undefined): Promise<TreasuryConfiguration> {
-    if (!registry_token_policy) {
-        registry_token_policy = await input({
-            message: "Enter the registry token policy ID",
-        });
-    }
-    return {
-        registry_token: registry_token_policy!,
-        permissions: {
-            reorganize: await getMultiSigScript("Multisig for treasury reorganize"),
-            sweep: await getMultiSigScript("Multisig for treasury sweep"),
-            fund: await getMultiSigScript("Multisig for treasury fund"),
-            disburse: await getMultiSigScript("Multisig for treasury disburse"),
-        },
-        expiration: BigInt(await input({
-            message: "Enter the expiration time (in seconds since epoch)",
-        })),
-        payout_upperbound: BigInt(await input({
-            message: "Enter the payout upper bound (in lovelace)",
-        })),
+    switch (await select({
+        message: "Enter CBOR or configure treasury configuration interactively?",
+        choices: [
+            { name: "CBOR", value: "cbor" },
+            { name: "Interactive", value: "interactive" },
+        ]
+    })) {
+        case "cbor":
+            const cbor = await input({
+                message: "Enter the treasury configuration CBOR",
+            });
+            return parse(TreasuryConfiguration, PlutusData.fromCbor(HexBlob(cbor)));
+        case "interactive":
+            if (!registry_token_policy) {
+                registry_token_policy = await input({
+                    message: "Enter the registry token policy ID",
+                });
+            }
+            return {
+                registry_token: registry_token_policy!,
+                permissions: {
+                    reorganize: await getMultiSigScript("Multisig for treasury reorganize"),
+                    sweep: await getMultiSigScript("Multisig for treasury sweep"),
+                    fund: await getMultiSigScript("Multisig for treasury fund"),
+                    disburse: await getMultiSigScript("Multisig for treasury disburse"),
+                },
+                expiration: BigInt(await input({
+                    message: "Enter the expiration time (in seconds since epoch)",
+                })),
+                payout_upperbound: BigInt(await input({
+                    message: "Enter the payout upper bound (in lovelace)",
+                })),
+            };
+        default:
+            throw new Error("Invalid choice for treasury configuration");
     };
 }
 
 export async function getVendorConfig(registry_token_policy: string | undefined): Promise<VendorConfiguration> {
-    if (!registry_token_policy) {
-        registry_token_policy = await input({
-            message: "Enter the registry token policy ID",
-        });
-    }
-    return {
-        registry_token: registry_token_policy!,
-        permissions: {
-            pause: await getMultiSigScript("Multisig for vendor pause"),
-            resume: await getMultiSigScript("Multisig for vendor resume"),
-            modify: await getMultiSigScript("Multisig for vendor modify"),
-        },
-        expiration: BigInt(await input({
-            message: "Enter the expiration time (in seconds since epoch)",
-        })),
+    switch (await select({
+        message: "Enter CBOR or configure vendor configuration interactively?",
+        choices: [
+            { name: "CBOR", value: "cbor" },
+            { name: "Interactive", value: "interactive" },
+        ]
+    })) {
+        case "cbor":
+            const cbor = await input({
+                message: "Enter the vendor configuration CBOR",
+            });
+            return parse(VendorConfiguration, PlutusData.fromCbor(HexBlob(cbor)));
+        case "interactive":
+            if (!registry_token_policy) {
+                registry_token_policy = await input({
+                    message: "Enter the registry token policy ID",
+                });
+            }
+            return {
+                registry_token: registry_token_policy!,
+                permissions: {
+                    pause: await getMultiSigScript("Multisig for vendor pause"),
+                    resume: await getMultiSigScript("Multisig for vendor resume"),
+                    modify: await getMultiSigScript("Multisig for vendor modify"),
+                },
+                expiration: BigInt(await input({
+                    message: "Enter the expiration time (in seconds since epoch)",
+                })),
+            };
+        default:
+            throw new Error("Invalid choice for vendor configuration");
     };
+}
+
+export async function deployTransaction<P extends Provider, W extends Wallet>(blazeInstance: Blaze<P, W>, script: Script): Promise<Transaction> {
+    return blazeInstance.newTransaction().deployScript(script).complete();
+}
+
+export async function getBlazeInstance(): Promise<Blaze<Provider, Wallet>> {
+    const provider = await getProvider();
+    const wallet = await getWallet(provider);
+    return await Blaze.from(provider, wallet);
 }
