@@ -1,25 +1,10 @@
-import { beforeEach, describe, test } from "bun:test";
-import { Core, makeValue, Value } from "@blaze-cardano/sdk";
 import * as Data from "@blaze-cardano/data";
 import { Emulator } from "@blaze-cardano/emulator";
-import {
-  deployScripts,
-  findRegistryInput,
-  fund_key,
-  Funder,
-  sampleTreasuryConfig,
-  sampleVendorConfig,
-  scriptOutput,
-  setupEmulator,
-  vendor_key,
-  modify_key,
-  Modifier,
-  pause_key,
-  Pauser,
-  Vendor,
-  Reorganizer,
-  reorganize_key,
-} from "../utilities";
+import { Core, makeValue, Value } from "@blaze-cardano/sdk";
+import { Ed25519KeyHashHex } from "@cardano-sdk/crypto";
+import { beforeEach, describe, test } from "bun:test";
+import { fund } from "src/treasury";
+import { modify } from "src/vendor";
 import {
   coreValueToContractsValue,
   loadScripts,
@@ -32,9 +17,24 @@ import {
   VendorDatum,
   VendorSpendRedeemer,
 } from "../../src/types/contracts";
-import { fund } from "src/treasury";
-import { modify } from "src/vendor";
-import { Ed25519KeyHashHex } from "@cardano-sdk/crypto";
+import {
+  deployScripts,
+  findRegistryInput,
+  fund_key,
+  Funder,
+  Modifier,
+  modify_key,
+  pause_key,
+  Pauser,
+  reorganize_key,
+  Reorganizer,
+  sampleTreasuryConfig,
+  sampleVendorConfig,
+  scriptOutput,
+  setupEmulator,
+  Vendor,
+  vendor_key,
+} from "../utilities";
 
 describe("MLabs Audit Findings", () => {
   let emulator: Emulator;
