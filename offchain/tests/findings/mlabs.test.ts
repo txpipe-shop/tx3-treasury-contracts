@@ -1207,4 +1207,80 @@ describe("MLabs Audit Findings", () => {
     });
   });
 
+  describe("4.1", () => {
+    test("should use payout upperbound correctly", async () => {
+      const scripts = loadScripts(
+        Core.NetworkId.Testnet,
+        await sampleTreasuryConfig(emulator),
+        await sampleVendorConfig(emulator),
+      );
+      await deployScripts(emulator, scripts);
+
+      const refInput = emulator.lookupScript(
+        scripts.treasuryScript.script.Script,
+      );
+      const registryInput = findRegistryInput(emulator);
+      const vendor = {
+        Signature: {
+          key_hash: await vendor_key(emulator),
+        },
+      };
+      const amount = 100_000_000_000_000n;
+      const input = scriptOutput(
+        emulator,
+        scripts.treasuryScript,
+        makeValue(amount),
+        Data.Void(),
+      );
+      await emulator.as(Funder, async (blaze) => {
+        const value = coreValueToContractsValue(makeValue(1_000_000n));
+        const datum: VendorDatum = {
+          vendor,
+          payouts: [
+            {
+              maturation: BigInt(
+                scripts.treasuryScript.config.payout_upperbound * 2n,
+              ),
+              value,
+              status: "Active",
+            },
+          ],
+        };
+        await emulator.expectScriptFailure(
+          blaze
+            .newTransaction()
+            .setValidUntil(
+              Core.Slot(
+                Number(
+                  scripts.treasuryScript.config.payout_upperbound / 1000n,
+                ) - 1,
+              ),
+            )
+            .addReferenceInput(registryInput)
+            .addReferenceInput(refInput)
+            .addRequiredSigner(Ed25519KeyHashHex(await fund_key(emulator)))
+            .addRequiredSigner(Ed25519KeyHashHex(await vendor_key(emulator)))
+            .addInput(
+              input,
+              Data.serialize(TreasurySpendRedeemer, {
+                Fund: {
+                  amount: value,
+                },
+              }),
+            )
+            .lockAssets(
+              scripts.vendorScript.scriptAddress,
+              makeValue(1_000_000n),
+              Data.serialize(VendorDatum, datum),
+            )
+            .lockAssets(
+              scripts.treasuryScript.scriptAddress,
+              makeValue(499_999_000_000n),
+              Data.Void(),
+            ),
+          /Trace expect p.maturation <= config.payout_upperbound/,
+        );
+      });
+    });
+  });
 });
