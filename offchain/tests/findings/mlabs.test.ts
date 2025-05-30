@@ -854,4 +854,79 @@ describe("MLabs Audit Findings", () => {
     });
   });
 
+  describe("3.13", () => {
+    test("cannot pause vendor funds which matured in the distant past", async () => {
+      const scripts = loadScripts(
+        Core.NetworkId.Testnet,
+        await sampleTreasuryConfig(emulator),
+        await sampleVendorConfig(emulator),
+      );
+      await deployScripts(emulator, scripts);
+      const refInput = emulator.lookupScript(
+        scripts.vendorScript.script.Script,
+      );
+      const registryInput = findRegistryInput(emulator);
+      const vendor = {
+        Signature: {
+          key_hash: await vendor_key(emulator),
+        },
+      };
+      const vendorDatum: VendorDatum = {
+        vendor: vendor,
+        payouts: [
+          {
+            maturation: 1000n,
+            status: "Active",
+            value: coreValueToContractsValue(makeValue(40_000_000n)),
+          },
+        ],
+      };
+      const vendorInput = scriptOutput(
+        emulator,
+        scripts.vendorScript,
+        makeValue(200_000_000n),
+        Data.serialize(VendorDatum, vendorDatum),
+      );
+      const pausedVendorDatum: VendorDatum = {
+        vendor: vendor,
+        payouts: [
+          {
+            maturation: 1000n,
+            status: "Paused",
+            value: coreValueToContractsValue(makeValue(40_000_000n)),
+          },
+        ],
+      };
+
+      // Advance forward by 36 hours
+      emulator.stepForwardToSlot(36 * 60 * 60 + 10);
+
+      await emulator.as(Pauser, async (blaze) => {
+        await emulator.expectScriptFailure(
+          blaze
+            .newTransaction()
+            .addInput(
+              vendorInput,
+              Data.serialize(VendorSpendRedeemer, {
+                Adjudicate: {
+                  statuses: ["Paused"],
+                },
+              }),
+            )
+            .lockAssets(
+              scripts.vendorScript.scriptAddress,
+              makeValue(200_000_000n),
+              Data.serialize(VendorDatum, pausedVendorDatum),
+            )
+            .addRequiredSigner(Ed25519KeyHashHex(await pause_key(emulator)))
+            .setValidFrom(Core.Slot(0))
+            .setValidUntil(Core.Slot(36 * 60 * 60 + 20))
+            .addReferenceInput(refInput)
+            .addReferenceInput(registryInput),
+          /Trace interval_length_at_most\(validity_range, thirty_six_hours\) \? False/,
+        );
+      });
+    });
+  });
+
 });
