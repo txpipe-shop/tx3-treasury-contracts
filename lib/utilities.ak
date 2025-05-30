@@ -1,7 +1,7 @@
 use aiken/collection/list
 use aiken/interval.{Finite, Interval}
 use aiken/option
-use cardano/address.{Credential, Script, VerificationKey}
+use cardano/address.{Credential, Inline, Script, VerificationKey}
 use cardano/assets.{PolicyId, Value, lovelace_of, without_lovelace}
 use cardano/transaction.{InlineDatum, Input, Output}
 use types.{Payout, ScriptHashRegistry, VendorDatum, registry_token_name}
@@ -68,15 +68,15 @@ pub fn equal_plus_min_ada(expected: Value, actual: Value) -> Bool {
 pub fn value_sum(
   outputs: List<Output>,
   account: Credential,
-  allow_stake: Bool,
+  allow_different_stake: Bool,
 ) -> Value {
   outputs
     |> list.filter(fn(output) { output.address.payment_credential == account })
     |> list.map(
         fn(output) {
           expect or {
-              allow_stake,
-              option.is_none(output.address.stake_credential),
+              allow_different_stake,
+              output.address.stake_credential == Some(Inline(account)),
             }
           output.value
         },

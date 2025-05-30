@@ -1,7 +1,7 @@
 use aiken/collection/list
 use aiken/interval.{is_entirely_after}
 use aiken/option
-use cardano/address.{Credential}
+use cardano/address.{Credential, Inline}
 use cardano/assets
 use cardano/transaction.{InlineDatum, Transaction}
 use types.{Active, ScriptHashRegistry, VendorConfiguration, VendorDatum}
@@ -74,7 +74,7 @@ pub fn logic(
       [] -> vendor_outputs == []
       _ -> {
         expect [vendor_output] = vendor_outputs
-        expect option.is_none(vendor_output.address.stake_credential)
+        expect vendor_output.address.stake_credential == Some(Inline(account))
         expect InlineDatum(out_datum) = vendor_output.datum
         expect out_datum: VendorDatum = out_datum
         and {

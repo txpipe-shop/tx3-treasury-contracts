@@ -1,6 +1,6 @@
 use aiken/collection/list
 use aiken/interval.{is_entirely_after}
-use cardano/address.{Credential}
+use cardano/address.{Credential, Inline}
 use cardano/transaction.{InlineDatum, Transaction}
 use sundae/multisig.{satisfied}
 use types.{Active, Paused, PayoutStatus, VendorConfiguration, VendorDatum}
@@ -46,7 +46,7 @@ pub fn logic(
       |> list.filter(
           fn(output) { output.address.payment_credential == account },
         )
-  expect vendor_output.address.stake_credential == None
+  expect vendor_output.address.stake_credential == Some(Inline(account))
 
   expect InlineDatum(output_vendor_datum) = vendor_output.datum
   expect output_vendor_datum: VendorDatum = output_vendor_datum

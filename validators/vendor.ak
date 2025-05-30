@@ -1,3 +1,8 @@
+use aiken/interval.{is_entirely_after}
+use cardano/certificate.{
+  AlwaysAbstain, Certificate, DelegateCredential, DelegateVote,
+  RegisterAndDelegateCredential, RegisterCredential, UnregisterCredential,
+}
 use cardano/transaction.{OutputReference, Transaction, find_input}
 use logic/vendor/adjudicate
 use logic/vendor/malformed
@@ -37,6 +42,26 @@ validator vendor(config: VendorConfiguration) {
     }
 
     True
+  }
+
+  // The funds received by the treasury must not be used to register or delegate to a stake pool,
+  // or be used to participate in governance; in particular, must be delegated to the always abstain DRep
+  // to ensure large treasury withdrawals don't deadlock governance
+  publish(_redeemer: Data, certificate: Certificate, self: Transaction) {
+    // Article IV - Section 5 of the constitution requires that funds:
+    //
+    // - SHALL NOT be delegated to an SPO
+    // - MUST be delegated to an auto-abstain DRep
+    //
+    when certificate is {
+      UnregisterCredential { .. } ->
+        is_entirely_after(self.validity_range, config.expiration)
+      RegisterCredential { .. } -> True
+      DelegateCredential { delegate, .. } |
+      RegisterAndDelegateCredential { delegate, .. } ->
+        delegate == DelegateVote(AlwaysAbstain)
+      _ -> False
+    }
   }
 
   // No other actions (withdrawing, minting, publishing certificates, voting, etc.) are valid
