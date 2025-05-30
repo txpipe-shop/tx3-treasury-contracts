@@ -63,6 +63,16 @@ pub fn equal_plus_min_ada(expected: Value, actual: Value) -> Bool {
   }
 }
 
+pub fn greater_than_or_equal_to(left: Value, right: Value) -> Bool {
+  right
+    |> assets.flatten
+    |> list.all(
+        fn((policy, name, qty)) {
+          assets.quantity_of(left, policy, name) >= qty
+        },
+      )
+}
+
 // Sum up all assets on the `outputs` held at `account`
 // Note: can also be used to traverse the inputs by mapping over them first
 pub fn value_sum(
