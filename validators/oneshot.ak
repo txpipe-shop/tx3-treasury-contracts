@@ -1,4 +1,5 @@
 use aiken/collection/list
+use cardano/assets
 use cardano/transaction.{OutputReference, Transaction}
 use types.{ScriptHashRegistry}
 
@@ -18,6 +19,9 @@ validator oneshot(utxo_ref: OutputReference) {
 
     expect Some(_) =
       list.find(inputs, fn(input) { input.output_reference == utxo_ref })
+
+    expect [(_, _, qty)] = self.mint |> assets.flatten
+    expect qty == 1
 
     True
   }
