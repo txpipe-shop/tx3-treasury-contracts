@@ -8,6 +8,7 @@ export default [
     rules: {
       "no-console": "off",
       "@typescript-eslint/no-non-null-asserted-optional-chain": "warn",
+      "no-use-before-define": "off",
     },
     languageOptions: {
       globals: {
