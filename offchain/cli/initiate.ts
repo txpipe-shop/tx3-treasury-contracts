@@ -1,6 +1,7 @@
 import {
   AssetName,
   Datum,
+  Ed25519KeyHashHex,
   PolicyId,
   TransactionId,
   TransactionInput,
@@ -22,7 +23,14 @@ import {
   getVendorConfig,
   getWallet,
   transactionDialog,
+  isAddressOrHex,
+  maybeInput,
+  getPermissions,
+  addressOrHexToPermission,
+  addressOrHexToHash,
 } from "./shared";
+import { ITransactionMetadata, toMetadata } from "src/metadata/shared";
+import { CredentialType } from "@blaze-cardano/core";
 
 export async function initiate(): Promise<void> {
   const utxo = await input({
@@ -45,7 +53,13 @@ export async function initiate(): Promise<void> {
   const registry_token = oneshotScript.Script;
   console.log(`Registry token policy ID: ${registry_token.hash()}`);
 
-  const treasuryConfig = await getTreasuryConfig(registry_token.hash());
+  console.log(`Now lets configure the permissions`);
+  const permissions = await getPermissions();
+
+  const treasuryConfig = await getTreasuryConfig(
+    registry_token.hash(),
+    permissions,
+  );
 
   const treasuryScript = new TreasuryTreasurySpend(treasuryConfig).Script;
   console.log(`Treasury script policy ID: ${treasuryScript.hash()}`);
@@ -53,6 +67,7 @@ export async function initiate(): Promise<void> {
   const vendorConfig = await getVendorConfig(
     registry_token.hash(),
     new Date(Number(treasuryConfig.payout_upperbound)),
+    permissions,
   );
 
   const vendorScript = new VendorVendorSpend(vendorConfig).Script;
@@ -80,7 +95,6 @@ export async function initiate(): Promise<void> {
       };
       const policyId = oneshotScript.Script.hash();
       const assetName = Core.toHex(Buffer.from("REGISTRY"));
-      console.log(`Asset name: ${assetName}`);
       const provider = await getProvider();
       const wallet = await getWallet(provider);
       const blazeInstance = await Blaze.from(provider, wallet);
@@ -105,6 +119,33 @@ export async function initiate(): Promise<void> {
           bootstrapUtxo.output_index,
         ),
       ]);
+      const metadata: ITransactionMetadata = {
+        "@context": "",
+        hashAlgorithm: "blake2b-256",
+        body: {
+          event: "publish",
+          expiration: treasuryConfig.expiration,
+          payoutUpperbound: treasuryConfig.payout_upperbound,
+          vendorExpiration: vendorConfig.expiration,
+          identifier: treasuryConfig.registry_token,
+          label: await input({
+            message: "Human readable label for this instance?",
+          }),
+          description: await input({
+            message:
+              "Longer human readable description for this treasury instance?",
+          }),
+          comment: await maybeInput({
+            message: "An arbitrary comment you'd like to attach?",
+          }),
+          tx_author: await input({
+            message:
+              "Enter a hexidecimal pubkey hash, or a bech32 encoded address for the author of this transaction",
+            validate: (s) => isAddressOrHex(s, CredentialType.KeyHash),
+          }).then((s) => addressOrHexToHash(s, CredentialType.KeyHash)),
+          permissions,
+        },
+      };
       const tx = await blazeInstance
         .newTransaction()
         .addInput(bootstrapUtxoObj[0])
@@ -114,7 +155,9 @@ export async function initiate(): Promise<void> {
           new Map<AssetName, bigint>([[AssetName(assetName), BigInt(1)]]),
           Void(),
         )
+        .setMetadata(toMetadata(metadata))
         .provideScript(oneshotScript.Script)
+        .addRequiredSigner(Ed25519KeyHashHex(metadata.body.tx_author))
         .complete();
       await transactionDialog(tx.toCbor().toString(), false);
       return;
