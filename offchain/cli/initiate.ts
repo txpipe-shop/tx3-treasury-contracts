@@ -26,7 +26,6 @@ import {
   isAddressOrHex,
   maybeInput,
   getPermissions,
-  addressOrHexToPermission,
   addressOrHexToHash,
 } from "./shared";
 import { ITransactionMetadata, toMetadata } from "src/metadata/shared";
