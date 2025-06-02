@@ -2,6 +2,7 @@ import {
   AssetName,
   Datum,
   Ed25519KeyHashHex,
+  HexBlob,
   PolicyId,
   TransactionId,
   TransactionInput,
@@ -28,7 +29,7 @@ import {
   getPermissions,
   addressOrHexToHash,
 } from "./shared";
-import { ITransactionMetadata, toMetadata } from "src/metadata/shared";
+import { type ITransactionMetadata, toMetadata } from "../src/metadata/shared";
 import { CredentialType } from "@blaze-cardano/core";
 
 export async function initiate(): Promise<void> {
@@ -137,7 +138,7 @@ export async function initiate(): Promise<void> {
           comment: await maybeInput({
             message: "An arbitrary comment you'd like to attach?",
           }),
-          tx_author: await input({
+          txAuthor: await input({
             message:
               "Enter a hexidecimal pubkey hash, or a bech32 encoded address for the author of this transaction",
             validate: (s) => isAddressOrHex(s, CredentialType.KeyHash),
@@ -156,7 +157,7 @@ export async function initiate(): Promise<void> {
         )
         .setMetadata(toMetadata(metadata))
         .provideScript(oneshotScript.Script)
-        .addRequiredSigner(Ed25519KeyHashHex(metadata.body.tx_author))
+        .addRequiredSigner(Ed25519KeyHashHex(HexBlob(metadata.body.txAuthor)))
         .complete();
       await transactionDialog(tx.toCbor().toString(), false);
       return;

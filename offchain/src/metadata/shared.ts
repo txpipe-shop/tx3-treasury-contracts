@@ -1,5 +1,5 @@
 import { Metadata, Metadatum } from "@blaze-cardano/core";
-import { INewInstance } from "./new-instance";
+import type { INewInstance } from "./new-instance";
 import { MetadatumMap } from "@blaze-cardano/core";
 import { MetadatumList } from "@blaze-cardano/core";
 

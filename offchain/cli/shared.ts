@@ -15,9 +15,9 @@ import {
 } from "@blaze-cardano/sdk";
 import {
   toMultisig,
-  TPermissionMetadata,
-  TPermissionName,
-} from "src/metadata/permission";
+  type TPermissionMetadata,
+  type TPermissionName,
+} from "../src/metadata/permission";
 
 export async function maybeInput(opts: {
   message: string;

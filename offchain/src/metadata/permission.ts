@@ -1,4 +1,4 @@
-import { MultisigScript } from "src/types/contracts";
+import { MultisigScript } from "../types/contracts";
 
 export type TPermissionName =
   | "reorganize"
