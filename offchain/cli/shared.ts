@@ -2,8 +2,10 @@ import { Address, CredentialType, Script, Transaction } from "@blaze-cardano/cor
 import { Blaze, Blockfrost, ColdWallet, Core, Maestro, Wallet, type Provider } from "@blaze-cardano/sdk";
 import { input, select } from "@inquirer/prompts";
 import clipboard from "clipboardy";
+import { INewInstance } from "src/metadata/new-instance";
 import { TPermissionMetadata, TPermissionName, toMultisig } from "src/metadata/permission";
-import { TreasuryConfiguration, VendorConfiguration } from "../src/types/contracts";
+import { OneshotOneshotMint, TreasuryConfiguration, TreasuryTreasurySpend, VendorConfiguration, VendorVendorSpend } from "../src/types/contracts";
+import { IInstanceWithUtxo } from "./instance-with-utxo";
 
 export async function maybeInput(opts: {
     message: string;
@@ -541,3 +543,210 @@ export async function getBlazeInstance(): Promise<Blaze<Provider, Wallet>> {
     return await Blaze.from(provider, wallet);
 }
 
+export async function configToMetaData(treasuryConfig: TreasuryConfiguration, vendorConfig: VendorConfiguration, permissions: Record<TPermissionName, TPermissionMetadata | TPermissionName>): Promise<INewInstance> {
+    return {
+        event: "publish",
+        expiration: Number(treasuryConfig.expiration),
+        payoutUpperbound: Number(treasuryConfig.payout_upperbound),
+        vendorExpiration: Number(vendorConfig.expiration),
+        identifier: treasuryConfig.registry_token,
+        label: await input({
+            message: "Human readable label for this instance?",
+        }),
+        description: await input({
+            message:
+                "Longer human readable description for this treasury instance?",
+        }),
+        comment: await input({
+            message: "An arbitrary comment you'd like to attach?",
+        }),
+        tx_author: await input({
+            message:
+                "Enter a hexidecimal pubkey hash, or a bech32 encoded address for the author of this transaction",
+            validate: (s) => isAddressOrHex(s, CredentialType.KeyHash),
+        }).then((s) => addressOrHexToHash(s, CredentialType.KeyHash)),
+        permissions,
+    }
+}
+
+export function metaDataToConfig(
+    metadata: INewInstance,
+): {
+    treasuryConfig: TreasuryConfiguration;
+    vendorConfig: VendorConfiguration;
+} {
+
+    const treasuryConfig: TreasuryConfiguration = {
+        registry_token: metadata.identifier,
+        permissions: {
+            disburse: toMultisig(metadata.permissions.disburse, metadata.permissions),
+            fund: toMultisig(metadata.permissions.fund, metadata.permissions),
+            reorganize: toMultisig(metadata.permissions.reorganize, metadata.permissions),
+            sweep: toMultisig(metadata.permissions.sweep, metadata.permissions),
+        },
+        expiration: BigInt(metadata.expiration),
+        payout_upperbound: BigInt(metadata.payoutUpperbound),
+    };
+    const vendorConfig: VendorConfiguration = {
+        registry_token: metadata.identifier,
+        permissions: {
+            modify: toMultisig(metadata.permissions.modify, metadata.permissions),
+            pause: toMultisig(metadata.permissions.pause, metadata.permissions),
+            resume: toMultisig(metadata.permissions.resume, metadata.permissions),
+        },
+        expiration: BigInt(metadata.vendorExpiration),
+    };
+    return { treasuryConfig, vendorConfig };
+}
+
+const fileName = "metadata.json";
+
+export async function readMetadataFromFile(): Promise<Map<string, IInstanceWithUtxo>> {
+    const fs = await import("fs/promises");
+    const path = await import("path");
+    const data = await fs.readFile(path.resolve(fileName), { encoding: "utf-8", flag: "a+" });
+
+    if (data.trim() === "") {
+        console.log("No metadata found, creating a new file.");
+        return new Map<string, IInstanceWithUtxo>();
+    }
+    let obj = JSON.parse(data);
+    let metadata = new Map<string, IInstanceWithUtxo>();
+    for (let k of Object.keys(obj)) {
+        metadata.set(k, obj[k]);
+    }
+    return metadata;
+}
+
+function bigIntReplacer(_key: string, value: any): any {
+    return typeof value === 'bigint' ? value.toString() : value;
+}
+
+export async function writeMetadataToFile(
+    metadata: Map<string, IInstanceWithUtxo>,
+): Promise<void> {
+    const fs = await import("fs/promises");
+    const path = await import("path");
+    let obj = Object.create(null);
+    for (let [k, v] of metadata) {
+        obj[k] = v;
+    }
+    await fs.writeFile(
+        path.resolve(fileName),
+        JSON.stringify(obj, bigIntReplacer, 2),
+    );
+}
+
+export async function registerMetadata(
+    metadata: IInstanceWithUtxo,
+): Promise<void> {
+    const existingMetadata = await readMetadataFromFile();
+    existingMetadata.set(metadata.identifier, metadata);
+    await writeMetadataToFile(existingMetadata);
+}
+
+export async function getConfigs(): Promise<{
+    treasuryConfig: TreasuryConfiguration;
+    vendorConfig: VendorConfiguration;
+    metadata: IInstanceWithUtxo;
+}> {
+    const choice = await select({
+        message: "Select saved configuration or register a new one",
+        choices: [
+            { name: "Register a new instance", value: "register" },
+            { name: "Select from existing instances", value: "select" },
+        ],
+    });
+
+    switch (choice) {
+        case "register": {
+            return await registerNewInstance();
+        }
+        case "select": {
+            const metadataMap = await readMetadataFromFile();
+
+            const metadataChoices = Array.from(metadataMap.entries()).map(
+                ([key, value]) => ({
+                    name: value.label || key,
+                    value: key,
+                }),
+            );
+            if (metadataChoices.length === 0) {
+                console.log("No saved configurations found. Please register a new instance.");
+                return await registerNewInstance();
+            }
+            const selectedKey = await select({
+                message: "Select a saved configuration",
+                choices: metadataChoices,
+            });
+            const metadata = metadataMap.get(selectedKey);
+            if (!metadata) {
+                throw new Error(`Metadata for ${selectedKey} not found`);
+            }
+            const { treasuryConfig, vendorConfig } = metaDataToConfig(metadata);
+            return { treasuryConfig, vendorConfig, metadata };
+        }
+        default:
+            throw new Error("Unreachable");
+    }
+}
+
+async function registerNewInstance(): Promise<{
+    treasuryConfig: TreasuryConfiguration;
+    vendorConfig: VendorConfiguration;
+    metadata: IInstanceWithUtxo;
+}> {
+    const utxo = await input({
+        message:
+            "Enter some transaction output (txId#idx) to spend to ensure the registry NFT is unique ",
+        validate: function (value) {
+            return (
+                /[0-9A-Fa-f]{64}#[0-9]+/.test(value) ||
+                "Should be in the format txId#idx"
+            );
+        },
+    });
+    const bootstrapUtxo = {
+        transaction_id: utxo.split("#")[0],
+        output_index: BigInt(utxo.split("#")[1]),
+    };
+    const oneshotScript = new OneshotOneshotMint(bootstrapUtxo);
+
+    const registry_token = oneshotScript.Script;
+    console.log(`Registry token policy ID: ${registry_token.hash()}`);
+
+    console.log(`Now lets configure the permissions`);
+    const permissions = await getPermissions();
+
+    const treasuryConfig = await getTreasuryConfig(
+        registry_token.hash(),
+        permissions,
+    );
+
+    const treasuryScript = new TreasuryTreasurySpend(treasuryConfig).Script;
+    console.log(`Treasury script policy ID: ${treasuryScript.hash()}`);
+
+    const vendorConfig = await getVendorConfig(
+        registry_token.hash(),
+        new Date(Number(treasuryConfig.payout_upperbound)),
+        permissions,
+    );
+
+    const vendorScript = new VendorVendorSpend(vendorConfig).Script;
+    console.log(`Vendor script policy ID: ${vendorScript.hash()}`);
+    const metadataRaw = await configToMetaData(
+        treasuryConfig,
+        vendorConfig,
+        permissions,
+    );
+    const metadata = {
+        ...metadataRaw,
+        utxo: bootstrapUtxo,
+    } as IInstanceWithUtxo;
+    await registerMetadata(metadata);
+    return {
+        treasuryConfig,
+        vendorConfig,
+        metadata,
+    };
+}
