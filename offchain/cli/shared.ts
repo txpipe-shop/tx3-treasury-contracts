@@ -196,7 +196,7 @@ export async function getWallet(
     return wallet;
 }
 
-export async function getTreasuryConfig(registry_token_policy: string | undefined): Promise<TreasuryConfiguration> {
+export async function getTreasuryConfig(registry_token_policy: string | undefined = undefined): Promise<TreasuryConfiguration> {
     switch (await select({
         message: "Enter CBOR or configure treasury configuration interactively?",
         choices: [

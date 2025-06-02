@@ -2,6 +2,7 @@
 
 import { Command } from 'commander';
 import { initiate } from './initiate';
+import { withdraw } from './treasury/withdraw';
 
 const program = new Command();
 
@@ -15,6 +16,13 @@ program
     .description('Initiate treasury and vendor contracts')
     .action(async () => {
         await initiate()
+    });
+
+program
+    .command('treasury-withdraw')
+    .description('Withdraw funds to the treasury')
+    .action(async () => {
+        await withdraw();
     });
 
 program.parse(process.argv);
