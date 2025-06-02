@@ -8,7 +8,15 @@ export async function withdraw(blazeInstance: Blaze<Provider, Wallet> | undefine
     if (!blazeInstance) {
         blazeInstance = await getBlazeInstance();
     }
-    const treasuryConfig = await getTreasuryConfig();
+    const treasuryConfig = await getTreasuryConfig(undefined, {
+        reorganize: "reorganize",
+        sweep: "reorganize",
+        fund: "reorganize",
+        disburse: "reorganize",
+        pause: "reorganize",
+        resume: "reorganize",
+        modify: "reorganize"
+    });
     const amount = BigInt(await input({
         message: "Enter the amount to withdraw (in lovelace)",
         validate: (value) => {
