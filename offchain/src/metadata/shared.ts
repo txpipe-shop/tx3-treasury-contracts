@@ -1,5 +1,5 @@
 import { Metadata, Metadatum } from "@blaze-cardano/core";
-import { INewInstance } from "./new-instance";
+import type { INewInstance } from "./new-instance";
 import { MetadatumMap } from "@blaze-cardano/core";
 import { MetadatumList } from "@blaze-cardano/core";
 
@@ -9,7 +9,7 @@ export interface ITransactionMetadata {
   body: INewInstance;
 }
 
-function toMetadatum(value: unknown): Metadatum {
+function toMetadatum(value: unknown): Metadatum | undefined {
   if (typeof value === "string" || value instanceof String) {
     if (value.length <= 64) {
       return Metadatum.newText(value.toString());
@@ -27,7 +27,10 @@ function toMetadatum(value: unknown): Metadatum {
   } else if (Array.isArray(value)) {
     const arr = new MetadatumList();
     for (const elem of value) {
-      arr.add(toMetadatum(elem));
+      const value = toMetadatum(elem);
+      if (value !== undefined) {
+        arr.add(value);
+      }
     }
     return Metadatum.newList(arr);
   } else if (
@@ -38,11 +41,16 @@ function toMetadatum(value: unknown): Metadatum {
     const map = new MetadatumMap();
     for (const [k, val] of Object.entries(value)) {
       const key = Metadatum.newText(k);
-      map.insert(key, toMetadatum(val));
+      const value = toMetadatum(val);
+      if (value !== undefined) {
+        map.insert(key, value);
+      }
     }
     return Metadatum.newMap(map);
+  } else if (value === undefined) {
+    return undefined;
   } else {
-    throw new Error("Unrecognized type");
+    throw new Error(`Unrecognized type: ${value}`);
   }
 }
 
@@ -53,7 +61,11 @@ export function toMetadata(m: ITransactionMetadata): Metadata {
     Metadatum.newText("hashAlgorithm"),
     Metadatum.newText(m.hashAlgorithm),
   );
-  root.insert(Metadatum.newText("body"), toMetadatum(m.body));
+  const body = toMetadatum(m.body);
+  if (body === undefined) {
+    throw new Error("must have a body");
+  }
+  root.insert(Metadatum.newText("body"), body);
   const metadata = new Map<bigint, Metadatum>();
   metadata.set(1694n, Metadatum.newMap(root));
   return new Metadata(metadata);

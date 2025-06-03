@@ -546,9 +546,9 @@ export async function getBlazeInstance(): Promise<Blaze<Provider, Wallet>> {
 export async function configToMetaData(treasuryConfig: TreasuryConfiguration, vendorConfig: VendorConfiguration, permissions: Record<TPermissionName, TPermissionMetadata | TPermissionName>): Promise<INewInstance> {
     return {
         event: "publish",
-        expiration: Number(treasuryConfig.expiration),
-        payoutUpperbound: Number(treasuryConfig.payout_upperbound),
-        vendorExpiration: Number(vendorConfig.expiration),
+        expiration: treasuryConfig.expiration,
+        payoutUpperbound: treasuryConfig.payout_upperbound,
+        vendorExpiration: vendorConfig.expiration,
         identifier: treasuryConfig.registry_token,
         label: await input({
             message: "Human readable label for this instance?",
@@ -557,10 +557,10 @@ export async function configToMetaData(treasuryConfig: TreasuryConfiguration, ve
             message:
                 "Longer human readable description for this treasury instance?",
         }),
-        comment: await input({
+        comment: await maybeInput({
             message: "An arbitrary comment you'd like to attach?",
         }),
-        tx_author: await input({
+        txAuthor: await input({
             message:
                 "Enter a hexidecimal pubkey hash, or a bech32 encoded address for the author of this transaction",
             validate: (s) => isAddressOrHex(s, CredentialType.KeyHash),
