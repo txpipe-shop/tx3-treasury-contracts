@@ -3,11 +3,9 @@ export interface IOutput {
     label?: string;
 }
 
-export type OutputMap = Record<number, IOutput>;
-
 interface IInitializeReorganize {
     reason?: string;
-    outputs: OutputMap;
+    outputs: Record<number, IOutput>;
 }
 
 export interface IInitialize extends IInitializeReorganize {

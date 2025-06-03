@@ -13,7 +13,7 @@ import type { TreasuryConfiguration } from "../../types/contracts";
 
 export async function withdraw<P extends Provider, W extends Wallet>(
   config: TreasuryConfiguration,
-  amount: bigint,
+  amounts: bigint[],
   metadata: IInitialize,
   blaze: Blaze<P, W>,
 ): Promise<TxBuilder> {
@@ -24,6 +24,11 @@ export async function withdraw<P extends Provider, W extends Wallet>(
   const refInput = await blaze.provider.resolveScriptRef(script.Script);
   if (!refInput)
     throw new Error("Could not find treasury script reference on-chain");
+  if (amounts.length !== Object.keys(metadata.outputs).length)
+    throw new Error(
+      "Number of amounts must match number of outputs in metadata",
+    );
+  const amount = amounts.reduce((acc, val) => acc + val, BigInt(0));
 
   const txMetadata: ITransactionMetadata = {
     "@context": "",
@@ -33,10 +38,17 @@ export async function withdraw<P extends Provider, W extends Wallet>(
   const auxData = new AuxiliaryData();
   auxData.setMetadata(toMetadata(txMetadata));
 
-  return blaze
+  const txBuilder = blaze
     .newTransaction()
     .addWithdrawal(rewardAccount, amount, Data.Void())
     .addReferenceInput(refInput)
-    .lockLovelace(scriptAddress, amount, Data.Void())
     .setAuxiliaryData(auxData);
+
+  amounts.forEach((amt) => {
+    txBuilder
+      .lockLovelace(scriptAddress, amt, Data.Void());
+  });
+
+  return txBuilder;
+
 }
