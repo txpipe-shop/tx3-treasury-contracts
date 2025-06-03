@@ -1,12 +1,11 @@
-import { Metadata, Metadatum } from "@blaze-cardano/core";
+import { Metadata, Metadatum, MetadatumList, MetadatumMap } from "@blaze-cardano/core";
+import { IInitialize } from "./initialize-reorganize";
 import type { INewInstance } from "./new-instance";
-import { MetadatumMap } from "@blaze-cardano/core";
-import { MetadatumList } from "@blaze-cardano/core";
 
 export interface ITransactionMetadata {
   "@context": string;
   hashAlgorithm: "blake2b-256";
-  body: INewInstance;
+  body: INewInstance | IInitialize;
 }
 
 function toMetadatum(value: unknown): Metadatum | undefined {

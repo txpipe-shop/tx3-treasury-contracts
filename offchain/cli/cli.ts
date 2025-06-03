@@ -12,15 +12,15 @@ program
     .version("1.0.0");
 
 program
-    .command("initiate")
-    .description("Initiate treasury and vendor contracts")
+    .command("publish")
+    .description("Initiate/publish treasury and vendor contracts")
     .action(async () => {
         await initiate();
     });
 
 program
-    .command('treasury-withdraw')
-    .description('Withdraw funds to the treasury')
+    .command('initialize')
+    .description('Initialize treasury by withdrawing funds')
     .action(async () => {
         await withdraw();
     });

@@ -2,6 +2,7 @@ import { Address, CredentialType, Script, Transaction } from "@blaze-cardano/cor
 import { Blaze, Blockfrost, ColdWallet, Core, Maestro, Wallet, type Provider } from "@blaze-cardano/sdk";
 import { input, select } from "@inquirer/prompts";
 import clipboard from "clipboardy";
+import { IOutput, OutputMap } from "src/metadata/initialize-reorganize";
 import { INewInstance } from "src/metadata/new-instance";
 import { TPermissionMetadata, TPermissionName, toMultisig } from "src/metadata/permission";
 import { OneshotOneshotMint, TreasuryConfiguration, TreasuryTreasurySpend, VendorConfiguration, VendorVendorSpend } from "../src/types/contracts";
@@ -550,10 +551,10 @@ export async function configToMetaData(treasuryConfig: TreasuryConfiguration, ve
         payoutUpperbound: treasuryConfig.payout_upperbound,
         vendorExpiration: vendorConfig.expiration,
         identifier: treasuryConfig.registry_token,
-        label: await input({
+        label: await maybeInput({
             message: "Human readable label for this instance?",
         }),
-        description: await input({
+        description: await maybeInput({
             message:
                 "Longer human readable description for this treasury instance?",
         }),
@@ -749,4 +750,36 @@ async function registerNewInstance(): Promise<{
         vendorConfig,
         metadata,
     };
+}
+
+export async function getOutputs(maxIndex: number): Promise<OutputMap> {
+    const outputs: OutputMap = {};
+    while (true) {
+        const outputIndex = await input({
+            message: `Enter the index of the output to add (0-${maxIndex}), or leave empty to finish:`,
+            validate: (value) => {
+                if (value === "") return true;
+                const num = parseInt(value, 10);
+                return num >= 0 && num <= maxIndex && outputs[num] === undefined
+                    ? true
+                    : `Must be a number between 0 and ${maxIndex} and not already used`;
+            },
+        });
+        if (outputIndex === "") break;
+
+        const output = {
+            identifier: await input({
+                message: `Enter a unique identifier for output ${outputIndex}:`,
+                validate: (value) => {
+                    return value.trim() !== "" ? true : "Identifier cannot be empty";
+                }
+            }),
+            label: await maybeInput({
+                message: `Enter a human readable label for output ${outputIndex} (optional):`,
+            }),
+        } as IOutput;
+
+        outputs[parseInt(outputIndex, 10)] = output;
+    }
+    return outputs;
 }

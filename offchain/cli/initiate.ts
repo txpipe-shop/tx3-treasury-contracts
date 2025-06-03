@@ -112,7 +112,7 @@ export async function initiate(): Promise<void> {
           )
           .setAuxiliaryData(auxData)
           .provideScript(oneshotScript.Script)
-          .addRequiredSigner(Ed25519KeyHashHex(txMetadata.body.txAuthor))
+          .addRequiredSigner(Ed25519KeyHashHex(metadataRaw.txAuthor))
           .complete();
         await transactionDialog(tx.toCbor().toString(), false);
         break;
