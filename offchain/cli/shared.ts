@@ -5,7 +5,7 @@ import clipboard from "clipboardy";
 import { IOutput } from "src/metadata/initialize-reorganize";
 import { INewInstance } from "src/metadata/new-instance";
 import { TPermissionMetadata, TPermissionName, toMultisig } from "src/metadata/permission";
-import { ITransactionMetadata, MetadataBody } from "src/metadata/shared";
+import { ITransactionMetadata } from "src/metadata/shared";
 import { OneshotOneshotMint, TreasuryConfiguration, TreasuryTreasurySpend, VendorConfiguration, VendorVendorSpend } from "../src/types/contracts";
 import { IInstanceWithUtxo } from "./instance-with-utxo";
 
@@ -782,7 +782,7 @@ export async function getOutputs(): Promise<{ amounts: bigint[], outputs: Record
     return { amounts, outputs };
 }
 
-export async function getTransactionMetadata(body: MetadataBody): Promise<ITransactionMetadata> {
+export async function getTransactionMetadata<MetadataBody>(body: MetadataBody): Promise<ITransactionMetadata<MetadataBody>> {
     return {
         "@context": "",
         hashAlgorithm: "blake2b-256",

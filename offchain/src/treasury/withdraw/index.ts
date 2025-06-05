@@ -6,6 +6,7 @@ import {
   type Provider,
   type Wallet,
 } from "@blaze-cardano/sdk";
+import { IInitialize } from "src/metadata/initialize-reorganize";
 import { ITransactionMetadata, toMetadata } from "src/metadata/shared";
 import { loadTreasuryScript } from "../../shared";
 import type { TreasuryConfiguration } from "../../types/contracts";
@@ -13,7 +14,7 @@ import type { TreasuryConfiguration } from "../../types/contracts";
 export async function withdraw<P extends Provider, W extends Wallet>(
   config: TreasuryConfiguration,
   amounts: bigint[],
-  metadata: ITransactionMetadata,
+  metadata: ITransactionMetadata<IInitialize>,
   blaze: Blaze<P, W>,
 ): Promise<TxBuilder> {
   const { script, rewardAccount, scriptAddress } = loadTreasuryScript(
@@ -23,10 +24,6 @@ export async function withdraw<P extends Provider, W extends Wallet>(
   const refInput = await blaze.provider.resolveScriptRef(script.Script);
   if (!refInput)
     throw new Error("Could not find treasury script reference on-chain");
-  if (!("outputs" in metadata.body))
-    throw new Error(
-      "Metadata body must be an instance of IInitialize for treasury withdrawal",
-    );
 
   if (amounts.length !== Object.keys(metadata.body.outputs).length)
     throw new Error(

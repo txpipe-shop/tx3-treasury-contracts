@@ -2,15 +2,15 @@ import { Metadata, Metadatum, MetadatumList, MetadatumMap } from "@blaze-cardano
 import { IInitialize } from "./initialize-reorganize";
 import type { INewInstance } from "./new-instance";
 
-export interface ITransactionMetadata {
+export interface ITransactionMetadata<MB = MetadataBody> {
   "@context": string;
   hashAlgorithm: "blake2b-256";
-  body: MetadataBody;
+  body: MB;
   comment?: string;
   txAuthor: string;
 }
 
-export type MetadataBody = INewInstance | IInitialize;
+export type MetadataBody = IInitialize | INewInstance;
 
 function toMetadatum(value: unknown): Metadatum | undefined {
   if (typeof value === "string" || value instanceof String) {
