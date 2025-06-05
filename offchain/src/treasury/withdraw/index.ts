@@ -1,4 +1,4 @@
-import { AuxiliaryData, Ed25519KeyHashHex } from "@blaze-cardano/core";
+import { AuxiliaryData } from "@blaze-cardano/core";
 import * as Data from "@blaze-cardano/data";
 import {
   TxBuilder,
@@ -16,6 +16,7 @@ export async function withdraw<P extends Provider, W extends Wallet>(
   amounts: bigint[],
   metadata: ITransactionMetadata<IInitialize>,
   blaze: Blaze<P, W>,
+  withdrawAmount: bigint | undefined = undefined
 ): Promise<TxBuilder> {
   const { script, rewardAccount, scriptAddress } = loadTreasuryScript(
     blaze.provider.network,
@@ -36,7 +37,7 @@ export async function withdraw<P extends Provider, W extends Wallet>(
 
   const txBuilder = blaze
     .newTransaction()
-    .addWithdrawal(rewardAccount, amount, Data.Void())
+    .addWithdrawal(rewardAccount, withdrawAmount !== undefined ? withdrawAmount : amount, Data.Void())
     .addReferenceInput(refInput)
     .setAuxiliaryData(auxData);
 
@@ -45,6 +46,6 @@ export async function withdraw<P extends Provider, W extends Wallet>(
       .lockLovelace(scriptAddress, amt, Data.Void());
   });
 
-  return txBuilder.addRequiredSigner(Ed25519KeyHashHex(metadata.txAuthor));
-
+  //return txBuilder.addRequiredSigner(Ed25519KeyHashHex(metadata.txAuthor));
+  return txBuilder;
 }
