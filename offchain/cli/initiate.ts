@@ -23,6 +23,7 @@ import {
   deployTransaction,
   getConfigs,
   getProvider,
+  getTransactionMetadata,
   getWallet,
   transactionDialog
 } from "./shared";
@@ -94,11 +95,7 @@ export async function initiate(): Promise<void> {
           ),
         ]);
         const { utxo: _, ...metadataRaw } = metadata;
-        const txMetadata: ITransactionMetadata = {
-          "@context": "",
-          hashAlgorithm: "blake2b-256",
-          body: metadataRaw,
-        };
+        const txMetadata: ITransactionMetadata = await getTransactionMetadata(metadataRaw);
         const auxData = new AuxiliaryData();
         auxData.setMetadata(toMetadata(txMetadata));
         const tx = await blazeInstance
@@ -112,7 +109,7 @@ export async function initiate(): Promise<void> {
           )
           .setAuxiliaryData(auxData)
           .provideScript(oneshotScript.Script)
-          .addRequiredSigner(Ed25519KeyHashHex(metadataRaw.txAuthor))
+          .addRequiredSigner(Ed25519KeyHashHex(txMetadata.txAuthor))
           .complete();
         await transactionDialog(tx.toCbor().toString(), false);
         break;

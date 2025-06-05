@@ -5,6 +5,7 @@ import clipboard from "clipboardy";
 import { IOutput } from "src/metadata/initialize-reorganize";
 import { INewInstance } from "src/metadata/new-instance";
 import { TPermissionMetadata, TPermissionName, toMultisig } from "src/metadata/permission";
+import { ITransactionMetadata, MetadataBody } from "src/metadata/shared";
 import { OneshotOneshotMint, TreasuryConfiguration, TreasuryTreasurySpend, VendorConfiguration, VendorVendorSpend } from "../src/types/contracts";
 import { IInstanceWithUtxo } from "./instance-with-utxo";
 
@@ -558,14 +559,6 @@ export async function configToMetaData(treasuryConfig: TreasuryConfiguration, ve
             message:
                 "Longer human readable description for this treasury instance?",
         }),
-        comment: await maybeInput({
-            message: "An arbitrary comment you'd like to attach?",
-        }),
-        txAuthor: await input({
-            message:
-                "Enter a hexidecimal pubkey hash, or a bech32 encoded address for the author of this transaction",
-            validate: (s) => isAddressOrHex(s, CredentialType.KeyHash),
-        }).then((s) => addressOrHexToHash(s, CredentialType.KeyHash)),
         permissions,
     }
 }
@@ -787,4 +780,20 @@ export async function getOutputs(): Promise<{ amounts: bigint[], outputs: Record
         outputIndex++;
     }
     return { amounts, outputs };
+}
+
+export async function getTransactionMetadata(body: MetadataBody): Promise<ITransactionMetadata> {
+    return {
+        "@context": "",
+        hashAlgorithm: "blake2b-256",
+        body: body,
+        txAuthor: await input({
+            message:
+                "Enter a hexidecimal pubkey hash, or a bech32 encoded address for the author of this transaction",
+            validate: (s) => isAddressOrHex(s, CredentialType.KeyHash),
+        }).then((s) => addressOrHexToHash(s, CredentialType.KeyHash)),
+        comment: await maybeInput({
+            message: "An arbitrary comment you'd like to attach?",
+        }),
+    };
 }

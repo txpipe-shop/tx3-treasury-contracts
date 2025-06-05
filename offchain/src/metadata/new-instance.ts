@@ -9,6 +9,4 @@ export interface INewInstance {
   payoutUpperbound: bigint;
   vendorExpiration: bigint;
   permissions: Record<TPermissionName, TPermissionMetadata | TPermissionName>;
-  comment?: string;
-  txAuthor: string;
 }

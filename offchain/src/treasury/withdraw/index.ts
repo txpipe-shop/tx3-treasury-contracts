@@ -1,4 +1,4 @@
-import { AuxiliaryData } from "@blaze-cardano/core";
+import { AuxiliaryData, Ed25519KeyHashHex } from "@blaze-cardano/core";
 import * as Data from "@blaze-cardano/data";
 import {
   TxBuilder,
@@ -6,7 +6,6 @@ import {
   type Provider,
   type Wallet,
 } from "@blaze-cardano/sdk";
-import { IInitialize } from "src/metadata/initialize-reorganize";
 import { ITransactionMetadata, toMetadata } from "src/metadata/shared";
 import { loadTreasuryScript } from "../../shared";
 import type { TreasuryConfiguration } from "../../types/contracts";
@@ -14,7 +13,7 @@ import type { TreasuryConfiguration } from "../../types/contracts";
 export async function withdraw<P extends Provider, W extends Wallet>(
   config: TreasuryConfiguration,
   amounts: bigint[],
-  metadata: IInitialize,
+  metadata: ITransactionMetadata,
   blaze: Blaze<P, W>,
 ): Promise<TxBuilder> {
   const { script, rewardAccount, scriptAddress } = loadTreasuryScript(
@@ -24,19 +23,19 @@ export async function withdraw<P extends Provider, W extends Wallet>(
   const refInput = await blaze.provider.resolveScriptRef(script.Script);
   if (!refInput)
     throw new Error("Could not find treasury script reference on-chain");
-  if (amounts.length !== Object.keys(metadata.outputs).length)
+  if (!("outputs" in metadata.body))
+    throw new Error(
+      "Metadata body must be an instance of IInitialize for treasury withdrawal",
+    );
+
+  if (amounts.length !== Object.keys(metadata.body.outputs).length)
     throw new Error(
       "Number of amounts must match number of outputs in metadata",
     );
   const amount = amounts.reduce((acc, val) => acc + val, BigInt(0));
 
-  const txMetadata: ITransactionMetadata = {
-    "@context": "",
-    hashAlgorithm: "blake2b-256",
-    body: metadata,
-  };
   const auxData = new AuxiliaryData();
-  auxData.setMetadata(toMetadata(txMetadata));
+  auxData.setMetadata(toMetadata(metadata));
 
   const txBuilder = blaze
     .newTransaction()
@@ -49,6 +48,6 @@ export async function withdraw<P extends Provider, W extends Wallet>(
       .lockLovelace(scriptAddress, amt, Data.Void());
   });
 
-  return txBuilder;
+  return txBuilder.addRequiredSigner(Ed25519KeyHashHex(metadata.txAuthor));
 
 }

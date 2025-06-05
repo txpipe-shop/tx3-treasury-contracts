@@ -4,6 +4,7 @@ export interface IOutput {
 }
 
 interface IInitializeReorganize {
+    instance: string;
     reason?: string;
     outputs: Record<number, IOutput>;
 }
