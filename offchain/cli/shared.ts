@@ -1,6 +1,6 @@
 import { Address, CredentialType, Ed25519KeyHashHex, Script, Transaction, TransactionUnspentOutput } from "@blaze-cardano/core";
 import { Blaze, Blockfrost, ColdWallet, Core, Maestro, Wallet, type Provider } from "@blaze-cardano/sdk";
-import { input, select } from "@inquirer/prompts";
+import { checkbox, input, select } from "@inquirer/prompts";
 import clipboard from "clipboardy";
 import { IOutput } from "src/metadata/initialize-reorganize";
 import { INewInstance } from "src/metadata/new-instance";
@@ -9,11 +9,42 @@ import { IAnchor, ITransactionMetadata } from "src/metadata/shared";
 import { OneshotOneshotMint, TreasuryConfiguration, TreasuryTreasurySpend, VendorConfiguration, VendorVendorSpend } from "../src/types/contracts";
 import { IInstanceWithUtxo } from "./instance-with-utxo";
 
+async function getSignersFromList(permissions: TPermissionMetadata[], min: number): Promise<Ed25519KeyHashHex[]> {
+    const choices = await Promise.all(permissions.map(async (script) => ({
+        "name": script.label || JSON.stringify(script),
+        "value": await getSigners(script),
+    })));
+    const selections = await checkbox({
+        message: "Select the keys that will be signing the transaction",
+        choices,
+        validate: (selected) => {
+            if (selected.length >= min) {
+                return "You must select at least one key";
+            }
+            return true;
+        }
+    })
+    return selections.flat();
+}
+
 export async function getSigners(permissions: TPermissionMetadata): Promise<Ed25519KeyHashHex[]> {
     const signers: Ed25519KeyHashHex[] = [];
 
     if ("signature" in permissions) {
         signers.push(Ed25519KeyHashHex(permissions.signature.key_hash));
+    }
+
+    if ("atLeast" in permissions) {
+        return await getSignersFromList(permissions.atLeast.scripts, Number(permissions.atLeast.required));
+    }
+
+    if ("anyOf" in permissions) {
+        return await getSignersFromList(permissions.anyOf.scripts, 1);
+    }
+
+    if ("allOf" in permissions) {
+        const allSigners = await Promise.all(permissions.allOf.scripts.map(async (script) => await getSigners(script)));
+        return allSigners.flat();
     }
 
     return signers;

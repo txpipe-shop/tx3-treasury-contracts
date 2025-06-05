@@ -1,4 +1,4 @@
-import { AuxiliaryData } from "@blaze-cardano/core";
+import { AuxiliaryData, Ed25519KeyHashHex } from "@blaze-cardano/core";
 import * as Data from "@blaze-cardano/data";
 import {
   TxBuilder,
@@ -46,6 +46,5 @@ export async function withdraw<P extends Provider, W extends Wallet>(
       .lockLovelace(scriptAddress, amt, Data.Void());
   });
 
-  //return txBuilder.addRequiredSigner(Ed25519KeyHashHex(metadata.txAuthor));
-  return txBuilder;
+  return txBuilder.addRequiredSigner(Ed25519KeyHashHex(metadata.txAuthor));
 }
