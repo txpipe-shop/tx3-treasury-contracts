@@ -1,13 +1,23 @@
-import { Address, CredentialType, Script, Transaction } from "@blaze-cardano/core";
+import { Address, CredentialType, Ed25519KeyHashHex, Script, Transaction, TransactionUnspentOutput } from "@blaze-cardano/core";
 import { Blaze, Blockfrost, ColdWallet, Core, Maestro, Wallet, type Provider } from "@blaze-cardano/sdk";
 import { input, select } from "@inquirer/prompts";
 import clipboard from "clipboardy";
 import { IOutput } from "src/metadata/initialize-reorganize";
 import { INewInstance } from "src/metadata/new-instance";
 import { TPermissionMetadata, TPermissionName, toMultisig } from "src/metadata/permission";
-import { ITransactionMetadata } from "src/metadata/shared";
+import { IAnchor, ITransactionMetadata } from "src/metadata/shared";
 import { OneshotOneshotMint, TreasuryConfiguration, TreasuryTreasurySpend, VendorConfiguration, VendorVendorSpend } from "../src/types/contracts";
 import { IInstanceWithUtxo } from "./instance-with-utxo";
+
+export async function getSigners(permissions: TPermissionMetadata): Promise<Ed25519KeyHashHex[]> {
+    const signers: Ed25519KeyHashHex[] = [];
+
+    if ("signature" in permissions) {
+        signers.push(Ed25519KeyHashHex(permissions.signature.key_hash));
+    }
+
+    return signers;
+}
 
 export async function maybeInput(opts: {
     message: string;
@@ -18,6 +28,46 @@ export async function maybeInput(opts: {
         return undefined;
     }
     return resp;
+}
+
+export async function getOptional<T, O>(message: string, opts: O, call: (o: O) => Promise<T>): Promise<T | undefined> {
+    const option = await select({
+        message: message,
+        choices: [
+            { name: "Yes", value: true },
+            { name: "No", value: false },
+        ],
+    });
+    if (option) {
+        return await call(opts);
+    } else {
+        return undefined;
+    }
+}
+
+export async function getAnchor(): Promise<IAnchor> {
+    return {
+        anchorUrl: await input({
+            message: "Enter the URL of the anchor (e.g., https://example.com/anchor)",
+            validate: (url) => {
+                try {
+                    new URL(url);
+                    return true;
+                } catch {
+                    return "Invalid URL format";
+                }
+            },
+        }),
+        anchorDataHash: await input({
+            message: "Enter the hash of the anchor data (hex format)",
+            validate: (hash) => {
+                if (/^[0-9a-fA-F]{64}$/.test(hash)) {
+                    return true;
+                }
+                return "Hash must be a 64-character hexadecimal string";
+            },
+        }),
+    } as IAnchor;
 }
 
 export async function getDate(title: string, min?: Date): Promise<Date> {
@@ -796,4 +846,19 @@ export async function getTransactionMetadata<MetadataBody>(body: MetadataBody): 
             message: "An arbitrary comment you'd like to attach?",
         }),
     };
+}
+
+export async function selectUtxo(utxos: TransactionUnspentOutput[]): Promise<TransactionUnspentOutput> {
+    if (utxos.length === 0) {
+        throw new Error("No UTxOs available to select from");
+    }
+    const choices = utxos.map((utxo, index) => ({
+        name: `${utxo.input().transactionId}#${utxo.input().index}: ${utxo.output().amount().toString()}`,
+        value: index,
+    }));
+    const selectedIndex = await select({
+        message: "Select a UTxO to use",
+        choices,
+    });
+    return utxos[selectedIndex];
 }

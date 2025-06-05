@@ -1,6 +1,12 @@
 import { Metadata, Metadatum, MetadatumList, MetadatumMap } from "@blaze-cardano/core";
+import { IFund } from "./fund";
 import { IInitialize } from "./initialize-reorganize";
 import type { INewInstance } from "./new-instance";
+
+export interface IAnchor {
+  anchorUrl: string;
+  anchorDataHash: string;
+}
 
 export interface ITransactionMetadata<MB = MetadataBody> {
   "@context": string;
@@ -10,7 +16,7 @@ export interface ITransactionMetadata<MB = MetadataBody> {
   txAuthor: string;
 }
 
-export type MetadataBody = IInitialize | INewInstance;
+export type MetadataBody = IInitialize | INewInstance | IFund;
 
 function toMetadatum(value: unknown): Metadatum | undefined {
   if (typeof value === "string" || value instanceof String) {
