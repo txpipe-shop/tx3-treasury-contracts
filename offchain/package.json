@@ -55,7 +55,6 @@
     "@sundaeswap/eslint-config": "^2.0.15",
     "@types/bun": "latest",
     "@types/commander": "^2.12.5",
-    "@types/jsonld": "^1.5.15",
     "commander": "^14.0.0",
     "eslint": "^9.27.0",
     "globals": "^16.2.0",

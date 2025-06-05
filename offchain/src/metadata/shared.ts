@@ -6,19 +6,12 @@ import {
 } from "@blaze-cardano/core";
 import { decodeFirst } from "cbor";
 
-import { JsonLdArray } from "jsonld/jsonld-spec.js";
 import type { INewInstance } from "./types/new-instance.js";
 
 export interface ITransactionMetadata {
   "@context": string;
   hashAlgorithm: "blake2b-256";
   body: INewInstance;
-}
-
-export interface IFromTransactionMetadataResult {
-  parsed: ITransactionMetadata;
-  jsonld?: JsonLdArray;
-  error?: string;
 }
 
 function toMetadatum(value: unknown): Metadatum | undefined {
