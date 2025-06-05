@@ -1,4 +1,4 @@
-import { IAnchor } from "./shared";
+import { IAnchor, IMetadataBodyBase } from "./shared";
 
 export interface IVendor {
     label: string;
@@ -13,7 +13,7 @@ export interface IMilestone {
     details?: IAnchor;
 }
 
-export interface IFund {
+export interface IFund extends IMetadataBodyBase {
     event: "fund";
     instance: string;
     identifier: string;

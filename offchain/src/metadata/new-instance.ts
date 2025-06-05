@@ -1,6 +1,7 @@
 import type { TPermissionMetadata, TPermissionName } from "./permission";
+import { IMetadataBodyBase } from "./shared";
 
-export interface INewInstance {
+export interface INewInstance extends IMetadataBodyBase {
   event: "publish";
   identifier: string;
   label?: string;

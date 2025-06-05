@@ -1,9 +1,11 @@
+import { IMetadataBodyBase } from "./shared";
+
 export interface IOutput {
     identifier: string;
     label?: string;
 }
 
-interface IInitializeReorganize {
+interface IInitializeReorganize extends IMetadataBodyBase {
     instance: string;
     reason?: string;
     outputs: Record<number, IOutput>;
