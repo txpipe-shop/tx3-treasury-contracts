@@ -3,7 +3,10 @@ use aiken/interval.{is_entirely_after}
 use cardano/address.{Credential, Inline}
 use cardano/transaction.{InlineDatum, Transaction}
 use sundae/multisig.{satisfied}
-use types.{Active, Paused, PayoutStatus, VendorConfiguration, VendorDatum}
+use types.{
+  Active, Paused, PayoutStatus, ScriptHashRegistry, VendorConfiguration,
+  VendorDatum,
+}
 use utilities.{
   equal_plus_min_ada, interval_length_at_most, outputs_of, thirty_six_hours,
 }
@@ -23,6 +26,7 @@ pub fn logic(
   statuses: List<PayoutStatus>,
   config: VendorConfiguration,
   account: Credential,
+  registry: ScriptHashRegistry,
   transaction: Transaction,
 ) {
   let Transaction {
@@ -34,9 +38,18 @@ pub fn logic(
     ..
   } = transaction
 
+  let inputs = outputs_of(inputs)
+
+  // Ensure there are no treasury inputs, to prevent double-satisfaction shenanigans
+  expect None =
+    inputs
+      |> list.find(
+          fn(input) { input.address.payment_credential == registry.treasury },
+        )
+
   // Find (and enforce) a singular vendor input
   expect [vendor_input] =
-    outputs_of(inputs)
+    inputs
       |> list.filter(fn(input) { input.address.payment_credential == account })
 
   expect InlineDatum(input_vendor_datum) = vendor_input.datum
