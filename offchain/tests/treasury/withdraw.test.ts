@@ -33,7 +33,7 @@ describe("When withdrawing", () => {
       await emulator.as("Anyone", async (blaze) => {
         await emulator.expectValidTransaction(
           blaze,
-          await withdraw(config, amount, blaze),
+          await withdraw(config, [amount], blaze),
         );
       });
     });
@@ -41,12 +41,7 @@ describe("When withdrawing", () => {
       await emulator.as("Anyone", async (blaze) => {
         await emulator.expectValidTransaction(
           blaze,
-          blaze
-            .newTransaction()
-            .addWithdrawal(rewardAccount, amount, Data.Void())
-            .addReferenceInput(refInput!)
-            .lockLovelace(scriptAddress, amount / 2n, Data.Void())
-            .lockLovelace(scriptAddress, amount / 2n, Data.Void()),
+          await withdraw(config, [amount / 2n, amount / 2n], blaze),
         );
       });
     });

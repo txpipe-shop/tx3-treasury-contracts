@@ -1,8 +1,8 @@
-import { INewInstance } from "src/metadata/new-instance";
+import type { INewInstance } from "../src/metadata/new-instance";
 
 export interface IInstanceWithUtxo extends INewInstance {
-    utxo: {
-        transaction_id: string;
-        output_index: bigint;
-    }
+  utxo: {
+    transaction_id: string;
+    output_index: bigint;
+  };
 }

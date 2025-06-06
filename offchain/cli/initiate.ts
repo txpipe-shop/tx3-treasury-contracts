@@ -6,12 +6,12 @@ import {
   PolicyId,
   TransactionId,
   TransactionInput,
-  TransactionOutput
+  TransactionOutput,
 } from "@blaze-cardano/core";
 import { serialize, Void } from "@blaze-cardano/data";
 import { Blaze, Core } from "@blaze-cardano/sdk";
 import { select } from "@inquirer/prompts";
-import { type ITransactionMetadata, toMetadata } from "src/metadata/shared";
+import { type ITransactionMetadata, toMetadata } from "../src/metadata/shared";
 import { contractsValueToCoreValue } from "../src/shared";
 import {
   OneshotOneshotMint,
@@ -25,7 +25,7 @@ import {
   getProvider,
   getTransactionMetadata,
   getWallet,
-  transactionDialog
+  transactionDialog,
 } from "./shared";
 
 export async function initiate(): Promise<void> {
@@ -49,11 +49,17 @@ export async function initiate(): Promise<void> {
       message: "What would you like to do next?",
       choices: [
         { name: "Create registry transaction", value: "registry" },
-        { name: "Create publish treasury script reference transaction", value: "treasury-publish" },
-        { name: "Create publish vendor script reference transaction", value: "vendor-publish" },
+        {
+          name: "Create publish treasury script reference transaction",
+          value: "treasury-publish",
+        },
+        {
+          name: "Create publish vendor script reference transaction",
+          value: "vendor-publish",
+        },
         { name: "Exit", value: "exit" },
       ],
-    })
+    });
 
     switch (choice) {
       case "registry":
@@ -88,14 +94,16 @@ export async function initiate(): Promise<void> {
         oneshotOutput.setDatum(
           Datum.fromCore(serialize(ScriptHashRegistry, registryDatum).toCore()),
         );
-        const bootstrapUtxoObj = await blazeInstance.provider.resolveUnspentOutputs([
-          new TransactionInput(
-            TransactionId(metadata.utxo.transaction_id),
-            metadata.utxo.output_index,
-          ),
-        ]);
-        const { utxo: _, ...metadataRaw } = metadata;
-        const txMetadata: ITransactionMetadata = await getTransactionMetadata(metadataRaw);
+        const bootstrapUtxoObj =
+          await blazeInstance.provider.resolveUnspentOutputs([
+            new TransactionInput(
+              TransactionId(metadata.utxo.transaction_id),
+              metadata.utxo.output_index,
+            ),
+          ]);
+        const { ...metadataRaw } = metadata;
+        const txMetadata: ITransactionMetadata =
+          await getTransactionMetadata(metadataRaw);
         const auxData = new AuxiliaryData();
         auxData.setMetadata(toMetadata(txMetadata));
         const tx = await blazeInstance
@@ -119,7 +127,12 @@ export async function initiate(): Promise<void> {
           const wallet = await getWallet(provider);
           blazeInstance = await Blaze.from(provider, wallet);
         }
-        await transactionDialog((await deployTransaction(blazeInstance, [treasuryScript])).toCbor().toString(), false);
+        await transactionDialog(
+          (await deployTransaction(blazeInstance, [treasuryScript]))
+            .toCbor()
+            .toString(),
+          false,
+        );
         break;
       case "vendor-publish":
         if (!blazeInstance) {
@@ -127,7 +140,12 @@ export async function initiate(): Promise<void> {
           const wallet = await getWallet(provider);
           blazeInstance = await Blaze.from(provider, wallet);
         }
-        await transactionDialog((await deployTransaction(blazeInstance, [vendorScript])).toCbor().toString(), false);
+        await transactionDialog(
+          (await deployTransaction(blazeInstance, [vendorScript]))
+            .toCbor()
+            .toString(),
+          false,
+        );
         break;
       case "exit":
         console.log("Exiting...");

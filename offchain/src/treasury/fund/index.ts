@@ -16,8 +16,11 @@ import {
   type Wallet,
 } from "@blaze-cardano/sdk";
 import * as Tx from "@blaze-cardano/tx";
-import { IFund } from "src/metadata/fund";
-import { ITransactionMetadata, toMetadata } from "src/metadata/shared";
+import type { IFund } from "../../../src/metadata/fund";
+import {
+  type ITransactionMetadata,
+  toMetadata,
+} from "../../../src/metadata/shared";
 import {
   coreValueToContractsValue,
   loadTreasuryScript,
@@ -38,7 +41,7 @@ export async function fund<P extends Provider, W extends Wallet>(
   vendor: MultisigScript,
   schedule: { date: Date; amount: Value }[],
   signers: Ed25519KeyHashHex[],
-  metadata: ITransactionMetadata<IFund>,
+  metadata?: ITransactionMetadata<IFund>,
 ): Promise<TxBuilder> {
   const { scriptAddress: vendorScriptAddress } = loadVendorScript(
     blaze.provider.network,
@@ -53,15 +56,17 @@ export async function fund<P extends Provider, W extends Wallet>(
   if (!refInput)
     throw new Error("Could not find treasury script reference on-chain");
 
-  const auxData = new AuxiliaryData();
-  auxData.setMetadata(toMetadata(metadata));
-
   let tx = blaze
     .newTransaction()
     .setValidUntil(Slot(Number(configs.treasury.expiration / 1000n) - 1))
     .addReferenceInput(registryInput)
-    .addReferenceInput(refInput)
-    .setAuxiliaryData(auxData);
+    .addReferenceInput(refInput);
+
+  if (metadata) {
+    const auxData = new AuxiliaryData();
+    auxData.setMetadata(toMetadata(metadata));
+    tx = tx.setAuxiliaryData(auxData);
+  }
 
   for (const signer of signers) {
     tx = tx.addRequiredSigner(signer);
