@@ -87,6 +87,17 @@ export async function getSigners(
   return signers;
 }
 
+export async function inputOrEnv(opts: {
+  message: string;
+  env: string;
+  validate?: (a: string) => boolean | string | Promise<boolean | string>;
+}): Promise<string> {
+  if (process.env[opts.env] !== undefined) {
+    return process.env[opts.env]!;
+  }
+  return await input(opts);
+}
+
 export async function maybeInput(opts: {
   message: string;
   validate?: (a: string) => boolean | string | Promise<boolean | string>;
@@ -521,20 +532,25 @@ export async function getProvider(): Promise<Provider> {
   });
   switch (providerType) {
     case "blockfrost":
-      const bfNetwork: "cardano-mainnet" | "cardano-preview" = await select({
-        message: "Select the network",
-        choices: [
-          { name: "Mainnet", value: "cardano-mainnet" },
-          { name: "Preview", value: "cardano-preview" },
-        ],
+      const bfKey = await inputOrEnv({
+        message: "Enter the Blockfrost project ID",
+        env: "BLOCKFROST_KEY",
+        validate: (s) => s.startsWith("preview") || s.startsWith("mainnet"),
       });
+      const bfNetwork: "cardano-mainnet" | "cardano-preview" = bfKey.startsWith(
+        "preview",
+      )
+        ? "cardano-preview"
+        : "cardano-mainnet";
       return new Blockfrost({
         network: bfNetwork,
-        projectId: await input({
-          message: "Enter the Blockfrost project ID",
-        }),
+        projectId: bfKey,
       });
     case "maestro":
+      const mKey = await inputOrEnv({
+        message: "Enter the Maestro API key",
+        env: "MAESTRO_KEY",
+      });
       const mNetwork: "mainnet" | "preview" = await select({
         message: "Select the network",
         choices: [
@@ -544,9 +560,7 @@ export async function getProvider(): Promise<Provider> {
       });
       return new Maestro({
         network: mNetwork,
-        apiKey: await input({
-          message: "Enter the Maestro API key",
-        }),
+        apiKey: mKey,
       });
     default:
       throw new Error("Invalid provider type");
