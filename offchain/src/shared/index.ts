@@ -1,4 +1,9 @@
-import { Slot, Value } from "@blaze-cardano/core";
+import {
+  Slot,
+  SLOT_CONFIG_NETWORK,
+  SlotConfig,
+  Value,
+} from "@blaze-cardano/core";
 import { Core, makeValue } from "@blaze-cardano/sdk";
 import { type Cardano } from "@cardano-sdk/core";
 
@@ -66,12 +71,32 @@ export function loadScripts(
   };
 }
 
-export function unix_to_slot(unix: bigint): Slot {
-  return Slot(Number(unix / 1000n));
+function getSlotConfig(network: Core.NetworkId): SlotConfig {
+  switch (network) {
+    case Core.NetworkId.Mainnet:
+      return SLOT_CONFIG_NETWORK.Mainnet;
+    case Core.NetworkId.Testnet:
+      return SLOT_CONFIG_NETWORK.Preview;
+    default:
+      throw new Error("Network not supported for slot conversion");
+  }
 }
 
-export function slot_to_unix(slot: Slot): bigint {
-  return BigInt(slot) * 1000n;
+export function unix_to_slot(network: Core.NetworkId, unix: number): Slot {
+  const slotConfig = getSlotConfig(network);
+
+  return Slot(
+    (unix - slotConfig.zeroTime) / slotConfig.slotLength + slotConfig.zeroSlot,
+  );
+}
+
+export function slot_to_unix(network: Core.NetworkId, slot: Slot): number {
+  const slotConfig = getSlotConfig(network);
+
+  return (
+    slotConfig.zeroTime +
+    (slot.valueOf() - slotConfig.zeroSlot) * slotConfig.slotLength
+  );
 }
 
 export function coreValueToContractsValue(amount: Value): {
@@ -98,7 +123,7 @@ export function contractsValueToCoreValue(amount: {
 }): Value {
   const values: [string, bigint][] = [];
   for (const [policy, assets] of Object.entries(amount)) {
-    if (policy == "") {
+    if (policy === "") {
       continue;
     }
     for (const [assetName, amount] of Object.entries(assets)) {

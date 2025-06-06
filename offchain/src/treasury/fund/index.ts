@@ -2,7 +2,6 @@ import {
   AssetId,
   AuxiliaryData,
   Ed25519KeyHashHex,
-  Slot,
   toHex,
   TransactionUnspentOutput,
   Value,
@@ -16,15 +15,17 @@ import {
   type Wallet,
 } from "@blaze-cardano/sdk";
 import * as Tx from "@blaze-cardano/tx";
+import { bigIntReplacer } from "cli/shared";
 import type { IFund } from "../../../src/metadata/fund";
 import {
-  type ITransactionMetadata,
   toMetadata,
+  type ITransactionMetadata,
 } from "../../../src/metadata/shared";
 import {
   coreValueToContractsValue,
   loadTreasuryScript,
   loadVendorScript,
+  unix_to_slot,
 } from "../../shared";
 import {
   MultisigScript,
@@ -56,9 +57,19 @@ export async function fund<P extends Provider, W extends Wallet>(
   if (!refInput)
     throw new Error("Could not find treasury script reference on-chain");
 
+  // expiration can be far into the future, so we set a max of 3 days
+  // to avoid the transaction being rejected for being "PastHorizon".
   let tx = blaze
     .newTransaction()
-    .setValidUntil(Slot(Number(configs.treasury.expiration / 1000n) - 1))
+    .setValidUntil(
+      unix_to_slot(
+        blaze.provider.network,
+        Math.min(
+          Date.now().valueOf() + 1 * 60 * 60 * 1000, // 36 hours in milliseconds
+          Number(configs.treasury.expiration) - 1,
+        ),
+      ),
+    )
     .addReferenceInput(registryInput)
     .addReferenceInput(refInput);
 

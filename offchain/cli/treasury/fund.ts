@@ -1,7 +1,15 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { Value } from "@blaze-cardano/core";
-import { Blaze, Provider, Wallet } from "@blaze-cardano/sdk";
+import { Blaze, makeValue, Provider, Wallet } from "@blaze-cardano/sdk";
 import { input, select } from "@inquirer/prompts";
+import { Treasury } from "../../src";
+import type { IFund, IMilestone } from "../../src/metadata/fund";
+import {
+  toMultisig,
+  type TPermissionMetadata,
+  type TPermissionName,
+} from "../../src/metadata/permission";
+import { loadTreasuryScript } from "../../src/shared";
 import {
   getAnchor,
   getBlazeInstance,
@@ -15,14 +23,6 @@ import {
   selectUtxo,
   transactionDialog,
 } from "../shared";
-import { Treasury } from "../../src";
-import type { IFund, IMilestone } from "../../src/metadata/fund";
-import {
-  toMultisig,
-  type TPermissionMetadata,
-  type TPermissionName,
-} from "../../src/metadata/permission";
-import { loadTreasuryScript } from "../../src/shared";
 
 async function getMilestones(): Promise<{
   schedules: { date: Date; amount: Value }[];
@@ -34,7 +34,7 @@ async function getMilestones(): Promise<{
 
   while (moreMilestones) {
     const date = await getDate("When should the milestone be completed?");
-    const amount = new Value(
+    const amount = makeValue(
       BigInt(
         await input({
           message:
@@ -68,6 +68,9 @@ async function getMilestones(): Promise<{
         getAnchor,
       ),
     } as IMilestone;
+
+    schedules.push({ date, amount });
+    milestones.push(meta);
 
     moreMilestones = await select({
       message: "Do you want to add another milestone?",
@@ -106,8 +109,6 @@ export async function fund(
     await getPermission("Which multisig should be able to use the funds?"),
   );
 
-  const { schedules, milestones } = await getMilestones();
-
   const metadataBody = {
     event: "fund",
     instance: metadata.identifier,
@@ -138,8 +139,12 @@ export async function fund(
       undefined,
       getAnchor,
     ),
-    milestones,
+    milestones: [],
   } as IFund;
+
+  const { schedules, milestones } = await getMilestones();
+
+  metadataBody.milestones = milestones;
 
   const txMetadata = await getTransactionMetadata(metadataBody);
 

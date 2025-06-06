@@ -20,9 +20,9 @@ import clipboard from "clipboardy";
 import type { IOutput } from "../src/metadata/initialize-reorganize";
 import type { INewInstance } from "../src/metadata/new-instance";
 import {
+  toMultisig,
   type TPermissionMetadata,
   type TPermissionName,
-  toMultisig,
 } from "../src/metadata/permission";
 import type { IAnchor, ITransactionMetadata } from "../src/metadata/shared";
 import {
@@ -774,7 +774,7 @@ export async function readMetadataFromFile(): Promise<
   return metadata;
 }
 
-function bigIntReplacer(_key: string, value: any): any {
+export function bigIntReplacer(_key: string, value: any): any {
   return typeof value === "bigint" ? value.toString() : value;
 }
 
@@ -971,7 +971,7 @@ export async function selectUtxo(
     throw new Error("No UTxOs available to select from");
   }
   const choices = utxos.map((utxo, index) => ({
-    name: `${utxo.input().transactionId}#${utxo.input().index}: ${utxo.output().amount().toString()}`,
+    name: `${utxo.input().transactionId().toString()}#${utxo.input().index().toString()}: ${utxo.output().amount().coin().toString()}`,
     value: index,
   }));
   const selectedIndex = await select({

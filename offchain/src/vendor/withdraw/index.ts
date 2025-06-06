@@ -40,7 +40,7 @@ export async function withdraw<P extends Provider, W extends Wallet>(
   let tx = blaze
     .newTransaction()
     .addReferenceInput(refInput)
-    .setValidFrom(unix_to_slot(BigInt(now.valueOf())));
+    .setValidFrom(unix_to_slot(blaze.provider.network, now.valueOf()));
 
   for (const signer of signers) {
     tx = tx.addRequiredSigner(signer);
@@ -61,7 +61,7 @@ export async function withdraw<P extends Provider, W extends Wallet>(
     let thisValue = Value.zero();
     for (const payout of datum.payouts) {
       if (
-        payout.status == "Active" &&
+        payout.status === "Active" &&
         payout.maturation < BigInt(now.valueOf())
       ) {
         thisValue = Value.merge(

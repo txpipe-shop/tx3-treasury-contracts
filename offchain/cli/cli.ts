@@ -2,6 +2,7 @@
 
 import { Command } from "commander";
 import { initiate } from "./initiate";
+import { fund } from "./treasury/fund";
 import { withdraw } from "./treasury/withdraw";
 
 const program = new Command();
@@ -23,6 +24,13 @@ program
   .description("Initialize treasury by withdrawing funds")
   .action(async () => {
     await withdraw();
+  });
+
+program
+  .command("fund")
+  .description("Fund a vendor utxo from the treasury")
+  .action(async () => {
+    await fund();
   });
 
 program.parse(process.argv);
