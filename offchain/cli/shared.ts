@@ -32,7 +32,6 @@ import {
   VendorConfiguration,
   VendorVendorSpend,
 } from "../src/types/contracts";
-import type { IInstanceWithUtxo } from "./instance-with-utxo";
 
 async function getSignersFromList(
   permissions: TPermissionMetadata[],
@@ -670,11 +669,22 @@ export async function getVendorConfig(
 export async function deployTransaction<P extends Provider, W extends Wallet>(
   blazeInstance: Blaze<P, W>,
   scripts: Script[],
+  register: boolean = false,
 ): Promise<Transaction> {
   const txBuilder = blazeInstance.newTransaction();
   scripts.forEach((script) => {
     txBuilder.deployScript(script);
   });
+  if (register) {
+    scripts.forEach((script) => {
+      txBuilder.addRegisterStake(
+        Core.Credential.fromCore({
+          type: Core.CredentialType.ScriptHash,
+          hash: script.hash(),
+        }),
+      );
+    });
+  }
   return txBuilder.complete();
 }
 
@@ -688,6 +698,10 @@ export async function configToMetaData(
   treasuryConfig: TreasuryConfiguration,
   vendorConfig: VendorConfiguration,
   permissions: Record<TPermissionName, TPermissionMetadata | TPermissionName>,
+  seed_utxo: {
+    transaction_id: string;
+    output_index: bigint;
+  },
 ): Promise<INewInstance> {
   return {
     event: "publish",
@@ -702,6 +716,7 @@ export async function configToMetaData(
       message: "Longer human readable description for this treasury instance?",
     }),
     permissions,
+    seed_utxo,
   };
 }
 
@@ -738,7 +753,7 @@ export function metaDataToConfig(metadata: INewInstance): {
 const fileName = "metadata.json";
 
 export async function readMetadataFromFile(): Promise<
-  Map<string, IInstanceWithUtxo>
+  Map<string, INewInstance>
 > {
   const fs = await import("fs/promises");
   const path = await import("path");
@@ -749,10 +764,10 @@ export async function readMetadataFromFile(): Promise<
 
   if (data.trim() === "") {
     console.log("No metadata found, creating a new file.");
-    return new Map<string, IInstanceWithUtxo>();
+    return new Map<string, INewInstance>();
   }
   const obj = JSON.parse(data);
-  const metadata = new Map<string, IInstanceWithUtxo>();
+  const metadata = new Map<string, INewInstance>();
   for (const k of Object.keys(obj)) {
     metadata.set(k, obj[k]);
   }
@@ -764,7 +779,7 @@ function bigIntReplacer(_key: string, value: any): any {
 }
 
 export async function writeMetadataToFile(
-  metadata: Map<string, IInstanceWithUtxo>,
+  metadata: Map<string, INewInstance>,
 ): Promise<void> {
   const fs = await import("fs/promises");
   const path = await import("path");
@@ -778,9 +793,7 @@ export async function writeMetadataToFile(
   );
 }
 
-export async function registerMetadata(
-  metadata: IInstanceWithUtxo,
-): Promise<void> {
+export async function registerMetadata(metadata: INewInstance): Promise<void> {
   const existingMetadata = await readMetadataFromFile();
   existingMetadata.set(metadata.identifier, metadata);
   await writeMetadataToFile(existingMetadata);
@@ -789,7 +802,7 @@ export async function registerMetadata(
 export async function getConfigs(): Promise<{
   treasuryConfig: TreasuryConfiguration;
   vendorConfig: VendorConfiguration;
-  metadata: IInstanceWithUtxo;
+  metadata: INewInstance;
 }> {
   const choice = await select({
     message: "Select saved configuration or register a new one",
@@ -837,7 +850,7 @@ export async function getConfigs(): Promise<{
 async function registerNewInstance(): Promise<{
   treasuryConfig: TreasuryConfiguration;
   vendorConfig: VendorConfiguration;
-  metadata: IInstanceWithUtxo;
+  metadata: INewInstance;
 }> {
   const utxo = await input({
     message:
@@ -881,11 +894,12 @@ async function registerNewInstance(): Promise<{
     treasuryConfig,
     vendorConfig,
     permissions,
+    bootstrapUtxo,
   );
-  const metadata = {
+  const metadata: INewInstance = {
     ...metadataRaw,
-    utxo: bootstrapUtxo,
-  } as IInstanceWithUtxo;
+    seed_utxo: bootstrapUtxo,
+  };
   await registerMetadata(metadata);
   return {
     treasuryConfig,

@@ -10,4 +10,8 @@ export interface INewInstance extends IMetadataBodyBase {
   payoutUpperbound: bigint;
   vendorExpiration: bigint;
   permissions: Record<TPermissionName, TPermissionMetadata | TPermissionName>;
+  seed_utxo: {
+    transaction_id: string;
+    output_index: bigint;
+  };
 }

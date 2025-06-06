@@ -42,14 +42,13 @@ export async function withdraw(
       : undefined;
   const txMetadata = await getTransactionMetadata(body);
 
-  const tx = await (
-    await Treasury.withdraw(
-      treasuryConfig,
-      amounts,
-      blazeInstance,
-      txMetadata,
-      withdrawAmount,
-    )
-  ).complete();
-  await transactionDialog(tx.toCbor().toString(), false);
+  const tx = await Treasury.withdraw(
+    treasuryConfig,
+    amounts,
+    blazeInstance,
+    txMetadata,
+    withdrawAmount,
+  );
+  const finalTx = await tx.complete();
+  await transactionDialog(finalTx.toCbor().toString(), false);
 }

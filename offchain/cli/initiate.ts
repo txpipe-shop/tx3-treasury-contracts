@@ -31,7 +31,7 @@ import {
 export async function initiate(): Promise<void> {
   const { treasuryConfig, vendorConfig, metadata } = await getConfigs();
 
-  const oneshotScript = new OneshotOneshotMint(metadata.utxo);
+  const oneshotScript = new OneshotOneshotMint(metadata.seed_utxo);
 
   const registry_token = oneshotScript.Script;
   console.log(`Registry token policy ID: ${registry_token.hash()}`);
@@ -97,8 +97,8 @@ export async function initiate(): Promise<void> {
         const bootstrapUtxoObj =
           await blazeInstance.provider.resolveUnspentOutputs([
             new TransactionInput(
-              TransactionId(metadata.utxo.transaction_id),
-              metadata.utxo.output_index,
+              TransactionId(metadata.seed_utxo.transaction_id),
+              metadata.seed_utxo.output_index,
             ),
           ]);
         const { ...metadataRaw } = metadata;
@@ -128,7 +128,7 @@ export async function initiate(): Promise<void> {
           blazeInstance = await Blaze.from(provider, wallet);
         }
         await transactionDialog(
-          (await deployTransaction(blazeInstance, [treasuryScript]))
+          (await deployTransaction(blazeInstance, [treasuryScript], true))
             .toCbor()
             .toString(),
           false,
