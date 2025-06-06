@@ -20,16 +20,23 @@ use utilities.{
 /// A vendor script, for an ongoing project with an owner
 validator vendor(config: VendorConfiguration) {
   spend(
+    // We don't restrict the datum yet here, because we allow malformed UTxOs to be swept to the treasury
     _: Option<Data>,
     redeemer: VendorSpendRedeemer,
     utxo: OutputReference,
     self: Transaction,
   ) {
+    // Find our own input
     expect Some(spent_input) = find_input(self.inputs, utxo)
     let account = spent_input.output.address.payment_credential
+
+    // Find the script registry (which lets us know the treasury script address)
     let registry =
       find_script_hash_registry(self.reference_inputs, config.registry_token)
+
+    // Make sure *only* the treasury and vendor scripts exist on the input, to avoid double satisfaction shenanigans
     ensure_compliant_scripts(self.inputs, registry)
+    // And make sure we don't attach any reference scripts on the outputs, to avoid inflating fees
     ensure_no_ref_scripts(self.outputs)
 
     when redeemer is {
@@ -64,13 +71,15 @@ validator vendor(config: VendorConfiguration) {
     }
   }
 
-  // No other actions (withdrawing, minting, publishing certificates, voting, etc.) are valid
+  // No other actions (withdrawing, minting, voting, etc.) are valid
   else(_) {
     False
   }
 }
 
-// Make sure VendorDatum doesn't get tree-shaken
+// The generated plutus.json file won't include the vendor datum, because it isn't used in
+// the public API of the validator above; So, we define a small "documentation" validator
+// to ensure that it shows up for the codegen tools
 validator documentation {
   spend(_d: Option<VendorDatum>, _r: Data, _o: OutputReference, _s: Transaction) {
     False

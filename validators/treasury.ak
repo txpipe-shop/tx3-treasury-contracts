@@ -28,16 +28,25 @@ validator treasury(config: TreasuryConfiguration) {
   //  - Disburse funds for arbitrary spending
   //  - Reorganize the treasury UTxOs
   spend(
+    // The datum is always ignored
     _d,
     redeemer: TreasurySpendRedeemer,
     utxo: OutputReference,
     self: Transaction,
   ) {
+    // Find our own input / script address
     expect Some(spent_input) = find_input(self.inputs, utxo)
     let account = spent_input.output.address.payment_credential
+
+    // Find the script hash registry; This is a datum + NFT, locked at an always-fail script
+    // that solves a circular reference. The treasury script needs to know about the vendor script hash
+    // and the vendor script needs to know about the treasury script hash
     let registry =
       find_script_hash_registry(self.reference_inputs, config.registry_token)
+
+    // We should *only* have inputs from the vendor and treasury, to prevent double satisfaction issues
     ensure_compliant_scripts(self.inputs, registry)
+    // We should also disallow reference scripts on the outputs, to prevent escalating the fees
     ensure_no_ref_scripts(self.outputs)
 
     when redeemer is {
@@ -57,20 +66,14 @@ validator treasury(config: TreasuryConfiguration) {
   }
 
   // Funds can be withdrawn only if they are paid to the spending portion of this script
-  // without a staking address; this is how the funds are moved out of the reward account
-  // after a treasury withdrawal
+  // without our own script hash as the staking credential; this is how the funds are moved
+  // out of the reward account after a treasury withdrawal
   withdraw(_, account: Credential, self: Transaction) {
+    // Make sure the person withdrawing doesn't attach a script reference, which could slightly increase the fees
     ensure_no_ref_scripts(self.outputs)
     let registry =
       find_script_hash_registry(self.reference_inputs, config.registry_token)
     withdraw.logic(self.withdrawals, account, registry, self)
-  }
-
-  // (n.b. We could just use `else` for these, but it's clearer to make things explicit)
-
-  // The funds received by the treasury are not allowed to vote in governance
-  vote(_r, _v, _t) {
-    False
   }
 
   // The funds received by the treasury must not be used to register or delegate to a stake pool,
@@ -83,8 +86,11 @@ validator treasury(config: TreasuryConfiguration) {
     // - MUST be delegated to an auto-abstain DRep
     //
     when certificate is {
+      // We allow the script to be de-registered after the expiration, to recover the deposit and clean
+      // up the ledger state
       UnregisterCredential { .. } ->
         is_entirely_after(self.validity_range, config.expiration)
+      // Anyone can register the script
       RegisterCredential { .. } -> True
       DelegateCredential { delegate, .. } |
       RegisterAndDelegateCredential { delegate, .. } ->
@@ -93,6 +99,12 @@ validator treasury(config: TreasuryConfiguration) {
     }
   }
 
+  // The funds received by the treasury are not allowed to vote in governance
+  vote(_r, _v, _t) {
+    False
+  }
+
+  // Any other behavior (minting, etc) automatically fails
   else(_) {
     False
   }

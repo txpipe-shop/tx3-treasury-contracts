@@ -70,25 +70,37 @@ pub type TreasurySpendRedeemer {
 }
 
 pub type VendorSpendRedeemer {
+  // A vendor can withdraw matured payments; also used as a no-op for the vendor to attach tx metadata for, ex., providing evidence
   Withdraw
+  // Update the paused/active statuses of each payout
   Adjudicate { statuses: List<PayoutStatus> }
+  // Reclaim the funds at the vendor script, relocking some or all of them at a new vendor contract, and return the rest to the treasury contract
   Modify
+  // Sweep any remaining funds back to the treasury contract after the vendor expiration
   SweepVendor
+  // Sweep any malformed UTxO back to the treasury contract
   Malformed
 }
 
 pub type PayoutStatus {
+  // This specific payout is not contested, and will be claimable by the vendor as of the maturation date
   Active
+  // This specific payout is contested by the oversight committee
   Paused
 }
 
 pub type Payout {
+  // The POSIX timestamp, in milliseconds since Jan 1 1970, at which these funds mature and belong to the Vendor
   maturation: Int,
+  // The value to be paid out at this specific date
   value: Pairs<PolicyId, Pairs<AssetName, Int>>,
+  // The current status of this payout
   status: PayoutStatus,
 }
 
 pub type VendorDatum {
+  // Who is allowed to withdraw matured payouts?
   vendor: MultisigScript,
+  // What are all the relevant payouts?
   payouts: List<Payout>,
 }
