@@ -980,3 +980,20 @@ export async function selectUtxo(
   });
   return utxos[selectedIndex];
 }
+
+export async function selectUtxos(
+  utxos: TransactionUnspentOutput[],
+): Promise<TransactionUnspentOutput[]> {
+  if (utxos.length === 0) {
+    throw new Error("No UTxOs available to select from");
+  }
+  const choices = utxos.map((utxo, index) => ({
+    name: `${utxo.input().transactionId().toString()}#${utxo.input().index().toString()}: ${utxo.output().amount().coin().toString()}`,
+    value: index,
+  }));
+  const selectedIndices = await checkbox({
+    message: "Select UTxO(s) to use",
+    choices,
+  });
+  return selectedIndices.map((index) => utxos[index]);
+}
