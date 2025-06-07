@@ -1,4 +1,9 @@
-import type { Address, RewardAccount, Script } from "@blaze-cardano/core";
+import {
+  AssetId,
+  type Address,
+  type RewardAccount,
+  type Script,
+} from "@blaze-cardano/core";
 import * as Data from "@blaze-cardano/data";
 import { Emulator } from "@blaze-cardano/emulator";
 import { Core, makeValue } from "@blaze-cardano/sdk";
@@ -6,7 +11,11 @@ import { beforeEach, describe, test } from "bun:test";
 import { loadTreasuryScript } from "../../src/shared";
 import { withdraw } from "../../src/treasury/withdraw";
 import type { TreasuryConfiguration } from "../../src/types/contracts";
-import { sampleTreasuryConfig, setupEmulator } from "../utilities";
+import {
+  registryToken,
+  sampleTreasuryConfig,
+  setupEmulator,
+} from "../utilities";
 
 describe("When withdrawing", () => {
   const amount = 340_000_000_000_000n;
@@ -16,15 +25,25 @@ describe("When withdrawing", () => {
   let scriptAddress: Address;
   let treasuryScript: Script;
   let config: TreasuryConfiguration;
+  let registryInput: Core.TransactionUnspentOutput;
   let refInput: Core.TransactionUnspentOutput;
   beforeEach(async () => {
     emulator = await setupEmulator();
     config = await sampleTreasuryConfig(emulator);
     const treasury = loadTreasuryScript(Core.NetworkId.Testnet, config);
-    rewardAccount = treasury.rewardAccount;
+    rewardAccount = treasury.rewardAccount!;
     scriptAddress = treasury.scriptAddress;
     treasuryScript = treasury.script.Script;
     emulator.accounts.set(rewardAccount, amount);
+    const [registryPolicy, registryName] = registryToken();
+    registryInput = emulator.utxos().find((u) =>
+      u
+        .output()
+        .amount()
+        .multiasset()
+        ?.get(AssetId(registryPolicy + registryName)),
+    )!;
+
     refInput = emulator.lookupScript(treasury.script.Script);
   });
 
@@ -41,7 +60,13 @@ describe("When withdrawing", () => {
       await emulator.as("Anyone", async (blaze) => {
         await emulator.expectValidTransaction(
           blaze,
-          await withdraw(config, [amount / 2n, amount / 2n], blaze),
+          blaze
+            .newTransaction()
+            .addWithdrawal(rewardAccount, amount, Data.Void())
+            .addReferenceInput(registryInput)
+            .addReferenceInput(refInput)
+            .lockLovelace(scriptAddress, amount / 2n, Data.Void())
+            .lockLovelace(scriptAddress, amount / 2n, Data.Void()),
         );
       });
     });
@@ -52,7 +77,8 @@ describe("When withdrawing", () => {
           blaze
             .newTransaction()
             .addWithdrawal(rewardAccount, amount, Data.Void())
-            .addReferenceInput(refInput!)
+            .addReferenceInput(registryInput)
+            .addReferenceInput(refInput)
             .lockAssets(
               scriptAddress,
               makeValue(amount, ["a".repeat(56), 1n]),
@@ -68,7 +94,8 @@ describe("When withdrawing", () => {
           blaze
             .newTransaction()
             .addWithdrawal(rewardAccount, amount, Data.Void())
-            .addReferenceInput(refInput!)
+            .addReferenceInput(registryInput)
+            .addReferenceInput(refInput)
             .lockLovelace(scriptAddress, amount, Data.Void()),
         );
       });
@@ -82,7 +109,8 @@ describe("When withdrawing", () => {
           blaze
             .newTransaction()
             .addWithdrawal(rewardAccount, amount, Data.Void())
-            .addReferenceInput(refInput!)
+            .addReferenceInput(registryInput)
+            .addReferenceInput(refInput)
             .payLovelace(address, amount, Data.Void()),
         );
       });
@@ -93,15 +121,16 @@ describe("When withdrawing", () => {
           blaze
             .newTransaction()
             .addWithdrawal(rewardAccount, amount, Data.Void())
-            .addReferenceInput(refInput!)
+            .addReferenceInput(registryInput)
+            .addReferenceInput(refInput)
             .lockLovelace(scriptAddress, amount / 2n, Data.Void())
             .payLovelace(address, amount / 2n, Data.Void()),
         );
       });
     });
-    test("cannot attach a staking address", async () => {
+    test("cannot attach an arbitrary stake address", async () => {
       await emulator.as("MalicuiousUser", async (blaze) => {
-        const fullAddress = new Core.Address({
+        const differentStakeAddress = new Core.Address({
           type: Core.AddressType.BasePaymentScriptStakeKey,
           networkId: Core.NetworkId.Testnet,
           paymentPart: {
@@ -110,15 +139,16 @@ describe("When withdrawing", () => {
           },
           delegationPart: {
             type: Core.CredentialType.KeyHash,
-            hash: treasuryScript.hash(), // Just use an arbitrary hash
+            hash: treasuryScript.hash(), // Just use an arbitrary hash, since this is a KeyHash credential
           },
         });
         await emulator.expectScriptFailure(
           blaze
             .newTransaction()
             .addWithdrawal(rewardAccount, amount, Data.Void())
-            .addReferenceInput(refInput!)
-            .lockLovelace(fullAddress, amount, Data.Void()),
+            .addReferenceInput(registryInput)
+            .addReferenceInput(refInput)
+            .lockLovelace(differentStakeAddress, amount, Data.Void()),
         );
       });
     });
@@ -133,7 +163,8 @@ describe("When withdrawing", () => {
           blaze
             .newTransaction()
             .addWithdrawal(rewardAccount, amount)
-            .addReferenceInput(refInput!)
+            .addReferenceInput(registryInput)
+            .addReferenceInput(refInput)
             .addInput(scriptUtxo)
             .lockLovelace(scriptAddress, amount + 5_000_000_000n, Data.Void()),
         );

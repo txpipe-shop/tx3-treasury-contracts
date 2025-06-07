@@ -1,7 +1,9 @@
 import {
   Address,
+  AssetId,
   AuxiliaryData,
   Ed25519KeyHashHex,
+  toHex,
   TransactionUnspentOutput,
 } from "@blaze-cardano/core";
 import * as Data from "@blaze-cardano/data";
@@ -38,6 +40,10 @@ export async function withdraw<P extends Provider, W extends Wallet>(
     blaze.provider.network,
     config,
   );
+  const registryInput = await blaze.provider.getUnspentOutputByNFT(
+    AssetId(config.registry_token + toHex(Buffer.from("REGISTRY"))),
+  );
+
   const refInput = await blaze.provider.resolveScriptRef(script.Script);
   if (!refInput)
     throw new Error("Could not find vendor script reference on-chain");
@@ -46,6 +52,7 @@ export async function withdraw<P extends Provider, W extends Wallet>(
   auxData.setMetadata(toMetadata(metadata));
   let tx = blaze
     .newTransaction()
+    .addReferenceInput(registryInput)
     .addReferenceInput(refInput)
     .setValidFrom(unix_to_slot(blaze.provider.network, now.valueOf()))
     .setAuxiliaryData(auxData);

@@ -21,9 +21,14 @@ pub fn logic(
   let TreasuryConfiguration { expiration, permissions, .. } = config
   let Transaction { inputs, outputs, validity_range, withdrawals, .. } =
     transaction
+
+  // Sum up the inputs and outputs held at the treasury script, so we can check how much leaves the script address
+  // We allow arbitrary staking scripts on the inputs, just in case funds got donated with a staking script;
+  // but we enforce that the outputs include only the treasury script on the outputs
   let input_sum = value_sum(outputs_of(inputs), account, True)
   let output_sum = value_sum(outputs, account, False)
   expect and {
+      // Make sure that the outputs contain at least as much assets as should be retained
       equal_plus_min_ada(merge(input_sum, negate(amount)), output_sum)?,
       // If we're before the expiration, we can pay out lovelace this way
       // After the expiration, we can *only* send native assets out, presumably to be converted back to ADA

@@ -4,7 +4,6 @@ import {
   Ed25519KeyHashHex,
   RewardAccount,
   Slot,
-  Transaction,
 } from "@blaze-cardano/core";
 import * as Data from "@blaze-cardano/data";
 import { Emulator } from "@blaze-cardano/emulator";
@@ -29,6 +28,8 @@ import { cancel, modify } from "../../src/vendor/modify";
 import {
   Modifier,
   modify_key,
+  new_vendor_key,
+  NewVendor,
   registryToken,
   sampleTreasuryConfig,
   sampleVendorConfig,
@@ -55,8 +56,10 @@ describe("", () => {
   let refInput: Core.TransactionUnspentOutput;
   let registryInput: Core.TransactionUnspentOutput;
   let vendor: MultisigScript;
+  let newVendor: MultisigScript;
   let modifySigner: Ed25519KeyHashHex;
   let vendorSigner: Ed25519KeyHashHex;
+  let newVendorSigner: Ed25519KeyHashHex;
   let rewardAccount: RewardAccount;
   let vendorScript: VendorVendorSpend;
   let vendorScriptAddress: Address;
@@ -73,7 +76,7 @@ describe("", () => {
       vendorConfig,
     );
     configs = { treasury: treasuryConfig, vendor: vendorConfig };
-    rewardAccount = treasuryScriptManifest.rewardAccount;
+    rewardAccount = treasuryScriptManifest.rewardAccount!;
     vendorScript = vendorScriptManifest.script;
     vendorScriptAddress = vendorScriptManifest.scriptAddress;
 
@@ -84,8 +87,14 @@ describe("", () => {
         key_hash: await vendor_key(emulator),
       },
     };
+    newVendor = {
+      Signature: {
+        key_hash: await new_vendor_key(emulator),
+      },
+    };
     modifySigner = Ed25519KeyHashHex(await modify_key(emulator));
     vendorSigner = Ed25519KeyHashHex(await vendor_key(emulator));
+    newVendorSigner = Ed25519KeyHashHex(await new_vendor_key(emulator));
 
     scriptInput = new Core.TransactionUnspentOutput(
       new Core.TransactionInput(Core.TransactionId("1".repeat(64)), 0n),
@@ -241,9 +250,8 @@ describe("", () => {
   describe("the oversight committee", () => {
     describe("can modify", () => {
       test("with the vendors permission", async () => {
-        let signedTx: Transaction;
-        await emulator.as(Modifier, async (blaze) => {
-          const tx = await modify(
+        const tx = await emulator.as(Modifier, async (blaze) => {
+          return modify(
             configs,
             blaze,
             new Date(Number(slot_to_unix(Slot(0)))),
@@ -251,21 +259,34 @@ describe("", () => {
             fourthDatum,
             [modifySigner, vendorSigner],
           );
-          const completedTx = await tx.complete();
-          signedTx = completedTx;
         });
-        await emulator.as(Modifier, async (blaze) => {
-          signedTx = await blaze.signTransaction(signedTx);
+        await emulator.expectValidMultisignedTransaction(
+          [Modifier, Vendor],
+          tx,
+        );
+      });
+      test("with the new vendors permission", async () => {
+        const newVendorDatum: VendorDatum = {
+          vendor: newVendor,
+          payouts: fourthDatum.payouts,
+        };
+        const tx = await emulator.as(Modifier, async (blaze) => {
+          return modify(
+            configs,
+            blaze,
+            new Date(Number(slot_to_unix(Slot(0)))),
+            scriptInput,
+            newVendorDatum,
+            [modifySigner, vendorSigner, newVendorSigner],
+          );
         });
-        await emulator.as(Vendor, async (blaze) => {
-          signedTx = await blaze.signTransaction(signedTx);
-        });
-        const txId = await emulator.submitTransaction(signedTx!);
-        emulator.awaitTransactionConfirmation(txId);
+        emulator.expectValidMultisignedTransaction(
+          [Modifier, Vendor, NewVendor],
+          tx,
+        );
       });
       test("efficiently", async () => {
-        let signedTx: Transaction;
-        await emulator.as(Modifier, async (blaze) => {
+        const tx = await emulator.as(Modifier, async (blaze) => {
           const new_datum: VendorDatum = {
             vendor: vendor,
             payouts: [
@@ -281,7 +302,7 @@ describe("", () => {
               },
             ],
           };
-          const tx = await modify(
+          return modify(
             configs,
             blaze,
             new Date(Number(slot_to_unix(Slot(0)))),
@@ -289,21 +310,14 @@ describe("", () => {
             new_datum,
             [modifySigner, vendorSigner],
           );
-          const completedTx = await tx.complete();
-          signedTx = completedTx;
         });
-        await emulator.as(Modifier, async (blaze) => {
-          signedTx = await blaze.signTransaction(signedTx);
-        });
-        await emulator.as(Vendor, async (blaze) => {
-          signedTx = await blaze.signTransaction(signedTx);
-        });
-        const txId = await emulator.submitTransaction(signedTx!);
-        emulator.awaitTransactionConfirmation(txId);
+        await emulator.expectValidMultisignedTransaction(
+          [Modifier, Vendor],
+          tx,
+        );
       });
       test("reclaiming some", async () => {
-        let signedTx: Transaction;
-        await emulator.as(Modifier, async (blaze) => {
+        const tx = await emulator.as(Modifier, async (blaze) => {
           const new_datum: VendorDatum = {
             vendor: vendor,
             payouts: [
@@ -319,7 +333,7 @@ describe("", () => {
               },
             ],
           };
-          const tx = await modify(
+          return modify(
             configs,
             blaze,
             new Date(Number(slot_to_unix(Slot(0)))),
@@ -327,20 +341,13 @@ describe("", () => {
             new_datum,
             [modifySigner, vendorSigner],
           );
-          const completedTx = await tx.complete();
-          signedTx = completedTx;
         });
-        await emulator.as(Modifier, async (blaze) => {
-          signedTx = await blaze.signTransaction(signedTx);
-        });
-        await emulator.as(Vendor, async (blaze) => {
-          signedTx = await blaze.signTransaction(signedTx);
-        });
-        const txId = await emulator.submitTransaction(signedTx!);
-        emulator.awaitTransactionConfirmation(txId);
+        await emulator.expectValidMultisignedTransaction(
+          [Modifier, Vendor],
+          tx,
+        );
       });
       test("with native tokens", async () => {
-        let signedTx: Transaction;
         const new_datum: VendorDatum = {
           vendor: vendor,
           payouts: [
@@ -360,8 +367,8 @@ describe("", () => {
             },
           ],
         };
-        await emulator.as(Modifier, async (blaze) => {
-          const tx = await modify(
+        const tx = await emulator.as(Modifier, async (blaze) => {
+          return modify(
             configs,
             blaze,
             new Date(Number(slot_to_unix(Slot(0)))),
@@ -369,21 +376,19 @@ describe("", () => {
             new_datum,
             [modifySigner, vendorSigner],
           );
-          const completedTx = await tx.complete();
-          signedTx = completedTx;
         });
-        await emulator.as(Modifier, async (blaze) => {
-          signedTx = await blaze.signTransaction(signedTx);
-        });
-        await emulator.as(Vendor, async (blaze) => {
-          signedTx = await blaze.signTransaction(signedTx);
-        });
-        const txId = await emulator.submitTransaction(signedTx!);
-        emulator.awaitTransactionConfirmation(txId);
+        await emulator.expectValidMultisignedTransaction(
+          [Modifier, Vendor],
+          tx,
+        );
       });
     });
     describe("cannot modify", () => {
       test("without the vendors permission", async () => {
+        const newDatum: VendorDatum = {
+          vendor: newVendor,
+          payouts: fourthDatum.payouts,
+        };
         await emulator.as(Modifier, async (blaze) => {
           emulator.expectScriptFailure(
             await modify(
@@ -391,36 +396,48 @@ describe("", () => {
               blaze,
               new Date(Number(slot_to_unix(Slot(0)))),
               scriptInput,
-              fourthDatum,
-              [modifySigner],
+              newDatum,
+              [modifySigner, newVendorSigner],
             ),
             /Trace satisfied\(input_vendor_datum.vendor, extra_signatories, validity_range, withdrawals\)/,
           );
+        });
+        test("without the new vendors permission", async () => {
+          const newDatum: VendorDatum = {
+            vendor: newVendor,
+            payouts: firstDatum.payouts,
+          };
+          await emulator.as(Modifier, async (blaze) => {
+            emulator.expectScriptFailure(
+              await modify(
+                configs,
+                blaze,
+                new Date(Number(slot_to_unix(Slot(0)))),
+                scriptInput,
+                newDatum,
+                [modifySigner, vendorSigner],
+              ),
+              /Trace expect\s*satisfied\(v.vendor, extra_signatories, validity_range, withdrawals\)/,
+            );
+          });
         });
       });
     });
     describe("can cancel", () => {
       test("with the vendors permission", async () => {
-        let signedTx: Transaction;
-        await emulator.as(Modifier, async (blaze) => {
-          const tx = await cancel(
+        const tx = await emulator.as(Modifier, async (blaze) => {
+          return cancel(
             configs,
             blaze,
             new Date(Number(slot_to_unix(Slot(0)))),
             scriptInput,
             [modifySigner, vendorSigner],
           );
-          const completedTx = await tx.complete();
-          signedTx = completedTx;
         });
-        await emulator.as(Modifier, async (blaze) => {
-          signedTx = await blaze.signTransaction(signedTx);
-        });
-        await emulator.as(Vendor, async (blaze) => {
-          signedTx = await blaze.signTransaction(signedTx);
-        });
-        const txId = await emulator.submitTransaction(signedTx!);
-        emulator.awaitTransactionConfirmation(txId);
+        await emulator.expectValidMultisignedTransaction(
+          [Modifier, Vendor],
+          tx,
+        );
       });
     });
     describe("cannot cancel", () => {
@@ -453,7 +470,7 @@ describe("", () => {
               )
               .addRequiredSigner(modifySigner)
               .addRequiredSigner(vendorSigner),
-            /Trace equal_plus_min_ada\(unmatured_value, assets.merge\(vendor_output_sum, treasury_output_sum\)\)/,
+            /Trace greater_than_or_equal_to\(retained_funds, treasury_owned_funds\)/,
           );
         });
       });
@@ -463,7 +480,7 @@ describe("", () => {
   describe("the vendor", () => {
     describe("cannot", () => {
       test("modify", async () => {
-        await emulator.as("Vendor", async (blaze, signer) => {
+        await emulator.as(Vendor, async (blaze) => {
           await emulator.expectScriptFailure(
             await modify(
               configs,
@@ -471,11 +488,7 @@ describe("", () => {
               new Date(Number(slot_to_unix(Slot(0)))),
               scriptInput,
               fourthDatum,
-              [
-                Ed25519KeyHashHex(
-                  signer.asBase()?.getPaymentCredential().hash!,
-                ),
-              ],
+              [Ed25519KeyHashHex(await vendor_key(emulator))],
             ),
             /Trace satisfied\(permissions.modify, extra_signatories, validity_range, withdrawals\)/,
           );
@@ -489,11 +502,7 @@ describe("", () => {
               blaze,
               new Date(Number(slot_to_unix(Slot(0)))),
               scriptInput,
-              [
-                Ed25519KeyHashHex(
-                  signer.asBase()?.getPaymentCredential().hash!,
-                ),
-              ],
+              [Ed25519KeyHashHex(signer.asBase()!.getPaymentCredential().hash)],
             ),
             /Trace satisfied\(permissions.modify, extra_signatories, validity_range, withdrawals\)/,
           );
@@ -513,13 +522,9 @@ describe("", () => {
               new Date(Number(slot_to_unix(Slot(0)))),
               fourthScriptInput,
               firstDatum,
-              [
-                Ed25519KeyHashHex(
-                  signer.asBase()?.getPaymentCredential().hash!,
-                ),
-              ],
+              [Ed25519KeyHashHex(signer.asBase()!.getPaymentCredential().hash)],
             ),
-            /Trace satisfied\(input_vendor_datum.vendor, extra_signatories, validity_range, withdrawals\)/,
+            /Trace expect\s*satisfied\(v.vendor, extra_signatories, validity_range, withdrawals\)/,
           );
         });
       });
@@ -531,11 +536,7 @@ describe("", () => {
               blaze,
               new Date(Number(slot_to_unix(Slot(0)))),
               fourthScriptInput,
-              [
-                Ed25519KeyHashHex(
-                  signer.asBase()?.getPaymentCredential().hash!,
-                ),
-              ],
+              [Ed25519KeyHashHex(signer.asBase()!.getPaymentCredential().hash)],
             ),
             /Trace satisfied\(input_vendor_datum.vendor, extra_signatories, validity_range, withdrawals\)/,
           );

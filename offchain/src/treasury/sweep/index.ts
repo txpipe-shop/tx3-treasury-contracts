@@ -1,4 +1,4 @@
-import { TransactionUnspentOutput } from "@blaze-cardano/core";
+import { AssetId, toHex, TransactionUnspentOutput } from "@blaze-cardano/core";
 import * as Data from "@blaze-cardano/data";
 import {
   makeValue,
@@ -25,6 +25,9 @@ export async function sweep<P extends Provider, W extends Wallet>(
     blaze.provider.network,
     config,
   );
+  const registryInput = await blaze.provider.getUnspentOutputByNFT(
+    AssetId(config.registry_token + toHex(Buffer.from("REGISTRY"))),
+  );
   const refInput = await blaze.provider.resolveScriptRef(script.Script);
   if (!refInput)
     throw new Error("Could not find treasury script reference on-chain");
@@ -34,6 +37,7 @@ export async function sweep<P extends Provider, W extends Wallet>(
     .setValidFrom(
       unix_to_slot(blaze.provider.network, Number(config.expiration + 1000n)),
     )
+    .addReferenceInput(registryInput)
     .addReferenceInput(refInput)
     .setDonation(amount);
 

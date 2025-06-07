@@ -1,12 +1,15 @@
+import { Core, makeValue } from "@blaze-cardano/sdk";
+import { type Cardano } from "@cardano-sdk/core";
+
 import {
+  Address,
+  RewardAccount,
   Slot,
   SLOT_CONFIG_NETWORK,
   SlotConfig,
   Value,
+  type CredentialCore,
 } from "@blaze-cardano/core";
-import { Core, makeValue } from "@blaze-cardano/sdk";
-import { type Cardano } from "@cardano-sdk/core";
-
 import {
   TreasuryConfiguration,
   TreasuryTreasuryWithdraw,
@@ -14,10 +17,18 @@ import {
   VendorVendorSpend,
 } from "../types/contracts";
 
+export interface ICompiledScript<T, C> {
+  config: C;
+  script: T;
+  credential: CredentialCore;
+  rewardAccount?: RewardAccount;
+  scriptAddress: Address;
+}
+
 export function loadTreasuryScript(
   network: Core.NetworkId,
   config: TreasuryConfiguration,
-) {
+): ICompiledScript<TreasuryTreasuryWithdraw, TreasuryConfiguration> {
   const script = new TreasuryTreasuryWithdraw(config);
   const credential: Cardano.Credential = {
     type: Core.CredentialType.ScriptHash,
@@ -25,11 +36,13 @@ export function loadTreasuryScript(
   };
   const rewardAccount = Core.RewardAccount.fromCredential(credential, network);
   const scriptAddress = new Core.Address({
-    type: Core.AddressType.EnterpriseScript,
+    type: Core.AddressType.BasePaymentScriptStakeScript,
     networkId: network,
     paymentPart: credential,
+    delegationPart: credential,
   });
   return {
+    config,
     script,
     credential,
     rewardAccount,
@@ -40,29 +53,39 @@ export function loadTreasuryScript(
 export function loadVendorScript(
   network: Core.NetworkId,
   config: VendorConfiguration,
-) {
+): ICompiledScript<VendorVendorSpend, VendorConfiguration> {
   const script = new VendorVendorSpend(config);
   const credential: Cardano.Credential = {
     type: Core.CredentialType.ScriptHash,
     hash: script.Script.hash(),
   };
   const scriptAddress = new Core.Address({
-    type: Core.AddressType.EnterpriseScript,
+    type: Core.AddressType.BasePaymentScriptStakeScript,
     networkId: network,
     paymentPart: credential,
+    delegationPart: credential,
   });
   return {
+    config,
     script,
     credential,
     scriptAddress,
   };
 }
 
+export interface ICompiledScripts {
+  treasuryScript: ICompiledScript<
+    TreasuryTreasuryWithdraw,
+    TreasuryConfiguration
+  >;
+  vendorScript: ICompiledScript<VendorVendorSpend, VendorConfiguration>;
+}
+
 export function loadScripts(
   network: Core.NetworkId,
   treasuryConfig: TreasuryConfiguration,
   vendorConfig: VendorConfiguration,
-) {
+): ICompiledScripts {
   const treasuryScript = loadTreasuryScript(network, treasuryConfig);
   const vendorScript = loadVendorScript(network, vendorConfig);
   return {

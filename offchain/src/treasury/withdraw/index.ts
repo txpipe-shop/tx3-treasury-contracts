@@ -1,4 +1,9 @@
-import { AuxiliaryData, Ed25519KeyHashHex } from "@blaze-cardano/core";
+import {
+  AssetId,
+  AuxiliaryData,
+  Ed25519KeyHashHex,
+  toHex,
+} from "@blaze-cardano/core";
 import * as Data from "@blaze-cardano/data";
 import {
   TxBuilder,
@@ -8,8 +13,8 @@ import {
 } from "@blaze-cardano/sdk";
 import type { IInitialize } from "../../../src/metadata/initialize-reorganize";
 import {
-  type ITransactionMetadata,
   toMetadata,
+  type ITransactionMetadata,
 } from "../../../src/metadata/shared";
 import { loadTreasuryScript } from "../../shared";
 import type { TreasuryConfiguration } from "../../types/contracts";
@@ -25,6 +30,9 @@ export async function withdraw<P extends Provider, W extends Wallet>(
     blaze.provider.network,
     config,
   );
+  const registryInput = await blaze.provider.getUnspentOutputByNFT(
+    AssetId(config.registry_token + toHex(Buffer.from("REGISTRY"))),
+  );
   const refInput = await blaze.provider.resolveScriptRef(script.Script);
   if (!refInput)
     throw new Error("Could not find treasury script reference on-chain");
@@ -34,11 +42,12 @@ export async function withdraw<P extends Provider, W extends Wallet>(
   let txBuilder = blaze
     .newTransaction()
     .addWithdrawal(
-      rewardAccount,
+      rewardAccount!,
       withdrawAmount !== undefined ? withdrawAmount : amount,
       Data.Void(),
     )
-    .addReferenceInput(refInput);
+    .addReferenceInput(refInput)
+    .addReferenceInput(registryInput);
 
   if (metadata) {
     if (amounts.length !== Object.keys(metadata.body.outputs).length)

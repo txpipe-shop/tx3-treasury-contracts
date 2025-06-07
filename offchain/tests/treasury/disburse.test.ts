@@ -52,7 +52,7 @@ describe("When disbursing", () => {
     const treasury = loadTreasuryScript(Core.NetworkId.Testnet, treasuryConfig);
     // const vendorScript = loadVendorScript(Core.NetworkId.Testnet, vendorConfig);
     configs = { treasury: treasuryConfig, vendor: vendorConfig };
-    rewardAccount = treasury.rewardAccount;
+    rewardAccount = treasury.rewardAccount!;
     treasuryScript = treasury.script;
     treasuryScriptAddress = treasury.scriptAddress;
 
@@ -182,7 +182,7 @@ describe("When disbursing", () => {
           );
         });
       });
-      test("cannot attach stake address to change", async () => {
+      test("cannot attach different stake address to change", async () => {
         const fullAddress = new Core.Address({
           type: Core.AddressType.BasePaymentScriptStakeKey,
           networkId: Core.NetworkId.Testnet,
@@ -220,7 +220,7 @@ describe("When disbursing", () => {
                 makeValue(499_990_000_000n),
                 Data.Void(),
               ),
-            /Trace expect or {\n {28}allow_stake/,
+            /Trace expect or {\s*allow_different_stake/,
           );
         });
       });

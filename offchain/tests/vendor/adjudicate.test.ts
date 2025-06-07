@@ -3,7 +3,6 @@ import {
   Ed25519KeyHashHex,
   RewardAccount,
   Slot,
-  Transaction,
   TransactionId,
   TransactionInput,
 } from "@blaze-cardano/core";
@@ -49,12 +48,10 @@ describe("", () => {
   let fourthDatum: VendorDatum;
   let fifthScriptInput: Core.TransactionUnspentOutput;
   let fifthDatum: VendorDatum;
-  // let refInput: Core.TransactionUnspentOutput | undefined;
   let vendor: MultisigScript;
   let pauseSigner: Ed25519KeyHashHex;
   let resumeSigner: Ed25519KeyHashHex;
   let rewardAccount: RewardAccount;
-  // let vendorScript: VendorVendorSpend;
   let vendorScriptAddress: Address;
 
   beforeEach(async () => {
@@ -70,8 +67,7 @@ describe("", () => {
       vendorConfig,
     );
     config = vendorConfig;
-    rewardAccount = treasuryScriptManifest.rewardAccount;
-    // vendorScript = vendorScriptManifest.script;
+    rewardAccount = treasuryScriptManifest.rewardAccount!;
     vendorScriptAddress = vendorScriptManifest.scriptAddress;
 
     emulator.accounts.set(rewardAccount, amount);
@@ -222,8 +218,6 @@ describe("", () => {
         Core.Datum.newInlineData(Data.serialize(VendorDatum, fifthDatum)),
       );
     emulator.addUtxo(fifthScriptInput);
-
-    // refInput = emulator.lookupScript(vendorScript.Script);
   });
 
   describe("the oversight committee", () => {
@@ -382,9 +376,8 @@ describe("", () => {
     });
     describe("can pause and resume", () => {
       test("in the same transaction", async () => {
-        let signedTx: Transaction;
-        await emulator.as(Resumer, async (blaze) => {
-          const tx = await adjudicate(
+        const tx = await emulator.as(Resumer, async (blaze) => {
+          return adjudicate(
             config,
             blaze,
             new Date(Number(slot_to_unix(Slot(0)))),
@@ -392,17 +385,8 @@ describe("", () => {
             ["Active", "Active", "Paused"],
             [resumeSigner, pauseSigner],
           );
-          const completedTx = await tx.complete();
-          signedTx = completedTx;
         });
-        await emulator.as(Resumer, async (blaze) => {
-          signedTx = await blaze.signTransaction(signedTx);
-        });
-        await emulator.as(Pauser, async (blaze) => {
-          signedTx = await blaze.signTransaction(signedTx);
-        });
-        const txId = await emulator.submitTransaction(signedTx!);
-        emulator.awaitTransactionConfirmation(txId);
+        await emulator.expectValidMultisignedTransaction([Resumer, Pauser], tx);
       });
     });
 
@@ -434,11 +418,7 @@ describe("", () => {
               new Date(Number(slot_to_unix(Slot(0)))),
               fourthScriptInput,
               ["Active", "Paused", "Paused"],
-              [
-                Ed25519KeyHashHex(
-                  signer.asBase()?.getPaymentCredential().hash!,
-                ),
-              ],
+              [Ed25519KeyHashHex(signer.asBase()!.getPaymentCredential().hash)],
             ),
             /Trace satisfied\(config.permissions.pause, extra_signatories, validity_range, withdrawals\)/,
           );
@@ -453,11 +433,7 @@ describe("", () => {
               new Date(Number(slot_to_unix(Slot(0)))),
               fourthScriptInput,
               ["Active", "Active", "Active"],
-              [
-                Ed25519KeyHashHex(
-                  signer.asBase()?.getPaymentCredential().hash!,
-                ),
-              ],
+              [Ed25519KeyHashHex(signer.asBase()!.getPaymentCredential().hash)],
             ),
             /Trace satisfied\(config.permissions.resume, extra_signatories, validity_range, withdrawals\)/,
           );
