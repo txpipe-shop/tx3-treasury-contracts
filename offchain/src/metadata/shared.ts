@@ -1,16 +1,21 @@
-import { Metadata, Metadatum, MetadatumList, MetadatumMap } from "@blaze-cardano/core";
+import {
+  Metadata,
+  Metadatum,
+  MetadatumList,
+  MetadatumMap,
+} from "@blaze-cardano/core";
 import { IInitialize } from "./initialize-reorganize";
 import type { INewInstance } from "./new-instance";
 
 export interface ITransactionMetadata {
   "@context": string;
   hashAlgorithm: "blake2b-256";
-  body: MetadataBody;
+  body: TMetadataBody;
   comment?: string;
   txAuthor: string;
 }
 
-export type MetadataBody = INewInstance | IInitialize;
+export type TMetadataBody = INewInstance | IInitialize;
 
 function toMetadatum(value: unknown): Metadatum | undefined {
   if (typeof value === "string" || value instanceof String) {
@@ -28,7 +33,9 @@ function toMetadatum(value: unknown): Metadatum | undefined {
       const chunks = new MetadatumList();
       for (let i = 0; i < value.length; i += 64) {
         let j = 0;
-        while (Buffer.from(value.substring(i, i + 64 - j), "utf8").length > 64) {
+        while (
+          Buffer.from(value.substring(i, i + 64 - j), "utf8").length > 64
+        ) {
           j++;
         }
         chunks.add(Metadatum.newText(value.substring(i, i + 64 - j)));
