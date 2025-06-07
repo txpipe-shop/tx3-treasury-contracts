@@ -22,14 +22,14 @@ export async function withdraw(
 
   const { amounts, outputs } = await getOutputs();
 
-  const body = {
+  const body: IInitialize = {
     event: "initialize",
     instance: metadata.identifier,
     reason: await maybeInput({
       message: "Enter a reason for the withdrawal (optional)",
     }),
-    outputs: outputs,
-  } as IInitialize;
+    outputs,
+  };
 
   const withdrawAmountOpt = await getOptional(
     "Do you want to specify a withdrawal amount? (optional)",
