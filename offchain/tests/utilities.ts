@@ -1,20 +1,27 @@
-import { Slot, toHex } from "@blaze-cardano/core";
 import * as Data from "@blaze-cardano/data";
+import { Slot, toHex, PlutusData, AssetId } from "@blaze-cardano/core";
 import { Emulator } from "@blaze-cardano/emulator";
-import { Core, makeValue } from "@blaze-cardano/sdk";
-
-import { loadScripts, slot_to_unix } from "../src/shared";
+import {
+  ICompiledScript,
+  ICompiledScripts,
+  loadScripts,
+  slot_to_unix,
+} from "../src/shared";
 import {
   ScriptHashRegistry,
   type TreasuryConfiguration,
   type VendorConfiguration,
 } from "../src/types/contracts";
+import { Core, makeValue } from "@blaze-cardano/sdk";
 
-export function registryToken(): [string, string] {
-  return [
-    "00000000000000000000000000000000000000000000000000000000",
-    toHex(Buffer.from("REGISTRY")),
-  ];
+export function registryTokenName(): string {
+  return toHex(Buffer.from("REGISTRY"));
+}
+
+export function registryToken(idx?: number): [string, string] {
+  const idx_string = String(idx ?? 0).padStart(4, "0");
+  const policyId = `0000000000000000000000000000000000000000000000000000${idx_string}`;
+  return [policyId, registryTokenName()];
 }
 
 export const Sweeper = "Sweeper";
@@ -22,6 +29,7 @@ export const Disburser = "Disburser";
 export const Funder = "Funder";
 export const Reorganizer = "Reorganizer";
 export const Vendor = "Vendor";
+export const NewVendor = "NewVendor";
 export const Pauser = "Pauser";
 export const Resumer = "Resumer";
 export const Modifier = "Modifier";
@@ -29,66 +37,73 @@ export const Modifier = "Modifier";
 export async function sweep_key(
   emulator: Emulator,
 ): Promise<Core.Hash28ByteBase16> {
-  return (await emulator.register(Sweeper)).asBase()?.getPaymentCredential()
-    .hash!;
+  return (await emulator.register(Sweeper)).asBase()!.getPaymentCredential()
+    .hash;
 }
 
 export async function disburse_key(
   emulator: Emulator,
 ): Promise<Core.Hash28ByteBase16> {
-  return (await emulator.register(Disburser)).asBase()?.getPaymentCredential()
-    .hash!;
+  return (await emulator.register(Disburser)).asBase()!.getPaymentCredential()
+    .hash;
 }
 
 export async function fund_key(
   emulator: Emulator,
 ): Promise<Core.Hash28ByteBase16> {
-  return (await emulator.register(Funder)).asBase()?.getPaymentCredential()
-    .hash!;
+  return (await emulator.register(Funder)).asBase()!.getPaymentCredential()
+    .hash;
 }
 
 export async function reorganize_key(
   emulator: Emulator,
 ): Promise<Core.Hash28ByteBase16> {
-  return (await emulator.register(Reorganizer)).asBase()?.getPaymentCredential()
-    .hash!;
+  return (await emulator.register(Reorganizer)).asBase()!.getPaymentCredential()
+    .hash;
 }
 
 export async function pause_key(
   emulator: Emulator,
 ): Promise<Core.Hash28ByteBase16> {
-  return (await emulator.register(Pauser)).asBase()?.getPaymentCredential()
-    .hash!;
+  return (await emulator.register(Pauser)).asBase()!.getPaymentCredential()
+    .hash;
 }
 
 export async function resume_key(
   emulator: Emulator,
 ): Promise<Core.Hash28ByteBase16> {
-  return (await emulator.register(Resumer)).asBase()?.getPaymentCredential()
-    .hash!;
+  return (await emulator.register(Resumer)).asBase()!.getPaymentCredential()
+    .hash;
 }
 
 export async function modify_key(
   emulator: Emulator,
 ): Promise<Core.Hash28ByteBase16> {
-  return (await emulator.register(Modifier)).asBase()?.getPaymentCredential()
-    .hash!;
+  return (await emulator.register(Modifier)).asBase()!.getPaymentCredential()
+    .hash;
 }
 
 export async function vendor_key(
   emulator: Emulator,
 ): Promise<Core.Hash28ByteBase16> {
-  return (await emulator.register(Vendor)).asBase()?.getPaymentCredential()
-    .hash!;
+  return (await emulator.register(Vendor)).asBase()!.getPaymentCredential()
+    .hash;
+}
+export async function new_vendor_key(
+  emulator: Emulator,
+): Promise<Core.Hash28ByteBase16> {
+  return (await emulator.register(NewVendor)).asBase()!.getPaymentCredential()
+    .hash;
 }
 
 export async function sampleTreasuryConfig(
   emulator: Emulator,
+  idx?: number,
 ): Promise<TreasuryConfiguration> {
-  const [policyId] = registryToken();
-  const config = {
+  const [policyId] = registryToken(idx);
+  return {
     registry_token: policyId,
-    expiration: slot_to_unix(Slot(36 * 60 * 60 + 10)),
+    expiration: slot_to_unix(Slot(36 * 60 * 60 + 10 * (idx ?? 0))),
     payout_upperbound: slot_to_unix(Slot(45 * 60 * 60)),
     permissions: {
       sweep: {
@@ -113,17 +128,16 @@ export async function sampleTreasuryConfig(
       },
     },
   };
-
-  return config;
 }
 
 export async function sampleVendorConfig(
   emulator: Emulator,
+  idx?: number,
 ): Promise<VendorConfiguration> {
-  const [policyId] = registryToken();
+  const [policyId] = registryToken(idx);
   return {
     registry_token: policyId,
-    expiration: slot_to_unix(Slot(60 * 60 * 60 + 10)),
+    expiration: slot_to_unix(Slot(60 * 60 * 60 + 10 * (idx ?? 0))),
     permissions: {
       pause: {
         Signature: {
@@ -148,7 +162,10 @@ export function blocks(slot: Slot): number {
   return slot / 20;
 }
 
-export async function setupEmulator(txOuts: Core.TransactionOutput[] = []) {
+export async function setupEmulator(
+  txOuts: Core.TransactionOutput[] = [],
+  deployDefaultScripts: boolean = true,
+) {
   // TODO: custom protocol parameters needed for plutus v3?
   const protocolParameters = {
     coinsPerUtxoByte: 4310,
@@ -241,13 +258,37 @@ export async function setupEmulator(txOuts: Core.TransactionOutput[] = []) {
 
   const emulator = new Emulator(txOuts, protocolParameters);
 
-  const { treasuryScript, vendorScript } = loadScripts(
-    Core.NetworkId.Testnet,
-    await sampleTreasuryConfig(emulator),
-    await sampleVendorConfig(emulator),
-  );
+  if (deployDefaultScripts) {
+    deployScripts(
+      emulator,
+      loadScripts(
+        Core.NetworkId.Testnet,
+        await sampleTreasuryConfig(emulator),
+        await sampleVendorConfig(emulator),
+      ),
+    );
+  }
 
-  const [registryPolicy, registryName] = registryToken();
+  await emulator.register("MaliciousUser");
+  await emulator.register(
+    "Anyone",
+    makeValue(5_000_000n, ["a".repeat(56), 1n]),
+  );
+  await emulator.fund("Anyone", makeValue(1000_000_000n));
+
+  return emulator;
+}
+
+export async function deployScripts(
+  emulator: Emulator,
+  scripts: ICompiledScripts,
+) {
+  const { treasuryScript, vendorScript } = scripts;
+
+  const [registryPolicy, registryName] = [
+    scripts.treasuryScript.config.registry_token,
+    registryTokenName(),
+  ];
   await emulator.register(
     "Registry",
     makeValue(5_000_000n, [registryPolicy + registryName, 1n]),
@@ -263,12 +304,38 @@ export async function setupEmulator(txOuts: Core.TransactionOutput[] = []) {
 
   await emulator.publishScript(treasuryScript.script.Script);
   await emulator.publishScript(vendorScript.script.Script);
-  await emulator.register("MaliciousUser");
-  await emulator.register(
-    "Anyone",
-    makeValue(5_000_000n, ["a".repeat(56), 1n]),
-  );
-  await emulator.fund("Anyone", makeValue(1000_000_000n));
+}
 
-  return emulator;
+export function scriptOutput<T, C>(
+  emulator: Emulator,
+  script: ICompiledScript<T, C>,
+  value: Core.Value,
+  datum?: PlutusData,
+): Core.TransactionUnspentOutput {
+  const output = new Core.TransactionUnspentOutput(
+    new Core.TransactionInput(
+      Core.TransactionId("1".repeat(64)),
+      BigInt(emulator.utxos().length), // By using emulator.utxos().length we ensure this is unique, if a bit large
+    ),
+    new Core.TransactionOutput(script.scriptAddress, value),
+  );
+  if (datum) {
+    output.output().setDatum(Core.Datum.newInlineData(datum));
+  }
+  emulator.addUtxo(output);
+  return output;
+}
+
+export function findRegistryInput(
+  emulator: Emulator,
+  idx?: number,
+): Core.TransactionUnspentOutput {
+  const [registryPolicy, registryName] = registryToken(idx);
+  return emulator.utxos().find((u) =>
+    u
+      .output()
+      .amount()
+      .multiasset()
+      ?.get(AssetId(registryPolicy + registryName)),
+  )!;
 }

@@ -1,4 +1,9 @@
-import { Address, Ed25519KeyHashHex, RewardAccount } from "@blaze-cardano/core";
+import {
+  Address,
+  AssetId,
+  Ed25519KeyHashHex,
+  RewardAccount,
+} from "@blaze-cardano/core";
 import * as Data from "@blaze-cardano/data";
 import { Emulator } from "@blaze-cardano/emulator";
 import { Core, makeValue } from "@blaze-cardano/sdk";
@@ -11,6 +16,7 @@ import {
   type TreasuryTreasuryWithdraw,
 } from "../../src/types/contracts";
 import {
+  registryToken,
   reorganize_key,
   Reorganizer,
   sampleTreasuryConfig,
@@ -25,6 +31,7 @@ describe("When reorganizing", () => {
   let scriptInput: Core.TransactionUnspentOutput;
   let secondScriptInput: Core.TransactionUnspentOutput;
   let thirdScriptInput: Core.TransactionUnspentOutput;
+  let registryInput: Core.TransactionUnspentOutput;
   let refInput: Core.TransactionUnspentOutput;
   let rewardAccount: RewardAccount;
   let treasuryScript: TreasuryTreasuryWithdraw;
@@ -33,7 +40,7 @@ describe("When reorganizing", () => {
     emulator = await setupEmulator();
     config = await sampleTreasuryConfig(emulator);
     const treasury = loadTreasuryScript(Core.NetworkId.Testnet, config);
-    rewardAccount = treasury.rewardAccount;
+    rewardAccount = treasury.rewardAccount!;
     treasuryScript = treasury.script;
     scriptAddress = treasury.scriptAddress;
 
@@ -63,6 +70,15 @@ describe("When reorganizing", () => {
     // TODO: update blaze to allow spending null datums for plutus v3
     thirdScriptInput.output().setDatum(Core.Datum.newInlineData(Data.Void()));
     emulator.addUtxo(thirdScriptInput);
+
+    const [registryPolicy, registryName] = registryToken();
+    registryInput = emulator.utxos().find((u) =>
+      u
+        .output()
+        .amount()
+        .multiasset()
+        ?.get(AssetId(registryPolicy + registryName)),
+    )!;
 
     refInput = emulator.lookupScript(treasuryScript.Script);
   });
@@ -160,6 +176,7 @@ describe("When reorganizing", () => {
               Ed25519KeyHashHex(await reorganize_key(emulator)),
             )
             .setValidUntil(unix_to_slot(config.expiration - 1000n))
+            .addReferenceInput(registryInput)
             .addReferenceInput(refInput),
           /Trace equal_plus_min_ada\(input_sum, output_sum\)/,
         );
@@ -181,6 +198,7 @@ describe("When reorganizing", () => {
             .lockAssets(scriptAddress, makeValue(499_999_999_999n), Data.Void())
             .payLovelace(address, 1_000_000n)
             .setValidUntil(unix_to_slot(config.expiration - 1000n))
+            .addReferenceInput(registryInput)
             .addReferenceInput(refInput),
           /Trace equal_plus_min_ada\(input_sum, output_sum\)/,
         );
@@ -206,13 +224,14 @@ describe("When reorganizing", () => {
             .lockAssets(scriptAddress, makeValue(500_000_500_000n), Data.Void())
             .payAssets(address, makeValue(2_000_000n, ["a".repeat(56), 1n]))
             .setValidUntil(unix_to_slot(config.expiration - 1000n))
+            .addReferenceInput(registryInput)
             .addReferenceInput(refInput),
           /Trace equal_plus_min_ada\(input_sum, output_sum\)/,
         );
       });
     });
 
-    test("cannot attach staking address", async () => {
+    test("cannot attach a different staking address", async () => {
       const fullAddress = new Core.Address({
         type: Core.AddressType.BasePaymentScriptStakeKey,
         networkId: Core.NetworkId.Testnet,
@@ -234,6 +253,7 @@ describe("When reorganizing", () => {
               Data.serialize(TreasurySpendRedeemer, "Reorganize"),
             )
             .setValidUntil(unix_to_slot(config.expiration - 1000n))
+            .addReferenceInput(registryInput)
             .addReferenceInput(refInput)
             .addRequiredSigner(
               Ed25519KeyHashHex(await reorganize_key(emulator)),
@@ -243,7 +263,7 @@ describe("When reorganizing", () => {
               scriptInput.output().amount(),
               Data.Void(),
             ),
-          /Trace expect or {\n {28}allow_stake,/,
+          /Trace expect or {\s*allow_different_stake,/,
         );
       });
     });
@@ -270,6 +290,7 @@ describe("When reorganizing", () => {
               Ed25519KeyHashHex(await reorganize_key(emulator)),
             )
             .setValidUntil(unix_to_slot(config.expiration - 1000n))
+            .addReferenceInput(registryInput)
             .addReferenceInput(refInput),
           /Trace equal_plus_min_ada\(input_sum, output_sum\)/,
         );
@@ -287,6 +308,7 @@ describe("When reorganizing", () => {
             blaze
               .newTransaction()
               .setValidUntil(unix_to_slot(config.expiration + 5000n))
+              .addReferenceInput(registryInput)
               .addReferenceInput(refInput)
               .addRequiredSigner(
                 Ed25519KeyHashHex(await reorganize_key(emulator)),
@@ -316,7 +338,7 @@ describe("When reorganizing", () => {
             blaze,
             [scriptInput],
             [makeValue(100_000_000_000n), makeValue(400_000_000_000n)],
-            [Ed25519KeyHashHex(address.asBase()?.getPaymentCredential().hash!)],
+            [Ed25519KeyHashHex(address.asBase()!.getPaymentCredential().hash)],
           ),
           /Trace satisfied\(config.permissions.reorganize/,
         );

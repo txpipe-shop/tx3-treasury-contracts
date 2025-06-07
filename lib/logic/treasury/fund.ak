@@ -3,24 +3,20 @@ use cardano/address.{Credential}
 use cardano/assets.{Value, merge, negate}
 use cardano/transaction.{Transaction}
 use sundae/multisig.{satisfied}
-use types.{TreasuryConfiguration}
-use utilities.{
-  equal_plus_min_ada, find_script_hash_registry, outputs_of, payout_sum,
-  value_sum,
-}
+use types.{ScriptHashRegistry, TreasuryConfiguration}
+use utilities.{equal_plus_min_ada, outputs_of, payout_sum, value_sum}
 
 // Pay out funds to the vendor script, to fund a new project
 pub fn logic(
   config: TreasuryConfiguration,
   account: Credential,
   amount: Value,
+  registry: ScriptHashRegistry,
   transaction: Transaction,
 ) {
-  let TreasuryConfiguration { registry_token, expiration, permissions, .. } =
-    config
+  let TreasuryConfiguration { expiration, permissions, .. } = config
   let Transaction {
     inputs,
-    reference_inputs,
     outputs,
     validity_range,
     extra_signatories,
@@ -28,12 +24,11 @@ pub fn logic(
     ..
   } = transaction
 
-  // Find the script hash registry, so we know the vendor script hash
-  let registry = find_script_hash_registry(reference_inputs, registry_token)
   // We need to make sure that the expected amount leaves the control of the treasury script
   // This means summing up the outputs and inputs at each script
-  let input_sum = value_sum(outputs_of(inputs), account, True)
-  let input_vendor_sum = value_sum(outputs_of(inputs), registry.vendor, True)
+  let inputs = outputs_of(inputs)
+  let input_sum = value_sum(inputs, account, True)
+  let input_vendor_sum = value_sum(inputs, registry.vendor, True)
   let output_sum = value_sum(outputs, account, False)
   let output_vendor_sum = value_sum(outputs, registry.vendor, False)
 
@@ -47,8 +42,15 @@ pub fn logic(
     payout_sum(
       outputs,
       registry.vendor,
-      fn(_, p) {
-        expect p.maturation <= config.expiration
+      fn(v, p) {
+        // Ensure the vendor also signs the contract
+        // This ensures they consent to the work, but also prevents accidentally
+        // locking funds with a nonsensical vendor multisig
+        expect
+          satisfied(v.vendor, extra_signatories, validity_range, withdrawals)
+        // Ensure payouts are bounded, so the oversight committee doesn't create
+        // a project that lasts 20 years
+        expect p.maturation <= config.payout_upperbound
         True
       },
     )
