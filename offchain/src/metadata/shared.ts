@@ -4,18 +4,28 @@ import {
   MetadatumList,
   MetadatumMap,
 } from "@blaze-cardano/core";
-import { IInitialize } from "./initialize-reorganize";
+import type { IFund } from "./fund";
+import type { IInitialize } from "./initialize-reorganize";
 import type { INewInstance } from "./new-instance";
 
-export interface ITransactionMetadata {
+export interface IAnchor {
+  anchorUrl: string;
+  anchorDataHash: string;
+}
+
+export interface IMetadataBodyBase {
+  event: string;
+}
+
+export interface ITransactionMetadata<MB = IMetadataBodyBase> {
   "@context": string;
   hashAlgorithm: "blake2b-256";
-  body: TMetadataBody;
+  body: MB;
   comment?: string;
   txAuthor: string;
 }
 
-export type TMetadataBody = INewInstance | IInitialize;
+export type TMetadataBody = IInitialize | INewInstance | IFund;
 
 function toMetadatum(value: unknown): Metadatum | undefined {
   if (typeof value === "string" || value instanceof String) {

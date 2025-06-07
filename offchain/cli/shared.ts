@@ -1,8 +1,10 @@
 import {
   Address,
   CredentialType,
+  Ed25519KeyHashHex,
   Script,
   Transaction,
+  TransactionUnspentOutput,
 } from "@blaze-cardano/core";
 import {
   Blaze,
@@ -13,16 +15,16 @@ import {
   Wallet,
   type Provider,
 } from "@blaze-cardano/sdk";
-import { input, select } from "@inquirer/prompts";
+import { checkbox, input, select } from "@inquirer/prompts";
 import clipboard from "clipboardy";
-import { IOutput } from "src/metadata/initialize-reorganize";
-import { INewInstance } from "src/metadata/new-instance";
+import type { IOutput } from "../src/metadata/initialize-reorganize";
+import type { INewInstance } from "../src/metadata/new-instance";
 import {
-  TPermissionMetadata,
-  TPermissionName,
   toMultisig,
-} from "src/metadata/permission";
-import { ITransactionMetadata, TMetadataBody } from "src/metadata/shared";
+  type TPermissionMetadata,
+  type TPermissionName,
+} from "../src/metadata/permission";
+import type { IAnchor, ITransactionMetadata } from "../src/metadata/shared";
 import {
   OneshotOneshotMint,
   TreasuryConfiguration,
@@ -30,7 +32,70 @@ import {
   VendorConfiguration,
   VendorVendorSpend,
 } from "../src/types/contracts";
-import { IInstanceWithUtxo } from "./instance-with-utxo";
+
+async function getSignersFromList(
+  permissions: TPermissionMetadata[],
+  min: number,
+): Promise<Ed25519KeyHashHex[]> {
+  const choices = await Promise.all(
+    permissions.map(async (script) => ({
+      name: script.label || JSON.stringify(script),
+      value: await getSigners(script),
+    })),
+  );
+  const selections = await checkbox({
+    message: "Select the keys that will be signing the transaction",
+    choices,
+    validate: (selected) => {
+      if (selected.length >= min) {
+        return "You must select at least one key";
+      }
+      return true;
+    },
+  });
+  return selections.flat();
+}
+
+export async function getSigners(
+  permissions: TPermissionMetadata,
+): Promise<Ed25519KeyHashHex[]> {
+  const signers: Ed25519KeyHashHex[] = [];
+
+  if ("signature" in permissions) {
+    signers.push(Ed25519KeyHashHex(permissions.signature.key_hash));
+  }
+
+  if ("atLeast" in permissions) {
+    return await getSignersFromList(
+      permissions.atLeast.scripts,
+      Number(permissions.atLeast.required),
+    );
+  }
+
+  if ("anyOf" in permissions) {
+    return await getSignersFromList(permissions.anyOf.scripts, 1);
+  }
+
+  if ("allOf" in permissions) {
+    const allSigners = await Promise.all(
+      permissions.allOf.scripts.map(async (script) => await getSigners(script)),
+    );
+    return allSigners.flat();
+  }
+
+  return signers;
+}
+
+export async function inputOrEnv(opts: {
+  message: string;
+  env: string;
+  validate?: (a: string) => boolean | string | Promise<boolean | string>;
+}): Promise<string> {
+  if (process.env[opts.env] !== undefined) {
+    return process.env[opts.env]!;
+  }
+  return await input(opts);
+}
 
 export async function maybeInput(opts: {
   message: string;
@@ -41,6 +106,50 @@ export async function maybeInput(opts: {
     return undefined;
   }
   return resp;
+}
+
+export async function getOptional<T, O>(
+  message: string,
+  opts: O,
+  call: (o: O) => Promise<T>,
+): Promise<T | undefined> {
+  const option = await select({
+    message: message,
+    choices: [
+      { name: "Yes", value: true },
+      { name: "No", value: false },
+    ],
+  });
+  if (option) {
+    return await call(opts);
+  } else {
+    return undefined;
+  }
+}
+
+export async function getAnchor(): Promise<IAnchor> {
+  return {
+    anchorUrl: await input({
+      message: "Enter the URL of the anchor (e.g., https://example.com/anchor)",
+      validate: (url) => {
+        try {
+          new URL(url);
+          return true;
+        } catch {
+          return "Invalid URL format";
+        }
+      },
+    }),
+    anchorDataHash: await input({
+      message: "Enter the hash of the anchor data (hex format)",
+      validate: (hash) => {
+        if (/^[0-9a-fA-F]{64}$/.test(hash)) {
+          return true;
+        }
+        return "Hash must be a 64-character hexadecimal string";
+      },
+    }),
+  } as IAnchor;
 }
 
 export async function getDate(title: string, min?: Date): Promise<Date> {
@@ -422,20 +531,25 @@ export async function getProvider(): Promise<Provider> {
   });
   switch (providerType) {
     case "blockfrost":
-      const bfNetwork: "cardano-mainnet" | "cardano-preview" = await select({
-        message: "Select the network",
-        choices: [
-          { name: "Mainnet", value: "cardano-mainnet" },
-          { name: "Preview", value: "cardano-preview" },
-        ],
+      const bfKey = await inputOrEnv({
+        message: "Enter the Blockfrost project ID",
+        env: "BLOCKFROST_KEY",
+        validate: (s) => s.startsWith("preview") || s.startsWith("mainnet"),
       });
+      const bfNetwork: "cardano-mainnet" | "cardano-preview" = bfKey.startsWith(
+        "preview",
+      )
+        ? "cardano-preview"
+        : "cardano-mainnet";
       return new Blockfrost({
         network: bfNetwork,
-        projectId: await input({
-          message: "Enter the Blockfrost project ID",
-        }),
+        projectId: bfKey,
       });
     case "maestro":
+      const mKey = await inputOrEnv({
+        message: "Enter the Maestro API key",
+        env: "MAESTRO_KEY",
+      });
       const mNetwork: "mainnet" | "preview" = await select({
         message: "Select the network",
         choices: [
@@ -445,9 +559,7 @@ export async function getProvider(): Promise<Provider> {
       });
       return new Maestro({
         network: mNetwork,
-        apiKey: await input({
-          message: "Enter the Maestro API key",
-        }),
+        apiKey: mKey,
       });
     default:
       throw new Error("Invalid provider type");
@@ -557,11 +669,22 @@ export async function getVendorConfig(
 export async function deployTransaction<P extends Provider, W extends Wallet>(
   blazeInstance: Blaze<P, W>,
   scripts: Script[],
+  register: boolean = false,
 ): Promise<Transaction> {
   const txBuilder = blazeInstance.newTransaction();
   scripts.forEach((script) => {
     txBuilder.deployScript(script);
   });
+  if (register) {
+    scripts.forEach((script) => {
+      txBuilder.addRegisterStake(
+        Core.Credential.fromCore({
+          type: Core.CredentialType.ScriptHash,
+          hash: script.hash(),
+        }),
+      );
+    });
+  }
   return txBuilder.complete();
 }
 
@@ -575,6 +698,10 @@ export async function configToMetaData(
   treasuryConfig: TreasuryConfiguration,
   vendorConfig: VendorConfiguration,
   permissions: Record<TPermissionName, TPermissionMetadata | TPermissionName>,
+  seed_utxo: {
+    transaction_id: string;
+    output_index: bigint;
+  },
 ): Promise<INewInstance> {
   return {
     event: "publish",
@@ -589,6 +716,7 @@ export async function configToMetaData(
       message: "Longer human readable description for this treasury instance?",
     }),
     permissions,
+    seed_utxo,
   };
 }
 
@@ -625,7 +753,7 @@ export function metaDataToConfig(metadata: INewInstance): {
 const fileName = "metadata.json";
 
 export async function readMetadataFromFile(): Promise<
-  Map<string, IInstanceWithUtxo>
+  Map<string, INewInstance>
 > {
   const fs = await import("fs/promises");
   const path = await import("path");
@@ -636,22 +764,22 @@ export async function readMetadataFromFile(): Promise<
 
   if (data.trim() === "") {
     console.log("No metadata found, creating a new file.");
-    return new Map<string, IInstanceWithUtxo>();
+    return new Map<string, INewInstance>();
   }
   const obj = JSON.parse(data);
-  const metadata = new Map<string, IInstanceWithUtxo>();
+  const metadata = new Map<string, INewInstance>();
   for (const k of Object.keys(obj)) {
     metadata.set(k, obj[k]);
   }
   return metadata;
 }
 
-function bigIntReplacer(_key: string, value: any): any {
+export function bigIntReplacer(_key: string, value: any): any {
   return typeof value === "bigint" ? value.toString() : value;
 }
 
 export async function writeMetadataToFile(
-  metadata: Map<string, IInstanceWithUtxo>,
+  metadata: Map<string, INewInstance>,
 ): Promise<void> {
   const fs = await import("fs/promises");
   const path = await import("path");
@@ -665,9 +793,7 @@ export async function writeMetadataToFile(
   );
 }
 
-export async function registerMetadata(
-  metadata: IInstanceWithUtxo,
-): Promise<void> {
+export async function registerMetadata(metadata: INewInstance): Promise<void> {
   const existingMetadata = await readMetadataFromFile();
   existingMetadata.set(metadata.identifier, metadata);
   await writeMetadataToFile(existingMetadata);
@@ -676,7 +802,7 @@ export async function registerMetadata(
 export async function getConfigs(): Promise<{
   treasuryConfig: TreasuryConfiguration;
   vendorConfig: VendorConfiguration;
-  metadata: IInstanceWithUtxo;
+  metadata: INewInstance;
 }> {
   const choice = await select({
     message: "Select saved configuration or register a new one",
@@ -724,7 +850,7 @@ export async function getConfigs(): Promise<{
 async function registerNewInstance(): Promise<{
   treasuryConfig: TreasuryConfiguration;
   vendorConfig: VendorConfiguration;
-  metadata: IInstanceWithUtxo;
+  metadata: INewInstance;
 }> {
   const utxo = await input({
     message:
@@ -768,11 +894,12 @@ async function registerNewInstance(): Promise<{
     treasuryConfig,
     vendorConfig,
     permissions,
+    bootstrapUtxo,
   );
-  const metadata = {
+  const metadata: INewInstance = {
     ...metadataRaw,
-    utxo: bootstrapUtxo,
-  } as IInstanceWithUtxo;
+    seed_utxo: bootstrapUtxo,
+  };
   await registerMetadata(metadata);
   return {
     treasuryConfig,
@@ -819,9 +946,9 @@ export async function getOutputs(): Promise<{
   return { amounts, outputs };
 }
 
-export async function getTransactionMetadata(
-  body: TMetadataBody,
-): Promise<ITransactionMetadata> {
+export async function getTransactionMetadata<MetadataBody>(
+  body: MetadataBody,
+): Promise<ITransactionMetadata<MetadataBody>> {
   return {
     "@context": "",
     hashAlgorithm: "blake2b-256",
@@ -835,4 +962,38 @@ export async function getTransactionMetadata(
       message: "An arbitrary comment you'd like to attach?",
     }),
   };
+}
+
+export async function selectUtxo(
+  utxos: TransactionUnspentOutput[],
+): Promise<TransactionUnspentOutput> {
+  if (utxos.length === 0) {
+    throw new Error("No UTxOs available to select from");
+  }
+  const choices = utxos.map((utxo, index) => ({
+    name: `${utxo.input().transactionId().toString()}#${utxo.input().index().toString()}: ${utxo.output().amount().coin().toString()}`,
+    value: index,
+  }));
+  const selectedIndex = await select({
+    message: "Select a UTxO to use",
+    choices,
+  });
+  return utxos[selectedIndex];
+}
+
+export async function selectUtxos(
+  utxos: TransactionUnspentOutput[],
+): Promise<TransactionUnspentOutput[]> {
+  if (utxos.length === 0) {
+    throw new Error("No UTxOs available to select from");
+  }
+  const choices = utxos.map((utxo, index) => ({
+    name: `${utxo.input().transactionId().toString()}#${utxo.input().index().toString()}: ${utxo.output().amount().coin().toString()}`,
+    value: index,
+  }));
+  const selectedIndices = await checkbox({
+    message: "Select UTxO(s) to use",
+    choices,
+  });
+  return selectedIndices.map((index) => utxos[index]);
 }

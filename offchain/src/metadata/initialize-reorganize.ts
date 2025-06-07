@@ -1,18 +1,20 @@
+import type { IMetadataBodyBase } from "./shared";
+
 export interface IOutput {
-    identifier: string;
-    label?: string;
+  identifier: string;
+  label?: string;
 }
 
-interface IInitializeReorganize {
-    instance: string;
-    reason?: string;
-    outputs: Record<number, IOutput>;
+interface IInitializeReorganize extends IMetadataBodyBase {
+  instance: string;
+  reason?: string;
+  outputs: Record<number, IOutput>;
 }
 
 export interface IInitialize extends IInitializeReorganize {
-    event: "initialize";
+  event: "initialize";
 }
 
 export interface IReorganize extends IInitializeReorganize {
-    event: "reorganize";
+  event: "reorganize";
 }

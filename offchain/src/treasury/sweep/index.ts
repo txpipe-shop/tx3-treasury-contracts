@@ -31,7 +31,9 @@ export async function sweep<P extends Provider, W extends Wallet>(
   let tx = blaze
     .newTransaction()
     .addInput(input, Data.serialize(TreasurySpendRedeemer, "SweepTreasury"))
-    .setValidFrom(unix_to_slot(config.expiration + 1000n))
+    .setValidFrom(
+      unix_to_slot(blaze.provider.network, Number(config.expiration + 1000n)),
+    )
     .addReferenceInput(refInput)
     .setDonation(amount);
 
