@@ -997,3 +997,17 @@ export async function selectUtxos(
   });
   return selectedIndices.map((index) => utxos[index]);
 }
+
+export function getActualPermission(
+  permission: TPermissionMetadata | TPermissionName,
+  permissions: Record<TPermissionName, TPermissionMetadata | TPermissionName>,
+): TPermissionMetadata {
+  if (typeof permission === "string") {
+    const actual = permissions[permission];
+    if (typeof actual === "string") {
+      throw new Error(`No metadata found for permission ${permission}`);
+    }
+    return actual;
+  }
+  return permission;
+}

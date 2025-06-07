@@ -4,13 +4,10 @@ import { Blaze, makeValue, Provider, Wallet } from "@blaze-cardano/sdk";
 import { input, select } from "@inquirer/prompts";
 import { Treasury } from "../../src";
 import type { IFund, IMilestone } from "../../src/metadata/fund";
-import {
-  toMultisig,
-  type TPermissionMetadata,
-  type TPermissionName,
-} from "../../src/metadata/permission";
+import { toMultisig } from "../../src/metadata/permission";
 import { loadTreasuryScript } from "../../src/shared";
 import {
+  getActualPermission,
   getAnchor,
   getBlazeInstance,
   getConfigs,
@@ -158,15 +155,10 @@ export async function fund(
   );
   const utxo = await selectUtxo(utxos);
 
-  let fundPermissions = metadata.permissions.fund;
-  if (
-    typeof fundPermissions === "string" ||
-    fundPermissions instanceof String
-  ) {
-    fundPermissions = metadata.permissions[
-      fundPermissions as TPermissionName
-    ] as TPermissionMetadata;
-  }
+  const fundPermissions = getActualPermission(
+    metadata.permissions.fund,
+    metadata.permissions,
+  );
   const signers = await getSigners(fundPermissions);
 
   const tx = await (
