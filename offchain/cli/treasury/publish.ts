@@ -146,7 +146,7 @@ export async function publish(): Promise<void> {
           blazeInstance = await Blaze.from(provider, wallet);
         }
         await transactionDialog(
-          (await deployTransaction(blazeInstance, [vendorScript]))
+          (await deployTransaction(blazeInstance, [vendorScript], true))
             .toCbor()
             .toString(),
           false,
