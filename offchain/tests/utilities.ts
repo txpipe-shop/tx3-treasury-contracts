@@ -1,18 +1,18 @@
+import { AssetId, PlutusData, Slot, toHex } from "@blaze-cardano/core";
 import * as Data from "@blaze-cardano/data";
-import { Slot, toHex, PlutusData, AssetId } from "@blaze-cardano/core";
 import { Emulator } from "@blaze-cardano/emulator";
+import { Core, makeValue } from "@blaze-cardano/sdk";
+import {
+  ScriptHashRegistry,
+  type TreasuryConfiguration,
+  type VendorConfiguration,
+} from "../src/generated-types/contracts";
 import {
   ICompiledScript,
   ICompiledScripts,
   loadScripts,
   slot_to_unix,
 } from "../src/shared";
-import {
-  ScriptHashRegistry,
-  type TreasuryConfiguration,
-  type VendorConfiguration,
-} from "../src/types/contracts";
-import { Core, makeValue } from "@blaze-cardano/sdk";
 
 export function registryTokenName(): string {
   return toHex(Buffer.from("REGISTRY"));

@@ -1,11 +1,4 @@
 import {
-  makeValue,
-  TxBuilder,
-  type Blaze,
-  type Provider,
-  type Wallet,
-} from "@blaze-cardano/sdk";
-import {
   AssetId,
   Ed25519KeyHashHex,
   Slot,
@@ -13,20 +6,27 @@ import {
   TransactionUnspentOutput,
   Value,
 } from "@blaze-cardano/core";
-import * as Tx from "@blaze-cardano/tx";
 import * as Data from "@blaze-cardano/data";
+import {
+  makeValue,
+  TxBuilder,
+  type Blaze,
+  type Provider,
+  type Wallet,
+} from "@blaze-cardano/sdk";
+import * as Tx from "@blaze-cardano/tx";
+import {
+  MultisigScript,
+  TreasuryConfiguration,
+  TreasurySpendRedeemer,
+  VendorConfiguration,
+  VendorDatum,
+} from "../../generated-types/contracts";
 import {
   coreValueToContractsValue,
   loadTreasuryScript,
   loadVendorScript,
 } from "../../shared";
-import {
-  VendorDatum,
-  MultisigScript,
-  TreasuryConfiguration,
-  TreasurySpendRedeemer,
-  VendorConfiguration,
-} from "../../types/contracts";
 
 export async function fund<P extends Provider, W extends Wallet>(
   configs: { treasury: TreasuryConfiguration; vendor: VendorConfiguration },

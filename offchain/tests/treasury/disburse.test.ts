@@ -10,16 +10,16 @@ import { Emulator } from "@blaze-cardano/emulator";
 import { Core, makeValue } from "@blaze-cardano/sdk";
 import { beforeEach, describe, test } from "bun:test";
 import {
-  loadTreasuryScript,
-  coreValueToContractsValue as translateValue,
-} from "../../src/shared";
-import { disburse } from "../../src/treasury/disburse";
-import {
   TreasurySpendRedeemer,
   VendorConfiguration,
   type TreasuryConfiguration,
   type TreasuryTreasuryWithdraw,
-} from "../../src/types/contracts";
+} from "../../src/generated-types/contracts";
+import {
+  loadTreasuryScript,
+  coreValueToContractsValue as translateValue,
+} from "../../src/shared";
+import { disburse } from "../../src/treasury/disburse";
 import {
   Disburser,
   Funder,

@@ -2,18 +2,18 @@ import { Core, makeValue } from "@blaze-cardano/sdk";
 import { type Cardano } from "@cardano-sdk/core";
 
 import {
-  TreasuryConfiguration,
-  TreasuryTreasuryWithdraw,
-  VendorConfiguration,
-  VendorVendorSpend,
-} from "../types/contracts";
-import {
   Address,
   RewardAccount,
   Slot,
   Value,
   type CredentialCore,
 } from "@blaze-cardano/core";
+import {
+  TreasuryConfiguration,
+  TreasuryTreasuryWithdraw,
+  VendorConfiguration,
+  VendorVendorSpend,
+} from "../generated-types/contracts";
 
 export interface ICompiledScript<T, C> {
   config: C;

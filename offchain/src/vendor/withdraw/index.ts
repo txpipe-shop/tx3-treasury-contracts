@@ -1,11 +1,4 @@
 import {
-  TxBuilder,
-  Value,
-  type Blaze,
-  type Provider,
-  type Wallet,
-} from "@blaze-cardano/sdk";
-import {
   Address,
   AssetId,
   Ed25519KeyHashHex,
@@ -14,15 +7,22 @@ import {
 } from "@blaze-cardano/core";
 import * as Data from "@blaze-cardano/data";
 import {
-  contractsValueToCoreValue,
-  loadVendorScript,
-  unix_to_slot,
-} from "../../shared";
+  TxBuilder,
+  Value,
+  type Blaze,
+  type Provider,
+  type Wallet,
+} from "@blaze-cardano/sdk";
 import {
   VendorConfiguration,
   VendorDatum,
   VendorSpendRedeemer,
-} from "../../types/contracts";
+} from "../../generated-types/contracts";
+import {
+  contractsValueToCoreValue,
+  loadVendorScript,
+  unix_to_slot,
+} from "../../shared";
 
 export async function withdraw<P extends Provider, W extends Wallet>(
   config: VendorConfiguration,

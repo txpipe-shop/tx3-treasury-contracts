@@ -9,15 +9,15 @@ import {
 } from "@blaze-cardano/sdk";
 import { input, select } from "@inquirer/prompts";
 import clipboard from "clipboardy";
+import type {
+  TreasuryConfiguration,
+  VendorConfiguration,
+} from "../src/generated-types/contracts";
 import {
   toMultisig,
   type TPermissionMetadata,
   type TPermissionName,
 } from "../src/metadata/types/permission";
-import type {
-  TreasuryConfiguration,
-  VendorConfiguration,
-} from "../src/types/contracts";
 
 export async function maybeInput(opts: {
   message: string;

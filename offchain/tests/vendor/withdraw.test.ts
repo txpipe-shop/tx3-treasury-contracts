@@ -10,18 +10,18 @@ import { Emulator } from "@blaze-cardano/emulator";
 import { Core, makeValue } from "@blaze-cardano/sdk";
 import { beforeEach, describe, test } from "bun:test";
 import {
-  coreValueToContractsValue,
-  loadTreasuryScript,
-  loadVendorScript,
-  slot_to_unix,
-} from "../../src/shared";
-import {
   MultisigScript,
   VendorConfiguration,
   VendorDatum,
   VendorSpendRedeemer,
   VendorVendorSpend,
-} from "../../src/types/contracts";
+} from "../../src/generated-types/contracts";
+import {
+  coreValueToContractsValue,
+  loadTreasuryScript,
+  loadVendorScript,
+  slot_to_unix,
+} from "../../src/shared";
 import { withdraw } from "../../src/vendor/withdraw";
 import {
   registryToken,

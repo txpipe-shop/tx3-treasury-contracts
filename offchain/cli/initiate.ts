@@ -13,16 +13,16 @@ import { serialize, Void } from "@blaze-cardano/data";
 import { Blaze, Core } from "@blaze-cardano/sdk";
 import { input, select } from "@inquirer/prompts";
 import {
-  type ITransactionMetadata,
-  toTxMetadata,
-} from "../src/metadata/shared";
-import { contractsValueToCoreValue } from "../src/shared";
-import {
   OneshotOneshotMint,
   ScriptHashRegistry,
   TreasuryTreasurySpend,
   VendorVendorSpend,
-} from "../src/types/contracts";
+} from "../src/generated-types/contracts";
+import {
+  type ITransactionMetadata,
+  toTxMetadata,
+} from "../src/metadata/shared";
+import { contractsValueToCoreValue } from "../src/shared";
 import {
   addressOrHexToHash,
   getPermissions,

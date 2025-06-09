@@ -1,3 +1,5 @@
+import { AssetId, toHex, TransactionUnspentOutput } from "@blaze-cardano/core";
+import * as Data from "@blaze-cardano/data";
 import {
   TxBuilder,
   Value,
@@ -5,14 +7,12 @@ import {
   type Provider,
   type Wallet,
 } from "@blaze-cardano/sdk";
-import { AssetId, toHex, TransactionUnspentOutput } from "@blaze-cardano/core";
-import * as Data from "@blaze-cardano/data";
-import { loadTreasuryScript, loadVendorScript } from "../../shared";
 import {
   TreasuryConfiguration,
   VendorConfiguration,
   VendorSpendRedeemer,
-} from "../../types/contracts";
+} from "../../generated-types/contracts";
+import { loadTreasuryScript, loadVendorScript } from "../../shared";
 
 export async function sweep_malformed<P extends Provider, W extends Wallet>(
   configs: { treasury: TreasuryConfiguration; vendor: VendorConfiguration },

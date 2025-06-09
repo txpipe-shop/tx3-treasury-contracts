@@ -13,17 +13,17 @@ import {
   type Wallet,
 } from "@blaze-cardano/sdk";
 import {
+  TreasuryConfiguration,
+  VendorConfiguration,
+  VendorDatum,
+  VendorSpendRedeemer,
+} from "../../generated-types/contracts";
+import {
   contractsValueToCoreValue,
   loadTreasuryScript,
   loadVendorScript,
   unix_to_slot,
 } from "../../shared";
-import {
-  TreasuryConfiguration,
-  VendorConfiguration,
-  VendorDatum,
-  VendorSpendRedeemer,
-} from "../../types/contracts";
 
 export async function modify<P extends Provider, W extends Wallet>(
   configs: { treasury: TreasuryConfiguration; vendor: VendorConfiguration },
