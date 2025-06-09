@@ -23,6 +23,7 @@ export interface ITransactionMetadata<MB = IMetadataBodyBase> {
   body: MB;
   comment?: string;
   txAuthor: string;
+  instance: string;
 }
 
 export type TMetadataBody = IInitialize | INewInstance | IFund;

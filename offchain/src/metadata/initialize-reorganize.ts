@@ -6,7 +6,6 @@ export interface IOutput {
 }
 
 interface IInitializeReorganize extends IMetadataBodyBase {
-  instance: string;
   reason?: string;
   outputs: Record<number, IOutput>;
 }

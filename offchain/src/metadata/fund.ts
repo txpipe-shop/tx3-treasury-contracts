@@ -15,7 +15,6 @@ export interface IMilestone {
 
 export interface IFund extends IMetadataBodyBase {
   event: "fund";
-  instance: string;
   identifier: string;
   otherIdentifiers: string[];
   label: string;

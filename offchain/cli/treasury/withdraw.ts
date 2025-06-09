@@ -18,13 +18,12 @@ export async function withdraw(
   if (!blazeInstance) {
     blazeInstance = await getBlazeInstance();
   }
-  const { treasuryConfig, metadata } = await getConfigs();
+  const { treasuryConfig } = await getConfigs();
 
   const { amounts, outputs } = await getOutputs();
 
   const body: IInitialize = {
     event: "initialize",
-    instance: metadata.identifier,
     reason: await maybeInput({
       message: "Enter a reason for the withdrawal (optional)",
     }),
@@ -40,7 +39,10 @@ export async function withdraw(
     withdrawAmountOpt !== undefined
       ? BigInt(parseInt(withdrawAmountOpt))
       : undefined;
-  const txMetadata = await getTransactionMetadata(body);
+  const txMetadata = await getTransactionMetadata(
+    treasuryConfig.registry_token,
+    body,
+  );
 
   const tx = await Treasury.withdraw(
     treasuryConfig,

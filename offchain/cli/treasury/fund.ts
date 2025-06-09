@@ -108,7 +108,6 @@ export async function fund(
 
   const metadataBody = {
     event: "fund",
-    instance: metadata.identifier,
     identifier: await input({
       message: "What is the main identifier for this project?",
     }),
@@ -143,7 +142,10 @@ export async function fund(
 
   metadataBody.milestones = milestones;
 
-  const txMetadata = await getTransactionMetadata(metadataBody);
+  const txMetadata = await getTransactionMetadata(
+    treasuryConfig.registry_token,
+    metadataBody,
+  );
 
   const { scriptAddress: treasuryScriptAddress, ...rest } = loadTreasuryScript(
     blazeInstance.provider.network,

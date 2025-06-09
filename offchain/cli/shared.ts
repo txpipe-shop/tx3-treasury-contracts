@@ -708,7 +708,6 @@ export async function configToMetaData(
     expiration: treasuryConfig.expiration,
     payoutUpperbound: treasuryConfig.payout_upperbound,
     vendorExpiration: vendorConfig.expiration,
-    identifier: treasuryConfig.registry_token,
     label: await maybeInput({
       message: "Human readable label for this instance?",
     }),
@@ -720,12 +719,15 @@ export async function configToMetaData(
   };
 }
 
-export function metaDataToConfig(metadata: INewInstance): {
+export function metaDataToConfig(
+  instance: string,
+  metadata: INewInstance,
+): {
   treasuryConfig: TreasuryConfiguration;
   vendorConfig: VendorConfiguration;
 } {
   const treasuryConfig: TreasuryConfiguration = {
-    registry_token: metadata.identifier,
+    registry_token: instance,
     permissions: {
       disburse: toMultisig(metadata.permissions.disburse, metadata.permissions),
       fund: toMultisig(metadata.permissions.fund, metadata.permissions),
@@ -739,7 +741,7 @@ export function metaDataToConfig(metadata: INewInstance): {
     payout_upperbound: BigInt(metadata.payoutUpperbound),
   };
   const vendorConfig: VendorConfiguration = {
-    registry_token: metadata.identifier,
+    registry_token: instance,
     permissions: {
       modify: toMultisig(metadata.permissions.modify, metadata.permissions),
       pause: toMultisig(metadata.permissions.pause, metadata.permissions),
@@ -793,9 +795,12 @@ export async function writeMetadataToFile(
   );
 }
 
-export async function registerMetadata(metadata: INewInstance): Promise<void> {
+export async function registerMetadata(
+  instance: string,
+  metadata: INewInstance,
+): Promise<void> {
   const existingMetadata = await readMetadataFromFile();
-  existingMetadata.set(metadata.identifier, metadata);
+  existingMetadata.set(instance, metadata);
   await writeMetadataToFile(existingMetadata);
 }
 
@@ -839,7 +844,10 @@ export async function getConfigs(): Promise<{
       if (!metadata) {
         throw new Error(`Metadata for ${selectedKey} not found`);
       }
-      const { treasuryConfig, vendorConfig } = metaDataToConfig(metadata);
+      const { treasuryConfig, vendorConfig } = metaDataToConfig(
+        selectedKey,
+        metadata,
+      );
       return { treasuryConfig, vendorConfig, metadata };
     }
     default:
@@ -900,7 +908,7 @@ async function registerNewInstance(): Promise<{
     ...metadataRaw,
     seed_utxo: bootstrapUtxo,
   };
-  await registerMetadata(metadata);
+  await registerMetadata(treasuryConfig.registry_token, metadata);
   return {
     treasuryConfig,
     vendorConfig,
@@ -947,12 +955,14 @@ export async function getOutputs(): Promise<{
 }
 
 export async function getTransactionMetadata<MetadataBody>(
+  instance: string,
   body: MetadataBody,
 ): Promise<ITransactionMetadata<MetadataBody>> {
   return {
     "@context": "",
     hashAlgorithm: "blake2b-256",
     body: body,
+    instance,
     txAuthor: await input({
       message:
         "Enter a hexidecimal pubkey hash, or a bech32 encoded address for the author of this transaction",

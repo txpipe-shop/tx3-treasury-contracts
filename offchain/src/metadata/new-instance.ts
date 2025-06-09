@@ -3,7 +3,6 @@ import type { IMetadataBodyBase } from "./shared";
 
 export interface INewInstance extends IMetadataBodyBase {
   event: "publish";
-  identifier: string;
   label?: string;
   description?: string;
   expiration: bigint;
