@@ -16,7 +16,6 @@ import {
   contractsValueToCoreValue,
   loadTreasuryScript,
   loadVendorScript,
-  unix_to_slot,
 } from "../../shared";
 import {
   TreasuryConfiguration,
@@ -50,10 +49,8 @@ export async function modify<P extends Provider, W extends Wallet>(
     .newTransaction()
     .addReferenceInput(registryInput)
     .addReferenceInput(refInput)
-    .setValidFrom(unix_to_slot(blaze.provider.network, now.valueOf()))
-    .setValidUntil(
-      unix_to_slot(blaze.provider.network, now.valueOf() + thirty_six_hours),
-    )
+    .setValidFrom(blaze.provider.unixToSlot(now.valueOf()))
+    .setValidUntil(blaze.provider.unixToSlot(now.valueOf() + thirty_six_hours))
     .addInput(input, Data.serialize(VendorSpendRedeemer, "Modify"));
   for (const signer of signers) {
     tx = tx.addRequiredSigner(signer);
@@ -108,10 +105,8 @@ export async function cancel<P extends Provider, W extends Wallet>(
     .newTransaction()
     .addReferenceInput(registryInput)
     .addReferenceInput(refInput)
-    .setValidFrom(unix_to_slot(blaze.provider.network, now.valueOf()))
-    .setValidUntil(
-      unix_to_slot(blaze.provider.network, now.valueOf() + thirty_six_hours),
-    )
+    .setValidFrom(blaze.provider.unixToSlot(now.valueOf()))
+    .setValidUntil(blaze.provider.unixToSlot(now.valueOf() + thirty_six_hours))
     .addInput(input, Data.serialize(VendorSpendRedeemer, "Modify"));
   for (const signer of signers) {
     tx = tx.addRequiredSigner(signer);

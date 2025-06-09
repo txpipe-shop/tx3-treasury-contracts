@@ -16,11 +16,7 @@ import {
 } from "@blaze-cardano/sdk";
 import { ITransactionMetadata, toMetadata } from "src/metadata/shared";
 import { IWithdraw } from "src/metadata/withdraw";
-import {
-  contractsValueToCoreValue,
-  loadVendorScript,
-  unix_to_slot,
-} from "../../shared";
+import { contractsValueToCoreValue, loadVendorScript } from "../../shared";
 import {
   VendorConfiguration,
   VendorDatum,
@@ -34,7 +30,7 @@ export async function withdraw<P extends Provider, W extends Wallet>(
   inputs: TransactionUnspentOutput[],
   destination: Address,
   signers: Ed25519KeyHashHex[],
-  metadata: ITransactionMetadata<IWithdraw>,
+  metadata?: ITransactionMetadata<IWithdraw>,
 ): Promise<TxBuilder> {
   const { script, scriptAddress } = loadVendorScript(
     blaze.provider.network,
@@ -48,14 +44,16 @@ export async function withdraw<P extends Provider, W extends Wallet>(
   if (!refInput)
     throw new Error("Could not find vendor script reference on-chain");
 
-  const auxData = new AuxiliaryData();
-  auxData.setMetadata(toMetadata(metadata));
   let tx = blaze
     .newTransaction()
     .addReferenceInput(registryInput)
     .addReferenceInput(refInput)
-    .setValidFrom(unix_to_slot(blaze.provider.network, now.valueOf()))
-    .setAuxiliaryData(auxData);
+    .setValidFrom(blaze.provider.unixToSlot(now.valueOf()));
+  if (metadata) {
+    const auxData = new AuxiliaryData();
+    auxData.setMetadata(toMetadata(metadata));
+    tx = tx.setAuxiliaryData(auxData);
+  }
 
   for (const signer of signers) {
     tx = tx.addRequiredSigner(signer);

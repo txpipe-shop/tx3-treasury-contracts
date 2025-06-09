@@ -12,7 +12,6 @@ import { beforeEach, describe, test } from "bun:test";
 import {
   loadTreasuryScript,
   loadVendorScript,
-  slot_to_unix,
   coreValueToContractsValue as translateValue,
 } from "../../src/shared";
 import { fund } from "../../src/treasury/fund";
@@ -145,7 +144,7 @@ describe("When funding", () => {
             vendor,
             [
               {
-                date: new Date(Number(slot_to_unix(Slot(10)))),
+                date: new Date(Number(emulator.slotToUnix(Slot(10)))),
                 amount: makeValue(10_000_000_000n),
               },
             ],
@@ -166,7 +165,7 @@ describe("When funding", () => {
             vendor,
             [
               {
-                date: new Date(Number(slot_to_unix(Slot(10)))),
+                date: new Date(Number(emulator.slotToUnix(Slot(10)))),
                 amount: makeValue(500_000_000_000n),
               },
             ],
@@ -187,11 +186,11 @@ describe("When funding", () => {
             vendor,
             [
               {
-                date: new Date(Number(slot_to_unix(Slot(10)))),
+                date: new Date(Number(emulator.slotToUnix(Slot(10)))),
                 amount: makeValue(250_000_000_000n),
               },
               {
-                date: new Date(Number(slot_to_unix(Slot(12)))),
+                date: new Date(Number(emulator.slotToUnix(Slot(12)))),
                 amount: makeValue(250_000_000_000n),
               },
             ],
@@ -212,11 +211,11 @@ describe("When funding", () => {
             vendor,
             [
               {
-                date: new Date(Number(slot_to_unix(Slot(10)))),
+                date: new Date(Number(emulator.slotToUnix(Slot(10)))),
                 amount: makeValue(10_000_000n),
               },
               {
-                date: new Date(Number(slot_to_unix(Slot(12)))),
+                date: new Date(Number(emulator.slotToUnix(Slot(12)))),
                 amount: makeValue(10_000_000n, ["b".repeat(56), 50n]),
               },
             ],
@@ -237,7 +236,7 @@ describe("When funding", () => {
             vendor,
             [
               {
-                date: new Date(Number(slot_to_unix(Slot(12)))),
+                date: new Date(Number(emulator.slotToUnix(Slot(12)))),
                 amount: makeValue(0n, ["b".repeat(56), 50n]),
               },
             ],
@@ -258,11 +257,11 @@ describe("When funding", () => {
             vendor,
             [
               {
-                date: new Date(Number(slot_to_unix(Slot(10)))),
+                date: new Date(Number(emulator.slotToUnix(Slot(10)))),
                 amount: makeValue(25_000_000n),
               },
               {
-                date: new Date(Number(slot_to_unix(Slot(12)))),
+                date: new Date(Number(emulator.slotToUnix(Slot(12)))),
                 amount: makeValue(25_000_000n, ["b".repeat(56), 50n]),
               },
             ],
@@ -627,7 +626,7 @@ describe("When funding", () => {
             vendor,
             [
               {
-                date: new Date(Number(slot_to_unix(Slot(10)))),
+                date: new Date(Number(emulator.slotToUnix(Slot(10)))),
                 amount: makeValue(10_000_000_000n),
               },
             ],

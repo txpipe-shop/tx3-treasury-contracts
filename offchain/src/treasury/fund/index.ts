@@ -15,7 +15,6 @@ import {
   type Wallet,
 } from "@blaze-cardano/sdk";
 import * as Tx from "@blaze-cardano/tx";
-import { bigIntReplacer } from "cli/shared";
 import type { IFund } from "../../../src/metadata/fund";
 import {
   toMetadata,
@@ -25,7 +24,6 @@ import {
   coreValueToContractsValue,
   loadTreasuryScript,
   loadVendorScript,
-  unix_to_slot,
 } from "../../shared";
 import {
   MultisigScript,
@@ -62,8 +60,7 @@ export async function fund<P extends Provider, W extends Wallet>(
   let tx = blaze
     .newTransaction()
     .setValidUntil(
-      unix_to_slot(
-        blaze.provider.network,
+      blaze.provider.unixToSlot(
         Math.min(
           Date.now().valueOf() + 1 * 60 * 60 * 1000, // 36 hours in milliseconds
           Number(configs.treasury.expiration) - 1,

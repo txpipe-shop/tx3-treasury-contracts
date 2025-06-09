@@ -13,8 +13,6 @@ import {
   coreValueToContractsValue,
   loadTreasuryScript,
   loadVendorScript,
-  slot_to_unix,
-  unix_to_slot,
 } from "../../src/shared";
 import {
   MultisigScript,
@@ -254,7 +252,7 @@ describe("", () => {
           return modify(
             configs,
             blaze,
-            new Date(Number(slot_to_unix(Slot(0)))),
+            new Date(Number(emulator.slotToUnix(Slot(0)))),
             scriptInput,
             fourthDatum,
             [modifySigner, vendorSigner],
@@ -274,7 +272,7 @@ describe("", () => {
           return modify(
             configs,
             blaze,
-            new Date(Number(slot_to_unix(Slot(0)))),
+            new Date(Number(emulator.slotToUnix(Slot(0)))),
             scriptInput,
             newVendorDatum,
             [modifySigner, vendorSigner, newVendorSigner],
@@ -305,7 +303,7 @@ describe("", () => {
           return modify(
             configs,
             blaze,
-            new Date(Number(slot_to_unix(Slot(0)))),
+            new Date(Number(emulator.slotToUnix(Slot(0)))),
             scriptInput,
             new_datum,
             [modifySigner, vendorSigner],
@@ -336,7 +334,7 @@ describe("", () => {
           return modify(
             configs,
             blaze,
-            new Date(Number(slot_to_unix(Slot(0)))),
+            new Date(Number(emulator.slotToUnix(Slot(0)))),
             scriptInput,
             new_datum,
             [modifySigner, vendorSigner],
@@ -371,7 +369,7 @@ describe("", () => {
           return modify(
             configs,
             blaze,
-            new Date(Number(slot_to_unix(Slot(0)))),
+            new Date(Number(emulator.slotToUnix(Slot(0)))),
             fifthScriptInput,
             new_datum,
             [modifySigner, vendorSigner],
@@ -394,7 +392,7 @@ describe("", () => {
             await modify(
               configs,
               blaze,
-              new Date(Number(slot_to_unix(Slot(0)))),
+              new Date(Number(emulator.slotToUnix(Slot(0)))),
               scriptInput,
               newDatum,
               [modifySigner, newVendorSigner],
@@ -412,7 +410,7 @@ describe("", () => {
               await modify(
                 configs,
                 blaze,
-                new Date(Number(slot_to_unix(Slot(0)))),
+                new Date(Number(emulator.slotToUnix(Slot(0)))),
                 scriptInput,
                 newDatum,
                 [modifySigner, vendorSigner],
@@ -429,7 +427,7 @@ describe("", () => {
           return cancel(
             configs,
             blaze,
-            new Date(Number(slot_to_unix(Slot(0)))),
+            new Date(Number(emulator.slotToUnix(Slot(0)))),
             scriptInput,
             [modifySigner, vendorSigner],
           );
@@ -447,7 +445,7 @@ describe("", () => {
             await cancel(
               configs,
               blaze,
-              new Date(Number(slot_to_unix(Slot(0)))),
+              new Date(Number(emulator.slotToUnix(Slot(0)))),
               scriptInput,
               [modifySigner],
             ),
@@ -462,8 +460,8 @@ describe("", () => {
               .newTransaction()
               .addReferenceInput(registryInput)
               .addReferenceInput(refInput)
-              .setValidFrom(unix_to_slot(BigInt(0)))
-              .setValidUntil(unix_to_slot(BigInt(100)))
+              .setValidFrom(Slot(0))
+              .setValidUntil(Slot(100))
               .addInput(
                 scriptInput,
                 Data.serialize(VendorSpendRedeemer, "Modify"),
@@ -485,7 +483,7 @@ describe("", () => {
             await modify(
               configs,
               blaze,
-              new Date(Number(slot_to_unix(Slot(0)))),
+              new Date(Number(emulator.slotToUnix(Slot(0)))),
               scriptInput,
               fourthDatum,
               [Ed25519KeyHashHex(await vendor_key(emulator))],
@@ -500,7 +498,7 @@ describe("", () => {
             await cancel(
               configs,
               blaze,
-              new Date(Number(slot_to_unix(Slot(0)))),
+              new Date(Number(emulator.slotToUnix(Slot(0)))),
               scriptInput,
               [Ed25519KeyHashHex(signer.asBase()!.getPaymentCredential().hash)],
             ),
@@ -519,7 +517,7 @@ describe("", () => {
             await modify(
               configs,
               blaze,
-              new Date(Number(slot_to_unix(Slot(0)))),
+              new Date(Number(emulator.slotToUnix(Slot(0)))),
               fourthScriptInput,
               firstDatum,
               [Ed25519KeyHashHex(signer.asBase()!.getPaymentCredential().hash)],
@@ -534,7 +532,7 @@ describe("", () => {
             await cancel(
               configs,
               blaze,
-              new Date(Number(slot_to_unix(Slot(0)))),
+              new Date(Number(emulator.slotToUnix(Slot(0)))),
               fourthScriptInput,
               [Ed25519KeyHashHex(signer.asBase()!.getPaymentCredential().hash)],
             ),

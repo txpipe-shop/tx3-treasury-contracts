@@ -14,7 +14,6 @@ import {
   coreValueToContractsValue,
   loadTreasuryScript,
   loadVendorScript,
-  slot_to_unix,
 } from "../../src/shared";
 import {
   MultisigScript,
@@ -229,7 +228,7 @@ describe("", () => {
             await adjudicate(
               config,
               blaze,
-              new Date(Number(slot_to_unix(Slot(0)))),
+              new Date(Number(emulator.slotToUnix(Slot(0)))),
               scriptInput,
               ["Paused"],
               [pauseSigner],
@@ -244,7 +243,7 @@ describe("", () => {
             await adjudicate(
               config,
               blaze,
-              new Date(Number(slot_to_unix(Slot(0)))),
+              new Date(Number(emulator.slotToUnix(Slot(0)))),
               thirdScriptInput,
               ["Paused", "Paused", "Paused"],
               [pauseSigner],
@@ -259,7 +258,7 @@ describe("", () => {
             await adjudicate(
               config,
               blaze,
-              new Date(Number(slot_to_unix(Slot(0)))),
+              new Date(Number(emulator.slotToUnix(Slot(0)))),
               thirdScriptInput,
               ["Paused", "Active", "Paused"],
               [pauseSigner],
@@ -275,7 +274,7 @@ describe("", () => {
             await adjudicate(
               config,
               blaze,
-              new Date(Number(slot_to_unix(Slot(2)))),
+              new Date(Number(emulator.slotToUnix(Slot(2)))),
               thirdScriptInput,
               ["Active", "Paused", "Paused"],
               [pauseSigner],
@@ -292,7 +291,7 @@ describe("", () => {
             await adjudicate(
               config,
               blaze,
-              new Date(Number(slot_to_unix(Slot(2)))),
+              new Date(Number(emulator.slotToUnix(Slot(2)))),
               thirdScriptInput,
               ["Paused", "Active", "Active"],
               [pauseSigner],
@@ -310,7 +309,7 @@ describe("", () => {
             await adjudicate(
               config,
               blaze,
-              new Date(Number(slot_to_unix(Slot(0)))),
+              new Date(Number(emulator.slotToUnix(Slot(0)))),
               fourthScriptInput,
               ["Active", "Active", "Active"],
               [resumeSigner],
@@ -324,7 +323,7 @@ describe("", () => {
           const tx = await adjudicate(
             config,
             blaze,
-            new Date(Number(slot_to_unix(Slot(0)))),
+            new Date(Number(emulator.slotToUnix(Slot(0)))),
             fourthScriptInput,
             ["Paused", "Paused", "Paused"],
             [pauseSigner],
@@ -349,7 +348,7 @@ describe("", () => {
             await adjudicate(
               config,
               blaze,
-              new Date(Number(slot_to_unix(Slot(1)))),
+              new Date(Number(emulator.slotToUnix(Slot(1)))),
               newScriptInput,
               ["Paused", "Active", "Active"],
               [resumeSigner],
@@ -365,7 +364,7 @@ describe("", () => {
             await adjudicate(
               config,
               blaze,
-              new Date(Number(slot_to_unix(Slot(10)))),
+              new Date(Number(emulator.slotToUnix(Slot(10)))),
               fourthScriptInput,
               ["Active", "Active", "Active"],
               [resumeSigner],
@@ -380,7 +379,7 @@ describe("", () => {
           return adjudicate(
             config,
             blaze,
-            new Date(Number(slot_to_unix(Slot(0)))),
+            new Date(Number(emulator.slotToUnix(Slot(0)))),
             fourthScriptInput,
             ["Active", "Active", "Paused"],
             [resumeSigner, pauseSigner],
@@ -396,7 +395,7 @@ describe("", () => {
           await adjudicate(
             config,
             blaze,
-            new Date(Number(slot_to_unix(Slot(0)))),
+            new Date(Number(emulator.slotToUnix(Slot(0)))),
             fourthScriptInput,
             ["Active", "Paused", "Active"],
             [pauseSigner],
@@ -415,7 +414,7 @@ describe("", () => {
             await adjudicate(
               config,
               blaze,
-              new Date(Number(slot_to_unix(Slot(0)))),
+              new Date(Number(emulator.slotToUnix(Slot(0)))),
               fourthScriptInput,
               ["Active", "Paused", "Paused"],
               [Ed25519KeyHashHex(signer.asBase()!.getPaymentCredential().hash)],
@@ -430,7 +429,7 @@ describe("", () => {
             await adjudicate(
               config,
               blaze,
-              new Date(Number(slot_to_unix(Slot(0)))),
+              new Date(Number(emulator.slotToUnix(Slot(0)))),
               fourthScriptInput,
               ["Active", "Active", "Active"],
               [Ed25519KeyHashHex(signer.asBase()!.getPaymentCredential().hash)],

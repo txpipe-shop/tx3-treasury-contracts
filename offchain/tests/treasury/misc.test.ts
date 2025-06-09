@@ -11,7 +11,7 @@ import { Core, makeValue } from "@blaze-cardano/sdk";
 import { type Cardano } from "@cardano-sdk/core";
 import { beforeEach, describe, test } from "bun:test";
 
-import { loadTreasuryScript, unix_to_slot } from "../../src/shared";
+import { loadTreasuryScript } from "../../src/shared";
 import { reorganize } from "../../src/treasury/reorganize";
 import { type TreasuryConfiguration } from "../../src/types/contracts";
 import {
@@ -97,7 +97,7 @@ describe("", () => {
   describe("anyone", async () => {
     test("can deregister after the expiration", async () => {
       emulator.as("Anyone", async (blaze) => {
-        const future = unix_to_slot(config.expiration * 2n);
+        const future = blaze.provider.unixToSlot(config.expiration * 2n);
         emulator.stepForwardToSlot(future);
         emulator.expectValidTransaction(
           blaze,

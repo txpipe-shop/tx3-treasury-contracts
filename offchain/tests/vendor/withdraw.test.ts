@@ -13,7 +13,6 @@ import {
   coreValueToContractsValue,
   loadTreasuryScript,
   loadVendorScript,
-  slot_to_unix,
 } from "../../src/shared";
 import {
   MultisigScript,
@@ -238,7 +237,7 @@ describe("When withdrawing from the vendor script", () => {
           await withdraw(
             config,
             blaze,
-            new Date(Number(slot_to_unix(Slot(2)))),
+            new Date(Number(emulator.slotToUnix(Slot(2)))),
             [scriptInput],
             vendorAddress,
             [vendorSigner],
@@ -254,7 +253,7 @@ describe("When withdrawing from the vendor script", () => {
           await withdraw(
             config,
             blaze,
-            new Date(Number(slot_to_unix(Slot(101)))),
+            new Date(Number(emulator.slotToUnix(Slot(101)))),
             [secondScriptInput],
             vendorAddress,
             [vendorSigner],
@@ -270,7 +269,7 @@ describe("When withdrawing from the vendor script", () => {
           await withdraw(
             config,
             blaze,
-            new Date(Number(slot_to_unix(Slot(101)))),
+            new Date(Number(emulator.slotToUnix(Slot(101)))),
             [fifthScriptInput],
             vendorAddress,
             [vendorSigner],
@@ -286,7 +285,7 @@ describe("When withdrawing from the vendor script", () => {
           await withdraw(
             config,
             blaze,
-            new Date(Number(slot_to_unix(Slot(3)))),
+            new Date(Number(emulator.slotToUnix(Slot(3)))),
             [thirdScriptInput],
             vendorAddress,
             [vendorSigner],
@@ -302,7 +301,7 @@ describe("When withdrawing from the vendor script", () => {
           await withdraw(
             config,
             blaze,
-            new Date(Number(slot_to_unix(Slot(101)))),
+            new Date(Number(emulator.slotToUnix(Slot(101)))),
             [thirdScriptInput],
             vendorAddress,
             [vendorSigner],
@@ -318,7 +317,7 @@ describe("When withdrawing from the vendor script", () => {
           await withdraw(
             config,
             blaze,
-            new Date(Number(slot_to_unix(Slot(11)))),
+            new Date(Number(emulator.slotToUnix(Slot(11)))),
             [fourthScriptInput],
             vendorAddress,
             [vendorSigner],
@@ -335,7 +334,7 @@ describe("When withdrawing from the vendor script", () => {
           await withdraw(
             config,
             blaze,
-            new Date(Number(slot_to_unix(Slot(0)))),
+            new Date(Number(emulator.slotToUnix(Slot(0)))),
             [scriptInput],
             vendorAddress,
             [vendorSigner],
@@ -636,7 +635,7 @@ describe("When withdrawing from the vendor script", () => {
           await withdraw(
             config,
             blaze,
-            new Date(Number(slot_to_unix(Slot(2)))),
+            new Date(Number(emulator.slotToUnix(Slot(2)))),
             [scriptInput],
             signer,
             [Ed25519KeyHashHex(signer.asBase()!.getPaymentCredential().hash)],

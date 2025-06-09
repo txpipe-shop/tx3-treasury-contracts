@@ -11,7 +11,6 @@ import {
   contractsValueToCoreValue,
   loadTreasuryScript,
   loadVendorScript,
-  unix_to_slot,
 } from "../../shared";
 import {
   TreasuryConfiguration,
@@ -43,10 +42,8 @@ export async function sweep<P extends Provider, W extends Wallet>(
     .newTransaction()
     .addReferenceInput(registryInput)
     .addReferenceInput(refInput)
-    .setValidFrom(unix_to_slot(blaze.provider.network, now.valueOf()))
-    .setValidUntil(
-      unix_to_slot(blaze.provider.network, now.valueOf() + thirtSixHours),
-    );
+    .setValidFrom(blaze.provider.unixToSlot(now.valueOf()))
+    .setValidUntil(blaze.provider.unixToSlot(now.valueOf() + thirtSixHours));
 
   let value = Value.zero();
   for (const input of inputs) {

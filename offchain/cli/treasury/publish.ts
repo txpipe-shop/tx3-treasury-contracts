@@ -11,14 +11,17 @@ import {
 import { serialize, Void } from "@blaze-cardano/data";
 import { Blaze, Core } from "@blaze-cardano/sdk";
 import { select } from "@inquirer/prompts";
-import { type ITransactionMetadata, toMetadata } from "../src/metadata/shared";
-import { contractsValueToCoreValue } from "../src/shared";
+import {
+  type ITransactionMetadata,
+  toMetadata,
+} from "../../src/metadata/shared";
+import { contractsValueToCoreValue } from "../../src/shared";
 import {
   OneshotOneshotMint,
   ScriptHashRegistry,
   TreasuryTreasurySpend,
   VendorVendorSpend,
-} from "../src/types/contracts";
+} from "../../src/types/contracts";
 import {
   deployTransaction,
   getConfigs,
@@ -26,9 +29,9 @@ import {
   getTransactionMetadata,
   getWallet,
   transactionDialog,
-} from "./shared";
+} from "../shared";
 
-export async function initiate(): Promise<void> {
+export async function publish(): Promise<void> {
   const { treasuryConfig, vendorConfig, metadata } = await getConfigs();
 
   const oneshotScript = new OneshotOneshotMint(metadata.seed_utxo);
@@ -102,8 +105,10 @@ export async function initiate(): Promise<void> {
             ),
           ]);
         const { ...metadataRaw } = metadata;
-        const txMetadata: ITransactionMetadata =
-          await getTransactionMetadata(metadataRaw);
+        const txMetadata: ITransactionMetadata = await getTransactionMetadata(
+          policyId,
+          metadataRaw,
+        );
         const auxData = new AuxiliaryData();
         auxData.setMetadata(toMetadata(txMetadata));
         const tx = await blazeInstance

@@ -18,11 +18,7 @@ import {
   setupEmulator,
   vendor_key,
 } from "../utilities";
-import {
-  coreValueToContractsValue,
-  loadScripts,
-  unix_to_slot,
-} from "../../src/shared";
+import { coreValueToContractsValue, loadScripts } from "../../src/shared";
 import {
   TreasurySpendRedeemer,
   VendorDatum,
@@ -90,7 +86,7 @@ describe("TxPipe Audit Findings", () => {
                 inputB,
                 Data.serialize(TreasurySpendRedeemer, "SweepTreasury"),
               )
-              .setValidFrom(unix_to_slot(future))
+              .setValidFrom(blaze.provider.unixToSlot(future))
               .addReferenceInput(refInput_1)
               .addReferenceInput(refInput_2)
               .addReferenceInput(registryInput1)
@@ -192,7 +188,7 @@ describe("TxPipe Audit Findings", () => {
           Data.Void(),
         );
 
-        const upperBound = unix_to_slot(
+        const upperBound = emulator.unixToSlot(
           scripts.treasuryScript.config.expiration - 10000n,
         );
         const fundRedeemer = {
@@ -514,7 +510,7 @@ describe("TxPipe Audit Findings", () => {
                   },
                 }),
               )
-              .setValidUntil(unix_to_slot(1000n))
+              .setValidUntil(Core.Slot(1))
               .addRequiredSigner(Ed25519KeyHashHex(await fund_key(emulator)))
               .addReferenceInput(refInput_1)
               .addReferenceInput(refInput_2)
@@ -702,7 +698,7 @@ describe("TxPipe Audit Findings", () => {
                 makeValue(40_000_000n),
                 Data.serialize(VendorDatum, updatedDatum),
               )
-              .setValidFrom(unix_to_slot(future))
+              .setValidFrom(blaze.provider.unixToSlot(future))
               .addReferenceInput(refInput)
               .addReferenceInput(registryInput),
             /Trace expect vendor_output.address.stake_credential == Some\(Inline\(account\)\)/,
@@ -751,7 +747,7 @@ describe("TxPipe Audit Findings", () => {
                 amount - 1n,
                 Data.Void(),
               )
-              .setValidFrom(unix_to_slot(future))
+              .setValidFrom(blaze.provider.unixToSlot(future))
               .addReferenceInput(refInput)
               .addReferenceInput(registryInput)
               .setDonation(1n),
@@ -839,7 +835,7 @@ describe("TxPipe Audit Findings", () => {
                 Data.Void(),
                 scripts.treasuryScript.script.Script,
               )
-              .setValidFrom(unix_to_slot(future))
+              .setValidFrom(blaze.provider.unixToSlot(future))
               .addReferenceInput(refInput)
               .addReferenceInput(registryInput),
             /Trace expect\s*outputs\s*|> list.all\(fn\(output\) { option.is_none\(output.reference_script\) }\)/,

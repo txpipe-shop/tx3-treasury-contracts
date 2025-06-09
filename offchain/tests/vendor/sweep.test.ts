@@ -7,8 +7,6 @@ import {
   coreValueToContractsValue,
   loadTreasuryScript,
   loadVendorScript,
-  slot_to_unix,
-  unix_to_slot,
 } from "../../src/shared";
 import {
   MultisigScript,
@@ -241,7 +239,7 @@ describe("", () => {
           await emulator.expectScriptFailure(
             await sweep(
               configs,
-              new Date(Number(slot_to_unix(Slot(0)))),
+              new Date(Number(emulator.slotToUnix(Slot(0)))),
               [scriptInput],
               blaze,
             ),
@@ -255,7 +253,7 @@ describe("", () => {
   describe("after the expiration", () => {
     beforeEach(() => {
       emulator.stepForwardToSlot(
-        unix_to_slot(configs.vendor.expiration + 1000n),
+        emulator.unixToSlot(configs.vendor.expiration + 1000n),
       );
     });
     describe("anyone", () => {
@@ -293,9 +291,9 @@ describe("", () => {
                 .newTransaction()
                 .addReferenceInput(registryInput)
                 .addReferenceInput(refInput)
-                .setValidFrom(unix_to_slot(BigInt(now.valueOf())))
+                .setValidFrom(emulator.unixToSlot(BigInt(now.valueOf())))
                 .setValidUntil(
-                  unix_to_slot(BigInt(now.valueOf()) + thirtSixHours),
+                  emulator.unixToSlot(BigInt(now.valueOf()) + thirtSixHours),
                 )
                 .addInput(
                   secondScriptInput,

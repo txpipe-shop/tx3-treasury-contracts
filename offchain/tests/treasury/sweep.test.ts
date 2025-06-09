@@ -6,7 +6,7 @@ import {
   sampleTreasuryConfig,
   setupEmulator,
 } from "../utilities";
-import { loadTreasuryScript, unix_to_slot } from "../../src/shared";
+import { loadTreasuryScript } from "../../src/shared";
 import { sweep } from "../../src/treasury/sweep";
 import {
   TreasuryConfiguration,
@@ -82,7 +82,7 @@ describe("When sweeping", () => {
 
   describe("after the timeout", () => {
     beforeEach(() => {
-      emulator.stepForwardToUnix(config.expiration + 1n);
+      emulator.stepForwardToUnix(config.expiration + 1000n);
     });
 
     describe("anyone", () => {
@@ -119,7 +119,7 @@ describe("When sweeping", () => {
                 scriptInput,
                 Data.serialize(TreasurySpendRedeemer, "SweepTreasury"),
               )
-              .setValidFrom(unix_to_slot(config.expiration + 1000n))
+              .setValidFrom(emulator.unixToSlot(config.expiration + 1000n))
               .addReferenceInput(registryInput)
               .addReferenceInput(refInput)
               .setDonation(scriptInput.output().amount().coin() + 1_000_000n),
@@ -141,7 +141,7 @@ describe("When sweeping", () => {
                 secondScriptInput,
                 Data.serialize(TreasurySpendRedeemer, "SweepTreasury"),
               )
-              .setValidFrom(unix_to_slot(config.expiration + 1000n))
+              .setValidFrom(emulator.unixToSlot(config.expiration + 1000n))
               .addReferenceInput(registryInput)
               .addReferenceInput(refInput)
               .setDonation(
@@ -167,7 +167,7 @@ describe("When sweeping", () => {
                 makeValue(2_000_000n, ["a".repeat(56), 1n]),
                 Data.Void(),
               )
-              .setValidFrom(unix_to_slot(config.expiration + 1000n))
+              .setValidFrom(emulator.unixToSlot(config.expiration + 1000n))
               .addReferenceInput(registryInput)
               .addReferenceInput(refInput)
               .setDonation(withAssetScriptInput.output().amount().coin()),
@@ -184,7 +184,7 @@ describe("When sweeping", () => {
                 scriptInput,
                 Data.serialize(TreasurySpendRedeemer, "SweepTreasury"),
               )
-              .setValidFrom(unix_to_slot(config.expiration + 1000n))
+              .setValidFrom(emulator.unixToSlot(config.expiration + 1000n))
               .addReferenceInput(registryInput)
               .addReferenceInput(refInput)
               .setDonation(scriptInput.output().amount().coin() / 2n),
@@ -208,7 +208,7 @@ describe("When sweeping", () => {
                 secondScriptInput,
                 Data.serialize(TreasurySpendRedeemer, "SweepTreasury"),
               )
-              .setValidFrom(unix_to_slot(config.expiration + 1000n))
+              .setValidFrom(emulator.unixToSlot(config.expiration + 1000n))
               .addReferenceInput(registryInput)
               .addReferenceInput(refInput)
               .setDonation(
@@ -229,7 +229,7 @@ describe("When sweeping", () => {
                 withAssetScriptInput,
                 Data.serialize(TreasurySpendRedeemer, "SweepTreasury"),
               )
-              .setValidFrom(unix_to_slot(config.expiration + 1000n))
+              .setValidFrom(emulator.unixToSlot(config.expiration + 1000n))
               .addReferenceInput(registryInput)
               .addReferenceInput(refInput)
               .setDonation(withAssetScriptInput.output().amount().coin()),
@@ -263,7 +263,7 @@ describe("When sweeping", () => {
                 makeValue(2_000_000n, ["a".repeat(56), 1n]),
                 Data.Void(),
               )
-              .setValidFrom(unix_to_slot(config.expiration + 1000n))
+              .setValidFrom(emulator.unixToSlot(config.expiration + 1000n))
               .addReferenceInput(registryInput)
               .addReferenceInput(refInput)
               .setDonation(withAssetScriptInput.output().amount().coin()),
@@ -284,7 +284,7 @@ describe("When sweeping", () => {
                 scriptInput,
                 Data.serialize(TreasurySpendRedeemer, "SweepTreasury"),
               )
-              .setValidFrom(unix_to_slot(config.expiration - 1000n))
+              .setValidFrom(emulator.unixToSlot(config.expiration - 1000n))
               .addReferenceInput(registryInput)
               .addReferenceInput(refInput)
               .setDonation(500_000_000_000n),

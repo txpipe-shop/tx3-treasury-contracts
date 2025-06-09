@@ -8,7 +8,7 @@ import * as Data from "@blaze-cardano/data";
 import { Emulator } from "@blaze-cardano/emulator";
 import { Core, makeValue } from "@blaze-cardano/sdk";
 import { beforeEach, describe, test } from "bun:test";
-import { loadTreasuryScript, unix_to_slot } from "../../src/shared";
+import { loadTreasuryScript } from "../../src/shared";
 import { reorganize } from "../../src/treasury/reorganize";
 import {
   TreasurySpendRedeemer,
@@ -175,7 +175,7 @@ describe("When reorganizing", () => {
             .addRequiredSigner(
               Ed25519KeyHashHex(await reorganize_key(emulator)),
             )
-            .setValidUntil(unix_to_slot(config.expiration - 1000n))
+            .setValidUntil(emulator.unixToSlot(config.expiration - 1000n))
             .addReferenceInput(registryInput)
             .addReferenceInput(refInput),
           /Trace equal_plus_min_ada\(input_sum, output_sum\)/,
@@ -197,7 +197,7 @@ describe("When reorganizing", () => {
             )
             .lockAssets(scriptAddress, makeValue(499_999_999_999n), Data.Void())
             .payLovelace(address, 1_000_000n)
-            .setValidUntil(unix_to_slot(config.expiration - 1000n))
+            .setValidUntil(emulator.unixToSlot(config.expiration - 1000n))
             .addReferenceInput(registryInput)
             .addReferenceInput(refInput),
           /Trace equal_plus_min_ada\(input_sum, output_sum\)/,
@@ -223,7 +223,7 @@ describe("When reorganizing", () => {
             )
             .lockAssets(scriptAddress, makeValue(500_000_500_000n), Data.Void())
             .payAssets(address, makeValue(2_000_000n, ["a".repeat(56), 1n]))
-            .setValidUntil(unix_to_slot(config.expiration - 1000n))
+            .setValidUntil(emulator.unixToSlot(config.expiration - 1000n))
             .addReferenceInput(registryInput)
             .addReferenceInput(refInput),
           /Trace equal_plus_min_ada\(input_sum, output_sum\)/,
@@ -252,7 +252,7 @@ describe("When reorganizing", () => {
               scriptInput,
               Data.serialize(TreasurySpendRedeemer, "Reorganize"),
             )
-            .setValidUntil(unix_to_slot(config.expiration - 1000n))
+            .setValidUntil(emulator.unixToSlot(config.expiration - 1000n))
             .addReferenceInput(registryInput)
             .addReferenceInput(refInput)
             .addRequiredSigner(
@@ -289,7 +289,7 @@ describe("When reorganizing", () => {
             .addRequiredSigner(
               Ed25519KeyHashHex(await reorganize_key(emulator)),
             )
-            .setValidUntil(unix_to_slot(config.expiration - 1000n))
+            .setValidUntil(emulator.unixToSlot(config.expiration - 1000n))
             .addReferenceInput(registryInput)
             .addReferenceInput(refInput),
           /Trace equal_plus_min_ada\(input_sum, output_sum\)/,
@@ -307,7 +307,7 @@ describe("When reorganizing", () => {
           await emulator.expectScriptFailure(
             blaze
               .newTransaction()
-              .setValidUntil(unix_to_slot(config.expiration + 5000n))
+              .setValidUntil(emulator.unixToSlot(config.expiration + 5000n))
               .addReferenceInput(registryInput)
               .addReferenceInput(refInput)
               .addRequiredSigner(

@@ -152,10 +152,21 @@ export async function getAnchor(): Promise<IAnchor> {
   } as IAnchor;
 }
 
-export async function getDate(title: string, min?: Date): Promise<Date> {
+export async function getDate(
+  title: string,
+  defaultDate?: Date,
+  min?: Date,
+): Promise<Date> {
   const dateStr = await input({
     message: `${title} (Enter a date and time in the format 2006-01-02 15:04:05)`,
+    default:
+      defaultDate &&
+      `${defaultDate.getUTCFullYear()}-${(defaultDate.getUTCMonth() + 1).toString().padStart(2, "0")}-${defaultDate.getUTCDate().toString().padStart(2, "0")} ${defaultDate.getHours().toString().padStart(2, "0")}:${defaultDate.getMinutes().toString().padStart(2, "0")}:${defaultDate.getSeconds().toString().padStart(2, "0")}`,
     validate: function (str) {
+      // Awkward hack
+      if (new Date(str) === defaultDate) {
+        return true;
+      }
       if (!/[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}/.test(str)) {
         return "Must be a valid date";
       } else {
@@ -622,9 +633,11 @@ export async function getTreasuryConfig(
 
   const treasury_expiration = await getDate(
     "After which date should funds at the treasury script be swept back to the Cardano treasury?",
+    new Date("2026-01-01 00:00:00"),
   );
   const payout_upperbound = await getDate(
     "What should the maximum date for any vendor payout be?",
+    new Date("2026-03-01 00:00:00"),
     treasury_expiration,
   );
 
@@ -653,6 +666,7 @@ export async function getVendorConfig(
   }
   const vendorExpiration = await getDate(
     "At which date should disputed payouts be swept back to the cardano treasury?",
+    new Date("2026-06-01 00:00:00"),
     payout_upperbound,
   );
   return {
@@ -959,7 +973,7 @@ export async function getTransactionMetadata<MetadataBody>(
   body: MetadataBody,
 ): Promise<ITransactionMetadata<MetadataBody>> {
   return {
-    "@context": "",
+    "@context": "sundae.fi/sample-context",
     hashAlgorithm: "blake2b-256",
     body: body,
     instance,

@@ -8,7 +8,7 @@ import {
   type Provider,
   type Wallet,
 } from "@blaze-cardano/sdk";
-import { loadTreasuryScript, unix_to_slot } from "../../shared";
+import { loadTreasuryScript } from "../../shared";
 import {
   TreasuryConfiguration,
   TreasurySpendRedeemer,
@@ -34,9 +34,7 @@ export async function sweep<P extends Provider, W extends Wallet>(
   let tx = blaze
     .newTransaction()
     .addInput(input, Data.serialize(TreasurySpendRedeemer, "SweepTreasury"))
-    .setValidFrom(
-      unix_to_slot(blaze.provider.network, Number(config.expiration + 1000n)),
-    )
+    .setValidFrom(blaze.provider.unixToSlot(Number(config.expiration + 1000n)))
     .addReferenceInput(registryInput)
     .addReferenceInput(refInput)
     .setDonation(amount);

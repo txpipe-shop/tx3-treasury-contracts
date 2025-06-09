@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
 import { Command } from "commander";
-import { initiate } from "./initiate";
+import { publish } from "./treasury/publish";
 import { fund } from "./treasury/fund";
-import { withdraw } from "./treasury/withdraw";
+import { withdraw as initialize } from "./treasury/withdraw";
 
 const program = new Command();
 
@@ -16,14 +16,14 @@ program
   .command("publish")
   .description("Initiate/publish treasury and vendor contracts")
   .action(async () => {
-    await initiate();
+    await publish();
   });
 
 program
   .command("initialize")
   .description("Initialize treasury by withdrawing funds")
   .action(async () => {
-    await withdraw();
+    await initialize();
   });
 
 program

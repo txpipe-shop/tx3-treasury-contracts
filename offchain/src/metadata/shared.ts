@@ -94,6 +94,7 @@ export function toMetadata(m: ITransactionMetadata): Metadata {
     Metadatum.newText(m.hashAlgorithm),
   );
   root.insert(Metadatum.newText("txAuthor"), Metadatum.newText(m.txAuthor));
+  root.insert(Metadatum.newText("instance"), Metadatum.newText(m.instance));
   if ("comment" in m && m.comment) {
     const comment = toMetadatum(m.comment);
     root.insert(Metadatum.newText("comment"), comment!);

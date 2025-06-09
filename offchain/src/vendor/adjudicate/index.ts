@@ -14,7 +14,7 @@ import {
 } from "@blaze-cardano/sdk";
 import { IPause, IResume } from "src/metadata/adjudicate";
 import { ITransactionMetadata, toMetadata } from "src/metadata/shared";
-import { loadVendorScript, unix_to_slot } from "../../shared";
+import { loadVendorScript } from "../../shared";
 import {
   PayoutStatus,
   VendorConfiguration,
@@ -29,7 +29,7 @@ export async function adjudicate<P extends Provider, W extends Wallet>(
   input: TransactionUnspentOutput,
   statuses: PayoutStatus[],
   signers: Ed25519KeyHashHex[],
-  metadata: ITransactionMetadata<IPause | IResume>,
+  metadata?: ITransactionMetadata<IPause | IResume>,
 ): Promise<TxBuilder> {
   const { scriptAddress: vendorScriptAddress, script: vendorScript } =
     loadVendorScript(blaze.provider.network, config);
@@ -40,18 +40,13 @@ export async function adjudicate<P extends Provider, W extends Wallet>(
   if (!refInput)
     throw new Error("Could not find vendor script reference on-chain");
 
-  const auxData = new AuxiliaryData();
-  auxData.setMetadata(toMetadata(metadata));
-
   const thirty_six_hours = 36 * 60 * 60 * 1000; // 36 hours in milliseconds
   let tx = blaze
     .newTransaction()
     .addReferenceInput(registryInput)
     .addReferenceInput(refInput)
-    .setValidFrom(unix_to_slot(blaze.provider.network, now.valueOf()))
-    .setValidUntil(
-      unix_to_slot(blaze.provider.network, now.valueOf() + thirty_six_hours),
-    )
+    .setValidFrom(blaze.provider.unixToSlot(now.valueOf()))
+    .setValidUntil(blaze.provider.unixToSlot(now.valueOf() + thirty_six_hours))
     .addInput(
       input,
       Data.serialize(VendorSpendRedeemer, {
@@ -59,8 +54,13 @@ export async function adjudicate<P extends Provider, W extends Wallet>(
           statuses,
         },
       }),
-    )
-    .setAuxiliaryData(auxData);
+    );
+  if (metadata) {
+    const auxData = new AuxiliaryData();
+    auxData.setMetadata(toMetadata(metadata));
+
+    tx = tx.setAuxiliaryData(auxData);
+  }
   for (const signer of signers) {
     tx = tx.addRequiredSigner(signer);
   }

@@ -51,6 +51,7 @@
     "@babel/preset-env": "^7.27.2",
     "@babel/preset-typescript": "^7.27.1",
     "@blaze-cardano/emulator": "^0.3.25",
+    "@blaze-cardano/blueprint": "^0.6.0",
     "@sundaeswap/babel-preset": "^2.0.15",
     "@sundaeswap/eslint-config": "^2.0.15",
     "@types/bun": "latest",
@@ -63,11 +64,11 @@
     "commander": "^14.0.0"
   },
   "dependencies": {
-    "@inquirer/prompts": "^7.5.3",
-    "clipboardy": "^4.0.0",
     "@blaze-cardano/data": "^0.6.0",
-    "@blaze-cardano/query": "^0.4.3",
+    "@blaze-cardano/query": "link:@blaze-cardano/query",
     "@blaze-cardano/sdk": "^0.2.30",
-    "@blaze-cardano/uplc": "^0.3.1"
+    "@blaze-cardano/uplc": "^0.3.1",
+    "@inquirer/prompts": "^7.5.3",
+    "clipboardy": "^4.0.0"
   }
 }

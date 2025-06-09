@@ -5,12 +5,7 @@ import { Ed25519KeyHashHex } from "@cardano-sdk/crypto";
 import { beforeEach, describe, test } from "bun:test";
 import { fund } from "src/treasury";
 import { modify } from "src/vendor";
-import {
-  coreValueToContractsValue,
-  loadScripts,
-  slot_to_unix,
-  unix_to_slot,
-} from "../../src/shared";
+import { coreValueToContractsValue, loadScripts } from "../../src/shared";
 import {
   MultisigScript,
   TreasurySpendRedeemer,
@@ -101,7 +96,7 @@ describe("MLabs Audit Findings", () => {
               Data.serialize(TreasurySpendRedeemer, "SweepTreasury"),
             )
             .setValidFrom(
-              unix_to_slot(
+              blaze.provider.unixToSlot(
                 treasuryConfig1.treasuryScript.config.expiration + 1000n,
               ),
             )
@@ -153,7 +148,7 @@ describe("MLabs Audit Findings", () => {
               Data.serialize(TreasurySpendRedeemer, "SweepTreasury"),
             )
             .setValidFrom(
-              unix_to_slot(
+              blaze.provider.unixToSlot(
                 treasuryConfig.treasuryScript.config.expiration + 1000n,
               ),
             )
@@ -284,7 +279,7 @@ describe("MLabs Audit Findings", () => {
         });
 
         schedule.push({
-          date: new Date(Number(slot_to_unix(Core.Slot(0)))),
+          date: new Date(Number(emulator.slotToUnix(Core.Slot(0)))),
           amount: value,
         });
       }
@@ -411,7 +406,7 @@ describe("MLabs Audit Findings", () => {
             vendor: configs.vendorScript.config,
           },
           blaze,
-          new Date(Number(slot_to_unix(Core.Slot(0)))),
+          new Date(Number(blaze.provider.slotToUnix(Core.Slot(0)))),
           vendorInput,
           largeVendorDatum,
           [
@@ -457,7 +452,7 @@ describe("MLabs Audit Findings", () => {
             vendor: configs.vendorScript.config,
           },
           blaze,
-          new Date(Number(slot_to_unix(Core.Slot(0)))),
+          new Date(Number(blaze.provider.slotToUnix(Core.Slot(0)))),
           vendorInput,
           largeVendorDatum,
           [
@@ -519,7 +514,7 @@ describe("MLabs Audit Findings", () => {
         Data.serialize(VendorDatum, vendorDatum),
       );
       const tx = await emulator.as(Modifier, async (blaze) => {
-        const now = new Date(Number(slot_to_unix(Core.Slot(3))));
+        const now = new Date(Number(blaze.provider.slotToUnix(Core.Slot(3))));
 
         emulator.stepForwardToSlot(3);
 
@@ -550,9 +545,9 @@ describe("MLabs Audit Findings", () => {
           .newTransaction()
           .addReferenceInput(registryInput)
           .addReferenceInput(refInput)
-          .setValidFrom(unix_to_slot(BigInt(now.valueOf())))
+          .setValidFrom(blaze.provider.unixToSlot(now.valueOf()))
           .setValidUntil(
-            unix_to_slot(BigInt(now.valueOf()) + 36n * 60n * 60n * 1000n),
+            blaze.provider.unixToSlot(now.valueOf() + 36 * 60 * 60 * 1000),
           )
           .addInput(vendorInput, Data.serialize(VendorSpendRedeemer, "Modify"))
           .addRequiredSigner(Ed25519KeyHashHex(await modify_key(emulator)))
@@ -671,7 +666,9 @@ describe("MLabs Audit Findings", () => {
             vendor,
             [
               {
-                date: new Date(Number(slot_to_unix(Core.Slot(10)))),
+                date: new Date(
+                  Number(blaze.provider.slotToUnix(Core.Slot(10))),
+                ),
                 amount: makeValue(100_000_000n),
               },
             ],
@@ -777,7 +774,7 @@ describe("MLabs Audit Findings", () => {
               vendor: configs.vendorScript.config,
             },
             blaze,
-            new Date(Number(slot_to_unix(Core.Slot(0)))),
+            new Date(Number(blaze.provider.slotToUnix(Core.Slot(0)))),
             vendorInput,
             invalidVendorDatum,
             [
@@ -835,7 +832,7 @@ describe("MLabs Audit Findings", () => {
               vendor: configs.vendorScript.config,
             },
             blaze,
-            new Date(Number(slot_to_unix(Core.Slot(0)))),
+            new Date(Number(blaze.provider.slotToUnix(Core.Slot(0)))),
             vendorInput,
             newVendorDatum,
             [
@@ -1019,7 +1016,9 @@ describe("MLabs Audit Findings", () => {
         Data.serialize(VendorDatum, vendorDatum),
       );
 
-      const now = unix_to_slot(scripts.vendorScript.config.expiration * 2n);
+      const now = emulator.unixToSlot(
+        scripts.vendorScript.config.expiration * 2n,
+      );
       emulator.stepForwardToSlot(now);
 
       const fullAddress = new Core.Address({
@@ -1041,7 +1040,7 @@ describe("MLabs Audit Findings", () => {
             .newTransaction()
             .addReferenceInput(refInput)
             .addReferenceInput(registryInput)
-            .setValidFrom(Core.Slot(now))
+            .setValidFrom(now)
             .setValidUntil(Core.Slot(now + 10))
             .addInput(
               vendorInput,
@@ -1127,7 +1126,9 @@ describe("MLabs Audit Findings", () => {
         ],
       };
 
-      const now = unix_to_slot(scripts.vendorScript.config.expiration * 2n);
+      const now = emulator.unixToSlot(
+        scripts.vendorScript.config.expiration * 2n,
+      );
       emulator.stepForwardToSlot(now);
 
       await emulator.as("Anyone", async (blaze) => {
@@ -1137,7 +1138,7 @@ describe("MLabs Audit Findings", () => {
             .addReferenceInput(treasuryRefInput)
             .addReferenceInput(vendorRefInput)
             .addReferenceInput(registryInput)
-            .setValidFrom(Core.Slot(now))
+            .setValidFrom(now)
             .setValidUntil(Core.Slot(now + 10))
             .addInput(
               treasuryInput,
@@ -1187,7 +1188,7 @@ describe("MLabs Audit Findings", () => {
       );
 
       const future = scripts.treasuryScript.config.expiration * 2n;
-      emulator.stepForwardToSlot(future);
+      emulator.stepForwardToSlot(emulator.unixToSlot(future));
 
       await emulator.as("Anyone", async (blaze) => {
         await emulator.expectScriptFailure(
@@ -1202,7 +1203,7 @@ describe("MLabs Audit Findings", () => {
               amount - 1n,
               Data.Void(),
             )
-            .setValidFrom(unix_to_slot(future))
+            .setValidFrom(blaze.provider.unixToSlot(future))
             .addReferenceInput(refInput)
             .addReferenceInput(registryInput)
             .setDonation(1n),
@@ -1256,8 +1257,8 @@ describe("MLabs Audit Findings", () => {
             .newTransaction()
             .setValidUntil(
               Core.Slot(
-                Number(
-                  scripts.treasuryScript.config.payout_upperbound / 1000n,
+                blaze.provider.unixToSlot(
+                  scripts.treasuryScript.config.payout_upperbound,
                 ) - 1,
               ),
             )
