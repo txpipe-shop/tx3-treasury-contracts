@@ -1,10 +1,4 @@
 import {
-  TxBuilder,
-  type Blaze,
-  type Provider,
-  type Wallet,
-} from "@blaze-cardano/sdk";
-import {
   Address,
   AssetId,
   Datum,
@@ -14,14 +8,20 @@ import {
   TransactionUnspentOutput,
   Value,
 } from "@blaze-cardano/core";
-import * as Tx from "@blaze-cardano/tx";
 import * as Data from "@blaze-cardano/data";
-import { coreValueToContractsValue, loadTreasuryScript } from "../../shared";
+import {
+  TxBuilder,
+  type Blaze,
+  type Provider,
+  type Wallet,
+} from "@blaze-cardano/sdk";
+import * as Tx from "@blaze-cardano/tx";
 import {
   TreasuryConfiguration,
   TreasurySpendRedeemer,
   VendorConfiguration,
-} from "../../types/contracts";
+} from "../../generated-types/contracts";
+import { coreValueToContractsValue, loadTreasuryScript } from "../../shared";
 
 export async function disburse<P extends Provider, W extends Wallet>(
   configs: { treasury: TreasuryConfiguration; vendor: VendorConfiguration },

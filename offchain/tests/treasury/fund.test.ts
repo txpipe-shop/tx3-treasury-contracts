@@ -10,13 +10,6 @@ import { Emulator } from "@blaze-cardano/emulator";
 import { Core, makeValue } from "@blaze-cardano/sdk";
 import { beforeEach, describe, test } from "bun:test";
 import {
-  loadTreasuryScript,
-  loadVendorScript,
-  slot_to_unix,
-  coreValueToContractsValue as translateValue,
-} from "../../src/shared";
-import { fund } from "../../src/treasury/fund";
-import {
   MultisigScript,
   TreasurySpendRedeemer,
   VendorConfiguration,
@@ -24,7 +17,14 @@ import {
   VendorVendorSpend,
   type TreasuryConfiguration,
   type TreasuryTreasuryWithdraw,
-} from "../../src/types/contracts";
+} from "../../src/generated-types/contracts";
+import {
+  loadTreasuryScript,
+  loadVendorScript,
+  slot_to_unix,
+  coreValueToContractsValue as translateValue,
+} from "../../src/shared";
+import { fund } from "../../src/treasury/fund";
 import {
   Funder,
   Vendor,

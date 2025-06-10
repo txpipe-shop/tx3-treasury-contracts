@@ -1,10 +1,4 @@
 import {
-  TxBuilder,
-  type Blaze,
-  type Provider,
-  type Wallet,
-} from "@blaze-cardano/sdk";
-import {
   AssetId,
   Ed25519KeyHashHex,
   Slot,
@@ -13,11 +7,17 @@ import {
   Value,
 } from "@blaze-cardano/core";
 import * as Data from "@blaze-cardano/data";
-import { loadTreasuryScript } from "../../shared";
+import {
+  TxBuilder,
+  type Blaze,
+  type Provider,
+  type Wallet,
+} from "@blaze-cardano/sdk";
 import {
   TreasuryConfiguration,
   TreasurySpendRedeemer,
-} from "../../types/contracts";
+} from "../../generated-types/contracts";
+import { loadTreasuryScript } from "../../shared";
 
 export async function reorganize<P extends Provider, W extends Wallet>(
   config: TreasuryConfiguration,

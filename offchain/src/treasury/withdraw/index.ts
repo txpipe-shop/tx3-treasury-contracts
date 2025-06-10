@@ -1,3 +1,4 @@
+import { AssetId, toHex } from "@blaze-cardano/core";
 import * as Data from "@blaze-cardano/data";
 import {
   TxBuilder,
@@ -5,9 +6,8 @@ import {
   type Provider,
   type Wallet,
 } from "@blaze-cardano/sdk";
+import type { TreasuryConfiguration } from "../../generated-types/contracts";
 import { loadTreasuryScript } from "../../shared";
-import type { TreasuryConfiguration } from "../../types/contracts";
-import { AssetId, toHex } from "@blaze-cardano/core";
 
 export async function withdraw<P extends Provider, W extends Wallet>(
   config: TreasuryConfiguration,

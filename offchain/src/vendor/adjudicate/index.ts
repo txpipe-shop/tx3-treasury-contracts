@@ -11,13 +11,13 @@ import {
   type Provider,
   type Wallet,
 } from "@blaze-cardano/sdk";
-import { loadVendorScript, unix_to_slot } from "../../shared";
 import {
   PayoutStatus,
   VendorConfiguration,
   VendorDatum,
   VendorSpendRedeemer,
-} from "../../types/contracts";
+} from "../../generated-types/contracts";
+import { loadVendorScript, unix_to_slot } from "../../shared";
 
 export async function adjudicate<P extends Provider, W extends Wallet>(
   config: VendorConfiguration,

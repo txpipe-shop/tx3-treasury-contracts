@@ -11,16 +11,16 @@ import { Emulator } from "@blaze-cardano/emulator";
 import { Core, makeValue } from "@blaze-cardano/sdk";
 import { beforeEach, describe, test } from "bun:test";
 import {
+  MultisigScript,
+  VendorConfiguration,
+  VendorDatum,
+} from "../../src/generated-types/contracts";
+import {
   coreValueToContractsValue,
   loadTreasuryScript,
   loadVendorScript,
   slot_to_unix,
 } from "../../src/shared";
-import {
-  MultisigScript,
-  VendorConfiguration,
-  VendorDatum,
-} from "../../src/types/contracts";
 import { adjudicate } from "../../src/vendor/adjudicate";
 import {
   pause_key,

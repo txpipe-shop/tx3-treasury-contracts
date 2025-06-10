@@ -6,17 +6,17 @@ import { beforeEach, describe, test } from "bun:test";
 import { fund } from "src/treasury";
 import { modify } from "src/vendor";
 import {
+  MultisigScript,
+  TreasurySpendRedeemer,
+  VendorDatum,
+  VendorSpendRedeemer,
+} from "../../src/generated-types/contracts";
+import {
   coreValueToContractsValue,
   loadScripts,
   slot_to_unix,
   unix_to_slot,
 } from "../../src/shared";
-import {
-  MultisigScript,
-  TreasurySpendRedeemer,
-  VendorDatum,
-  VendorSpendRedeemer,
-} from "../../src/types/contracts";
 import {
   deployScripts,
   findRegistryInput,

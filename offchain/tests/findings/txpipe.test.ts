@@ -1,7 +1,18 @@
-import { beforeEach, describe, test } from "bun:test";
-import { Core, makeValue } from "@blaze-cardano/sdk";
+import { AssetId, Ed25519KeyHashHex, Slot } from "@blaze-cardano/core";
 import * as Data from "@blaze-cardano/data";
 import { Emulator } from "@blaze-cardano/emulator";
+import { Core, makeValue } from "@blaze-cardano/sdk";
+import { beforeEach, describe, test } from "bun:test";
+import {
+  TreasurySpendRedeemer,
+  VendorDatum,
+  VendorSpendRedeemer,
+} from "../../src/generated-types/contracts";
+import {
+  coreValueToContractsValue,
+  loadScripts,
+  unix_to_slot,
+} from "../../src/shared";
 import {
   deployScripts,
   findRegistryInput,
@@ -18,17 +29,6 @@ import {
   setupEmulator,
   vendor_key,
 } from "../utilities";
-import {
-  coreValueToContractsValue,
-  loadScripts,
-  unix_to_slot,
-} from "../../src/shared";
-import {
-  TreasurySpendRedeemer,
-  VendorDatum,
-  VendorSpendRedeemer,
-} from "../../src/types/contracts";
-import { AssetId, Ed25519KeyHashHex, Slot } from "@blaze-cardano/core";
 
 describe("TxPipe Audit Findings", () => {
   let emulator: Emulator;

@@ -8,13 +8,13 @@ import * as Data from "@blaze-cardano/data";
 import { Emulator } from "@blaze-cardano/emulator";
 import { Core, makeValue } from "@blaze-cardano/sdk";
 import { beforeEach, describe, test } from "bun:test";
-import { loadTreasuryScript, unix_to_slot } from "../../src/shared";
-import { reorganize } from "../../src/treasury/reorganize";
 import {
   TreasurySpendRedeemer,
   type TreasuryConfiguration,
   type TreasuryTreasuryWithdraw,
-} from "../../src/types/contracts";
+} from "../../src/generated-types/contracts";
+import { loadTreasuryScript, unix_to_slot } from "../../src/shared";
+import { reorganize } from "../../src/treasury/reorganize";
 import {
   registryToken,
   reorganize_key,
