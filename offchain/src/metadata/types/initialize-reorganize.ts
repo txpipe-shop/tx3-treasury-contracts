@@ -1,4 +1,4 @@
-import type { IMetadataBodyBase } from "./shared";
+import { IMetadataBodyBase } from "../shared";
 
 export interface IOutput {
   identifier: string;

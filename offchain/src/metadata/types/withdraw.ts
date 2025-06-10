@@ -1,4 +1,4 @@
-import { IAnchor, IMetadataBodyBase } from "./shared";
+import { IAnchor, IMetadataBodyBase } from "../shared";
 
 export interface IAnchorWithLabel extends IAnchor {
   label: string;

@@ -1,5 +1,7 @@
 import { Blaze, Provider, Wallet } from "@blaze-cardano/sdk";
 import { input } from "@inquirer/prompts";
+import { IInitialize } from "src/metadata/types/initialize-reorganize";
+import { Treasury } from "../../src";
 import {
   getBlazeInstance,
   getConfigs,
@@ -9,8 +11,6 @@ import {
   maybeInput,
   transactionDialog,
 } from "../shared";
-import { Treasury } from "../../src";
-import { type IInitialize } from "../../src/metadata/initialize-reorganize";
 
 export async function withdraw(
   blazeInstance: Blaze<Provider, Wallet> | undefined = undefined,

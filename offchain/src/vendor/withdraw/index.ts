@@ -1,6 +1,7 @@
 import {
   Address,
   AssetId,
+  AuxiliaryData,
   Ed25519KeyHashHex,
   toHex,
   TransactionUnspentOutput,
@@ -13,15 +14,14 @@ import {
   type Provider,
   type Wallet,
 } from "@blaze-cardano/sdk";
+import { ITransactionMetadata, toTxMetadata } from "src/metadata/shared";
+import { IWithdraw } from "src/metadata/types/withdraw";
 import {
   VendorConfiguration,
   VendorDatum,
   VendorSpendRedeemer,
 } from "../../generated-types/contracts";
-import {
-  contractsValueToCoreValue,
-  loadVendorScript
-} from "../../shared";
+import { contractsValueToCoreValue, loadVendorScript } from "../../shared";
 
 export async function withdraw<P extends Provider, W extends Wallet>(
   config: VendorConfiguration,
@@ -51,7 +51,7 @@ export async function withdraw<P extends Provider, W extends Wallet>(
     .setValidFrom(blaze.provider.unixToSlot(now.valueOf()));
   if (metadata) {
     const auxData = new AuxiliaryData();
-    auxData.setMetadata(toMetadata(metadata));
+    auxData.setMetadata(toTxMetadata(metadata));
     tx = tx.setAuxiliaryData(auxData);
   }
 

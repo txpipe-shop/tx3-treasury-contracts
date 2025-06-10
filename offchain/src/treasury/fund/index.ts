@@ -1,9 +1,10 @@
 import {
   AssetId,
+  AuxiliaryData,
   Ed25519KeyHashHex,
   toHex,
   TransactionUnspentOutput,
-  Value
+  Value,
 } from "@blaze-cardano/core";
 import * as Data from "@blaze-cardano/data";
 import {
@@ -14,6 +15,8 @@ import {
   type Wallet,
 } from "@blaze-cardano/sdk";
 import * as Tx from "@blaze-cardano/tx";
+import { ITransactionMetadata, toTxMetadata } from "src/metadata/shared";
+import { IFund } from "src/metadata/types/fund";
 import {
   MultisigScript,
   TreasuryConfiguration,
@@ -66,7 +69,7 @@ export async function fund<P extends Provider, W extends Wallet>(
 
   if (metadata) {
     const auxData = new AuxiliaryData();
-    auxData.setMetadata(toMetadata(metadata));
+    auxData.setMetadata(toTxMetadata(metadata));
     tx = tx.setAuxiliaryData(auxData);
   }
 

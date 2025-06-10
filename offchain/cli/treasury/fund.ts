@@ -2,9 +2,9 @@
 import { Value } from "@blaze-cardano/core";
 import { Blaze, makeValue, Provider, Wallet } from "@blaze-cardano/sdk";
 import { input, select } from "@inquirer/prompts";
+import { IFund, IMilestone } from "src/metadata/types/fund";
+import { toMultisig } from "src/metadata/types/permission";
 import { Treasury } from "../../src";
-import type { IFund, IMilestone } from "../../src/metadata/fund";
-import { toMultisig } from "../../src/metadata/permission";
 import { loadTreasuryScript } from "../../src/shared";
 import {
   getActualPermission,

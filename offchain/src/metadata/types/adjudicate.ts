@@ -1,4 +1,4 @@
-import { IMetadataBodyBase } from "./shared";
+import { IMetadataBodyBase } from "../shared";
 
 export interface IMilestone {
   reason: string;

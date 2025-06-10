@@ -12,16 +12,16 @@ import { serialize, Void } from "@blaze-cardano/data";
 import { Blaze, Core } from "@blaze-cardano/sdk";
 import { select } from "@inquirer/prompts";
 import {
-  type ITransactionMetadata,
-  toMetadata,
-} from "../../src/metadata/shared";
-import { contractsValueToCoreValue } from "../../src/shared";
-import {
   OneshotOneshotMint,
   ScriptHashRegistry,
   TreasuryTreasurySpend,
   VendorVendorSpend,
-} from "../../src/types/contracts";
+} from "src/generated-types/contracts";
+import {
+  toTxMetadata,
+  type ITransactionMetadata,
+} from "../../src/metadata/shared";
+import { contractsValueToCoreValue } from "../../src/shared";
 import {
   deployTransaction,
   getConfigs,
@@ -30,10 +30,8 @@ import {
   getWallet,
   transactionDialog,
 } from "../shared";
-
 export async function publish(): Promise<void> {
   const { treasuryConfig, vendorConfig, metadata } = await getConfigs();
-
   const oneshotScript = new OneshotOneshotMint(metadata.seed_utxo);
 
   const registry_token = oneshotScript.Script;
@@ -110,7 +108,7 @@ export async function publish(): Promise<void> {
           metadataRaw,
         );
         const auxData = new AuxiliaryData();
-        auxData.setMetadata(toMetadata(txMetadata));
+        auxData.setMetadata(toTxMetadata(txMetadata));
         const tx = await blazeInstance
           .newTransaction()
           .addInput(bootstrapUtxoObj[0])

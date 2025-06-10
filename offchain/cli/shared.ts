@@ -17,21 +17,21 @@ import {
 } from "@blaze-cardano/sdk";
 import { checkbox, input, select } from "@inquirer/prompts";
 import clipboard from "clipboardy";
-import type { IOutput } from "../src/metadata/initialize-reorganize";
-import type { INewInstance } from "../src/metadata/new-instance";
-import {
-  toMultisig,
-  type TPermissionMetadata,
-  type TPermissionName,
-} from "../src/metadata/permission";
-import type { IAnchor, ITransactionMetadata } from "../src/metadata/shared";
 import {
   OneshotOneshotMint,
   TreasuryConfiguration,
   TreasuryTreasurySpend,
   VendorConfiguration,
   VendorVendorSpend,
-} from "../src/types/contracts";
+} from "src/generated-types/contracts";
+import { IOutput } from "src/metadata/types/initialize-reorganize";
+import { INewInstance } from "src/metadata/types/new-instance";
+import {
+  TPermissionMetadata,
+  TPermissionName,
+  toMultisig,
+} from "src/metadata/types/permission";
+import type { IAnchor, ITransactionMetadata } from "../src/metadata/shared";
 
 async function getSignersFromList(
   permissions: TPermissionMetadata[],

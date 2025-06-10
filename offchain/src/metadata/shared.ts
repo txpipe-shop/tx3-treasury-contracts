@@ -5,10 +5,6 @@ import {
   MetadatumMap,
 } from "@blaze-cardano/core";
 import { decodeFirst } from "cbor";
-import type { IFund } from "./fund";
-import type { IInitialize } from "./initialize-reorganize";
-
-import type { INewInstance } from "./types/new-instance.js";
 
 export interface IAnchor {
   anchorUrl: string;
@@ -27,8 +23,6 @@ export interface ITransactionMetadata<MB = IMetadataBodyBase> {
   txAuthor: string;
   instance: string;
 }
-
-export type TMetadataBody = IInitialize | INewInstance | IFund;
 
 function toMetadatum(value: unknown): Metadatum | undefined {
   if (typeof value === "string" || value instanceof String) {

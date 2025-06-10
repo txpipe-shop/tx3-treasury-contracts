@@ -1,4 +1,9 @@
-import { AssetId, toHex } from "@blaze-cardano/core";
+import {
+  AssetId,
+  AuxiliaryData,
+  Ed25519KeyHashHex,
+  toHex,
+} from "@blaze-cardano/core";
 import * as Data from "@blaze-cardano/data";
 import {
   TxBuilder,
@@ -6,6 +11,8 @@ import {
   type Provider,
   type Wallet,
 } from "@blaze-cardano/sdk";
+import { ITransactionMetadata, toTxMetadata } from "src/metadata/shared";
+import { IInitialize } from "src/metadata/types/initialize-reorganize";
 import type { TreasuryConfiguration } from "../../generated-types/contracts";
 import { loadTreasuryScript } from "../../shared";
 
@@ -45,7 +52,7 @@ export async function withdraw<P extends Provider, W extends Wallet>(
         "Number of amounts must match number of outputs in metadata",
       );
     const auxData = new AuxiliaryData();
-    auxData.setMetadata(toMetadata(metadata));
+    auxData.setMetadata(toTxMetadata(metadata));
     txBuilder = txBuilder
       .setAuxiliaryData(auxData)
       .addRequiredSigner(Ed25519KeyHashHex(metadata.txAuthor));

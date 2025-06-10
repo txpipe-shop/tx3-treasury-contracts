@@ -1,4 +1,4 @@
-import type { IAnchor, IMetadataBodyBase } from "./shared";
+import { IAnchor, IMetadataBodyBase } from "../shared";
 
 export interface IVendor {
   label: string;

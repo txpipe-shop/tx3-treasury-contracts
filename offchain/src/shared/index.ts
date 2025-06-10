@@ -5,7 +5,7 @@ import {
   Address,
   RewardAccount,
   Value,
-  type CredentialCore
+  type CredentialCore,
 } from "@blaze-cardano/core";
 import {
   TreasuryConfiguration,

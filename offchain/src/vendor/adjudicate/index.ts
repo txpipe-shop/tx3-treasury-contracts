@@ -12,6 +12,8 @@ import {
   type Provider,
   type Wallet,
 } from "@blaze-cardano/sdk";
+import { ITransactionMetadata, toTxMetadata } from "src/metadata/shared";
+import { IPause, IResume } from "src/metadata/types/adjudicate";
 import {
   PayoutStatus,
   VendorConfiguration,
@@ -55,7 +57,7 @@ export async function adjudicate<P extends Provider, W extends Wallet>(
     );
   if (metadata) {
     const auxData = new AuxiliaryData();
-    auxData.setMetadata(toMetadata(metadata));
+    auxData.setMetadata(toTxMetadata(metadata));
 
     tx = tx.setAuxiliaryData(auxData);
   }
