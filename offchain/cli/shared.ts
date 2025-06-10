@@ -709,6 +709,7 @@ export async function getBlazeInstance(): Promise<Blaze<Provider, Wallet>> {
 }
 
 export async function configToMetaData(
+  instance: string,
   treasuryConfig: TreasuryConfiguration,
   vendorConfig: VendorConfiguration,
   permissions: Record<TPermissionName, TPermissionMetadata | TPermissionName>,
@@ -716,8 +717,8 @@ export async function configToMetaData(
     transaction_id: string;
     output_index: bigint;
   },
-): Promise<INewInstance> {
-  return {
+): Promise<ITransactionMetadata<INewInstance>> {
+  return await getTransactionMetadata(instance, {
     event: "publish",
     expiration: treasuryConfig.expiration,
     payoutUpperbound: treasuryConfig.payout_upperbound,
@@ -730,38 +731,55 @@ export async function configToMetaData(
     }),
     permissions,
     seed_utxo,
-  };
+  });
 }
 
 export function metaDataToConfig(
-  instance: string,
-  metadata: INewInstance,
+  metadata: ITransactionMetadata<INewInstance>,
 ): {
   treasuryConfig: TreasuryConfiguration;
   vendorConfig: VendorConfiguration;
 } {
   const treasuryConfig: TreasuryConfiguration = {
-    registry_token: instance,
+    registry_token: metadata.instance,
     permissions: {
-      disburse: toMultisig(metadata.permissions.disburse, metadata.permissions),
-      fund: toMultisig(metadata.permissions.fund, metadata.permissions),
-      reorganize: toMultisig(
-        metadata.permissions.reorganize,
-        metadata.permissions,
+      disburse: toMultisig(
+        metadata.body.permissions.disburse,
+        metadata.body.permissions,
       ),
-      sweep: toMultisig(metadata.permissions.sweep, metadata.permissions),
+      fund: toMultisig(
+        metadata.body.permissions.fund,
+        metadata.body.permissions,
+      ),
+      reorganize: toMultisig(
+        metadata.body.permissions.reorganize,
+        metadata.body.permissions,
+      ),
+      sweep: toMultisig(
+        metadata.body.permissions.sweep,
+        metadata.body.permissions,
+      ),
     },
-    expiration: BigInt(metadata.expiration),
-    payout_upperbound: BigInt(metadata.payoutUpperbound),
+    expiration: BigInt(metadata.body.expiration),
+    payout_upperbound: BigInt(metadata.body.payoutUpperbound),
   };
   const vendorConfig: VendorConfiguration = {
-    registry_token: instance,
+    registry_token: metadata.instance,
     permissions: {
-      modify: toMultisig(metadata.permissions.modify, metadata.permissions),
-      pause: toMultisig(metadata.permissions.pause, metadata.permissions),
-      resume: toMultisig(metadata.permissions.resume, metadata.permissions),
+      modify: toMultisig(
+        metadata.body.permissions.modify,
+        metadata.body.permissions,
+      ),
+      pause: toMultisig(
+        metadata.body.permissions.pause,
+        metadata.body.permissions,
+      ),
+      resume: toMultisig(
+        metadata.body.permissions.resume,
+        metadata.body.permissions,
+      ),
     },
-    expiration: BigInt(metadata.vendorExpiration),
+    expiration: BigInt(metadata.body.vendorExpiration),
   };
   return { treasuryConfig, vendorConfig };
 }
@@ -769,7 +787,7 @@ export function metaDataToConfig(
 const fileName = "metadata.json";
 
 export async function readMetadataFromFile(): Promise<
-  Map<string, INewInstance>
+  Map<string, ITransactionMetadata<INewInstance>>
 > {
   const fs = await import("fs/promises");
   const path = await import("path");
@@ -780,10 +798,10 @@ export async function readMetadataFromFile(): Promise<
 
   if (data.trim() === "") {
     console.log("No metadata found, creating a new file.");
-    return new Map<string, INewInstance>();
+    return new Map<string, ITransactionMetadata<INewInstance>>();
   }
   const obj = JSON.parse(data);
-  const metadata = new Map<string, INewInstance>();
+  const metadata = new Map<string, ITransactionMetadata<INewInstance>>();
   for (const k of Object.keys(obj)) {
     metadata.set(k, obj[k]);
   }
@@ -795,7 +813,7 @@ export function bigIntReplacer(_key: string, value: any): any {
 }
 
 export async function writeMetadataToFile(
-  metadata: Map<string, INewInstance>,
+  metadata: Map<string, ITransactionMetadata<INewInstance>>,
 ): Promise<void> {
   const fs = await import("fs/promises");
   const path = await import("path");
@@ -811,7 +829,7 @@ export async function writeMetadataToFile(
 
 export async function registerMetadata(
   instance: string,
-  metadata: INewInstance,
+  metadata: ITransactionMetadata<INewInstance>,
 ): Promise<void> {
   const existingMetadata = await readMetadataFromFile();
   existingMetadata.set(instance, metadata);
@@ -821,7 +839,7 @@ export async function registerMetadata(
 export async function getConfigs(): Promise<{
   treasuryConfig: TreasuryConfiguration;
   vendorConfig: VendorConfiguration;
-  metadata: INewInstance;
+  metadata: ITransactionMetadata<INewInstance>;
 }> {
   const choice = await select({
     message: "Select saved configuration or register a new one",
@@ -840,7 +858,7 @@ export async function getConfigs(): Promise<{
 
       const metadataChoices = Array.from(metadataMap.entries()).map(
         ([key, value]) => ({
-          name: value.label || key,
+          name: value.body.label || key,
           value: key,
         }),
       );
@@ -858,10 +876,7 @@ export async function getConfigs(): Promise<{
       if (!metadata) {
         throw new Error(`Metadata for ${selectedKey} not found`);
       }
-      const { treasuryConfig, vendorConfig } = metaDataToConfig(
-        selectedKey,
-        metadata,
-      );
+      const { treasuryConfig, vendorConfig } = metaDataToConfig(metadata);
       return { treasuryConfig, vendorConfig, metadata };
     }
     default:
@@ -872,7 +887,7 @@ export async function getConfigs(): Promise<{
 async function registerNewInstance(): Promise<{
   treasuryConfig: TreasuryConfiguration;
   vendorConfig: VendorConfiguration;
-  metadata: INewInstance;
+  metadata: ITransactionMetadata<INewInstance>;
 }> {
   const utxo = await input({
     message:
@@ -912,16 +927,13 @@ async function registerNewInstance(): Promise<{
 
   const vendorScript = new VendorVendorSpend(vendorConfig).Script;
   console.log(`Vendor script policy ID: ${vendorScript.hash()}`);
-  const metadataRaw = await configToMetaData(
+  const metadata = await configToMetaData(
+    treasuryConfig.registry_token,
     treasuryConfig,
     vendorConfig,
     permissions,
     bootstrapUtxo,
   );
-  const metadata: INewInstance = {
-    ...metadataRaw,
-    seed_utxo: bootstrapUtxo,
-  };
   await registerMetadata(treasuryConfig.registry_token, metadata);
   return {
     treasuryConfig,

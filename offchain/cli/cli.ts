@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
 import { Command } from "commander";
-import { publish } from "./treasury/publish";
 import { fund } from "./treasury/fund";
+import { publish } from "./treasury/publish";
 import { withdraw as initialize } from "./treasury/withdraw";
+import { pause, resume } from "./vendor/adjudicate";
 
 const program = new Command();
 
@@ -31,6 +32,20 @@ program
   .description("Fund a vendor utxo from the treasury")
   .action(async () => {
     await fund();
+  });
+
+program
+  .command("pause")
+  .description("Pause one or more payouts in a vendor contract")
+  .action(async () => {
+    await pause();
+  });
+
+program
+  .command("resume")
+  .description("Resume one or more payouts in a vendor contract")
+  .action(async () => {
+    await resume();
   });
 
 program.parse(process.argv);

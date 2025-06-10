@@ -32,7 +32,7 @@ import {
 } from "../shared";
 export async function publish(): Promise<void> {
   const { treasuryConfig, vendorConfig, metadata } = await getConfigs();
-  const oneshotScript = new OneshotOneshotMint(metadata.seed_utxo);
+  const oneshotScript = new OneshotOneshotMint(metadata.body.seed_utxo);
 
   const registry_token = oneshotScript.Script;
   console.log(`Registry token policy ID: ${registry_token.hash()}`);
@@ -98,17 +98,13 @@ export async function publish(): Promise<void> {
         const bootstrapUtxoObj =
           await blazeInstance.provider.resolveUnspentOutputs([
             new TransactionInput(
-              TransactionId(metadata.seed_utxo.transaction_id),
-              metadata.seed_utxo.output_index,
+              TransactionId(metadata.body.seed_utxo.transaction_id),
+              metadata.body.seed_utxo.output_index,
             ),
           ]);
-        const { ...metadataRaw } = metadata;
-        const txMetadata: ITransactionMetadata = await getTransactionMetadata(
-          policyId,
-          metadataRaw,
-        );
+        
         const auxData = new AuxiliaryData();
-        auxData.setMetadata(toTxMetadata(txMetadata));
+        auxData.setMetadata(toTxMetadata(metadata));
         const tx = await blazeInstance
           .newTransaction()
           .addInput(bootstrapUtxoObj[0])
@@ -120,7 +116,7 @@ export async function publish(): Promise<void> {
           )
           .setAuxiliaryData(auxData)
           .provideScript(oneshotScript.Script)
-          .addRequiredSigner(Ed25519KeyHashHex(txMetadata.txAuthor))
+          .addRequiredSigner(Ed25519KeyHashHex(metadata.txAuthor))
           .complete();
         await transactionDialog(tx.toCbor().toString(), false);
         break;

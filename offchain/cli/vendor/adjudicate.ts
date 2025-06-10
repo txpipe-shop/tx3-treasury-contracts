@@ -12,9 +12,9 @@ import {
   transactionDialog,
 } from "cli/shared";
 import { Vendor } from "src";
-import { IMilestone, IPause, IResume } from "src/metadata/adjudicate";
+import { VendorDatum } from "src/generated-types/contracts";
+import { IMilestone, IPause, IResume } from "src/metadata/types/adjudicate";
 import { loadVendorScript } from "src/shared";
-import { VendorDatum } from "src/types/contracts";
 
 async function adjudicate(
   pause: boolean,
@@ -96,11 +96,20 @@ async function adjudicate(
 
   const signers = await getSigners(
     pause
-      ? getActualPermission(metadata.permissions.pause, metadata.permissions)
-      : getActualPermission(metadata.permissions.resume, metadata.permissions),
+      ? getActualPermission(
+          metadata.body.permissions.pause,
+          metadata.body.permissions,
+        )
+      : getActualPermission(
+          metadata.body.permissions.resume,
+          metadata.body.permissions,
+        ),
   );
 
-  const txMetadata = await getTransactionMetadata(metadataBody);
+  const txMetadata = await getTransactionMetadata(
+    metadata.instance,
+    metadataBody,
+  );
 
   const tx = await (
     await Vendor.adjudicate(
