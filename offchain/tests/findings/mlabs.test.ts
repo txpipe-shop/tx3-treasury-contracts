@@ -5,13 +5,16 @@ import { Ed25519KeyHashHex } from "@cardano-sdk/crypto";
 import { beforeEach, describe, test } from "bun:test";
 import { fund } from "src/treasury";
 import { modify } from "src/vendor";
-import { coreValueToContractsValue, loadScripts } from "../../src/shared";
 import {
   MultisigScript,
   TreasurySpendRedeemer,
   VendorDatum,
   VendorSpendRedeemer,
-} from "../../src/types/contracts";
+} from "../../src/generated-types/contracts";
+import {
+  coreValueToContractsValue,
+  loadScripts
+} from "../../src/shared";
 import {
   deployScripts,
   findRegistryInput,

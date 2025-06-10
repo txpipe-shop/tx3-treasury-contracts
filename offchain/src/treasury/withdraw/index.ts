@@ -1,9 +1,4 @@
-import {
-  AssetId,
-  AuxiliaryData,
-  Ed25519KeyHashHex,
-  toHex,
-} from "@blaze-cardano/core";
+import { AssetId, toHex } from "@blaze-cardano/core";
 import * as Data from "@blaze-cardano/data";
 import {
   TxBuilder,
@@ -11,13 +6,8 @@ import {
   type Provider,
   type Wallet,
 } from "@blaze-cardano/sdk";
-import type { IInitialize } from "../../../src/metadata/initialize-reorganize";
-import {
-  toMetadata,
-  type ITransactionMetadata,
-} from "../../../src/metadata/shared";
+import type { TreasuryConfiguration } from "../../generated-types/contracts";
 import { loadTreasuryScript } from "../../shared";
-import type { TreasuryConfiguration } from "../../types/contracts";
 
 export async function withdraw<P extends Provider, W extends Wallet>(
   config: TreasuryConfiguration,

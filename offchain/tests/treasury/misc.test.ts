@@ -11,9 +11,9 @@ import { Core, makeValue } from "@blaze-cardano/sdk";
 import { type Cardano } from "@cardano-sdk/core";
 import { beforeEach, describe, test } from "bun:test";
 
+import { type TreasuryConfiguration } from "../../src/generated-types/contracts";
 import { loadTreasuryScript } from "../../src/shared";
 import { reorganize } from "../../src/treasury/reorganize";
-import { type TreasuryConfiguration } from "../../src/types/contracts";
 import {
   reorganize_key,
   Reorganizer,

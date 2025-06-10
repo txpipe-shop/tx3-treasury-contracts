@@ -1,13 +1,17 @@
+import { AssetId, PlutusData, Slot, toHex } from "@blaze-cardano/core";
 import * as Data from "@blaze-cardano/data";
-import { Slot, toHex, PlutusData, AssetId } from "@blaze-cardano/core";
 import { Emulator } from "@blaze-cardano/emulator";
-import { ICompiledScript, ICompiledScripts, loadScripts } from "../src/shared";
+import { Core, makeValue } from "@blaze-cardano/sdk";
 import {
   ScriptHashRegistry,
   type TreasuryConfiguration,
   type VendorConfiguration,
-} from "../src/types/contracts";
-import { Core, makeValue } from "@blaze-cardano/sdk";
+} from "../src/generated-types/contracts";
+import {
+  ICompiledScript,
+  ICompiledScripts,
+  loadScripts
+} from "../src/shared";
 
 // TODO: this is a bit hacky, but our slot to time conversion is a bit messy so this is our escape hatch for tests
 export const EmulatorNetwork: Core.NetworkId = 2 as Core.NetworkId;

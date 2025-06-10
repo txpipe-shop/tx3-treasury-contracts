@@ -4,9 +4,11 @@ import {
   MetadatumList,
   MetadatumMap,
 } from "@blaze-cardano/core";
+import { decodeFirst } from "cbor";
 import type { IFund } from "./fund";
 import type { IInitialize } from "./initialize-reorganize";
-import type { INewInstance } from "./new-instance";
+
+import type { INewInstance } from "./types/new-instance.js";
 
 export interface IAnchor {
   anchorUrl: string;
@@ -86,7 +88,21 @@ function toMetadatum(value: unknown): Metadatum | undefined {
   }
 }
 
-export function toMetadata(m: ITransactionMetadata): Metadata {
+export async function fromTxMetadata(
+  m: Metadata,
+): Promise<ITransactionMetadata> {
+  const meta = m.metadata()?.get(1694n);
+  if (!meta) {
+    throw new Error("Invalid metadata, could not find at key 1694.");
+  }
+
+  const obj = await decodeFirst(meta.toCbor());
+  const sanitized = convertNumbersToBigints<ITransactionMetadata>(obj);
+
+  return sanitized;
+}
+
+export function toTxMetadata(m: ITransactionMetadata): Metadata {
   const root = new MetadatumMap();
   root.insert(Metadatum.newText("@context"), Metadatum.newText(m["@context"]));
   root.insert(
@@ -107,4 +123,23 @@ export function toMetadata(m: ITransactionMetadata): Metadata {
   const metadata = new Map<bigint, Metadatum>();
   metadata.set(1694n, Metadatum.newMap(root));
   return new Metadata(metadata);
+}
+
+function convertNumbersToBigints<T>(obj: T): T {
+  if (Array.isArray(obj)) {
+    return obj.map(convertNumbersToBigints) as unknown as T;
+  } else if (obj !== null && typeof obj === "object") {
+    const newObject: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj)) {
+      if (typeof value === "number") {
+        newObject[key] = BigInt(value);
+      } else if (typeof value === "object" && value !== null) {
+        newObject[key] = convertNumbersToBigints(value);
+      } else {
+        newObject[key] = value;
+      }
+    }
+    return newObject as T;
+  }
+  return obj;
 }

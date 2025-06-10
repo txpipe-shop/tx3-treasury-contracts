@@ -8,9 +8,9 @@ import * as Data from "@blaze-cardano/data";
 import { Emulator } from "@blaze-cardano/emulator";
 import { Core, makeValue } from "@blaze-cardano/sdk";
 import { beforeEach, describe, test } from "bun:test";
+import type { TreasuryConfiguration } from "../../src/generated-types/contracts";
 import { loadTreasuryScript } from "../../src/shared";
 import { withdraw } from "../../src/treasury/withdraw";
-import type { TreasuryConfiguration } from "../../src/types/contracts";
 import {
   registryToken,
   sampleTreasuryConfig,

@@ -1,10 +1,9 @@
 import {
   AssetId,
-  AuxiliaryData,
   Ed25519KeyHashHex,
   toHex,
   TransactionUnspentOutput,
-  Value,
+  Value
 } from "@blaze-cardano/core";
 import * as Data from "@blaze-cardano/data";
 import {
@@ -15,23 +14,18 @@ import {
   type Wallet,
 } from "@blaze-cardano/sdk";
 import * as Tx from "@blaze-cardano/tx";
-import type { IFund } from "../../../src/metadata/fund";
-import {
-  toMetadata,
-  type ITransactionMetadata,
-} from "../../../src/metadata/shared";
-import {
-  coreValueToContractsValue,
-  loadTreasuryScript,
-  loadVendorScript,
-} from "../../shared";
 import {
   MultisigScript,
   TreasuryConfiguration,
   TreasurySpendRedeemer,
   VendorConfiguration,
   VendorDatum,
-} from "../../types/contracts";
+} from "../../generated-types/contracts";
+import {
+  coreValueToContractsValue,
+  loadTreasuryScript,
+  loadVendorScript,
+} from "../../shared";
 
 export async function fund<P extends Provider, W extends Wallet>(
   configs: { treasury: TreasuryConfiguration; vendor: VendorConfiguration },

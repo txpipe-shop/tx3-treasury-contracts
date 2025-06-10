@@ -5,14 +5,14 @@ import {
   Address,
   RewardAccount,
   Value,
-  type CredentialCore,
+  type CredentialCore
 } from "@blaze-cardano/core";
 import {
   TreasuryConfiguration,
   TreasuryTreasuryWithdraw,
   VendorConfiguration,
   VendorVendorSpend,
-} from "../types/contracts";
+} from "../generated-types/contracts";
 
 export interface ICompiledScript<T, C> {
   config: C;

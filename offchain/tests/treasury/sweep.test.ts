@@ -1,24 +1,24 @@
-import { beforeEach, describe, test } from "bun:test";
-import * as Data from "@blaze-cardano/data";
-import { Emulator } from "@blaze-cardano/emulator";
-import {
-  registryToken,
-  sampleTreasuryConfig,
-  setupEmulator,
-} from "../utilities";
-import { loadTreasuryScript } from "../../src/shared";
-import { sweep } from "../../src/treasury/sweep";
-import {
-  TreasuryConfiguration,
-  TreasurySpendRedeemer,
-} from "../../src/types/contracts";
 import {
   Address,
   AssetId,
   Hash28ByteBase16,
   Script,
 } from "@blaze-cardano/core";
+import * as Data from "@blaze-cardano/data";
+import { Emulator } from "@blaze-cardano/emulator";
 import { Core, makeValue } from "@blaze-cardano/sdk";
+import { beforeEach, describe, test } from "bun:test";
+import {
+  TreasuryConfiguration,
+  TreasurySpendRedeemer,
+} from "../../src/generated-types/contracts";
+import { loadTreasuryScript } from "../../src/shared";
+import { sweep } from "../../src/treasury/sweep";
+import {
+  registryToken,
+  sampleTreasuryConfig,
+  setupEmulator,
+} from "../utilities";
 
 describe("When sweeping", () => {
   const amount = 340_000_000_000_000n;

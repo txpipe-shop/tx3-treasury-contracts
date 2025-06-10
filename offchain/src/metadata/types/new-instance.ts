@@ -1,5 +1,8 @@
-import type { TPermissionMetadata, TPermissionName } from "./permission";
+
 import type { IMetadataBodyBase } from "./shared";
+
+import type { TPermissionMetadata, TPermissionName } from "./permission.js";
+
 
 export interface INewInstance extends IMetadataBodyBase {
   event: "publish";
