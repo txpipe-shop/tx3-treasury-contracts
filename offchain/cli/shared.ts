@@ -57,33 +57,35 @@ async function getSignersFromList(
 }
 
 export async function getSigners(
-  permissions: TPermissionMetadata,
+  ...permissions: TPermissionMetadata[]
 ): Promise<Ed25519KeyHashHex[]> {
   const signers: Ed25519KeyHashHex[] = [];
 
-  if ("signature" in permissions) {
-    signers.push(Ed25519KeyHashHex(permissions.signature.key_hash));
+  for (const permission of permissions) {
+    if ("signature" in permission) {
+      signers.push(Ed25519KeyHashHex(permission.signature.key_hash));
+    }
+
+    if ("atLeast" in permission) {
+      return await getSignersFromList(
+        permission.atLeast.scripts,
+        Number(permission.atLeast.required),
+      );
+    }
+
+    if ("anyOf" in permission) {
+      return await getSignersFromList(permission.anyOf.scripts, 1);
+    }
+
+     if ("allOf" in permission) {
+      const allSigners = await Promise.all(
+        permission.allOf.scripts.map(async (script) => await getSigners(script)),
+      );
+      signers.push(...allSigners.flat());
+    }
   }
 
-  if ("atLeast" in permissions) {
-    return await getSignersFromList(
-      permissions.atLeast.scripts,
-      Number(permissions.atLeast.required),
-    );
-  }
-
-  if ("anyOf" in permissions) {
-    return await getSignersFromList(permissions.anyOf.scripts, 1);
-  }
-
-  if ("allOf" in permissions) {
-    const allSigners = await Promise.all(
-      permissions.allOf.scripts.map(async (script) => await getSigners(script)),
-    );
-    return allSigners.flat();
-  }
-
-  return signers;
+  return signers.filter((v, i) => signers.indexOf(v) === i);
 }
 
 export async function inputOrEnv(opts: {
@@ -516,11 +518,16 @@ export async function transactionDialog(
   });
   switch (choice) {
     case "copy":
-      clipboard.writeSync(txCbor);
-      await select({
-        message: "Transaction cbor copied to clipboard.",
-        choices: [{ name: "Press enter to continue.", value: "continue" }],
-      });
+      try {
+        clipboard.writeSync(txCbor);
+        await select({
+          message: "Transaction cbor copied to clipboard.",
+          choices: [{ name: "Press enter to continue.", value: "continue" }],
+        });
+      } catch {
+	console.log("Failed to copy to clipboard; expand the cbor instead");
+	await transactionDialog(txCbor, true);
+      }
       break;
     case "back":
       return;
@@ -844,8 +851,8 @@ export async function getConfigs(): Promise<{
   const choice = await select({
     message: "Select saved configuration or register a new one",
     choices: [
-      { name: "Register a new instance", value: "register" },
       { name: "Select from existing instances", value: "select" },
+      { name: "Register a new instance", value: "register" },
     ],
   });
 

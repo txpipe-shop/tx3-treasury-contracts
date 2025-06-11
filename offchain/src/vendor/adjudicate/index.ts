@@ -40,13 +40,14 @@ export async function adjudicate<P extends Provider, W extends Wallet>(
   if (!refInput)
     throw new Error("Could not find vendor script reference on-chain");
 
-  const thirty_six_hours = 36 * 60 * 60 * 1000; // 36 hours in milliseconds
+  // TODO: switch based on network? on preview we can only project 12 hours in the future
+  const thirty_six_hours = 12 * 60 * 60 * 1000; // 36 hours in milliseconds
   let tx = blaze
     .newTransaction()
     .addReferenceInput(registryInput)
     .addReferenceInput(refInput)
     .setValidFrom(blaze.provider.unixToSlot(now.valueOf()))
-    .setValidUntil(blaze.provider.unixToSlot(now.valueOf() + thirty_six_hours))
+    .setValidUntil(blaze.provider.unixToSlot(now.valueOf() + thirty_six_hours - 1000))
     .addInput(
       input,
       Data.serialize(VendorSpendRedeemer, {

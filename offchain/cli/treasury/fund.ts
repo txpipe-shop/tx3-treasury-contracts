@@ -102,9 +102,8 @@ export async function fund(
     blazeInstance = await getBlazeInstance();
   }
   const { treasuryConfig, vendorConfig, metadata } = await getConfigs();
-  const vendor = toMultisig(
-    await getPermission("Which multisig should be able to use the funds?"),
-  );
+  const vendorPermissions = await getPermission("Which multisig should be able to use the funds?");
+  const vendor = toMultisig(vendorPermissions);
 
   const metadataBody = {
     event: "fund",
@@ -158,10 +157,10 @@ export async function fund(
   const utxo = await selectUtxo(utxos);
 
   const fundPermissions = getActualPermission(
-    metadata.permissions.fund,
-    metadata.permissions,
+    metadata.body.permissions.fund,
+    metadata.body.permissions,
   );
-  const signers = await getSigners(fundPermissions);
+  const signers = await getSigners(fundPermissions, vendorPermissions);
 
   const tx = await (
     await Treasury.fund(

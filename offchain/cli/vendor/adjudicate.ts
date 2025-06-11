@@ -26,8 +26,8 @@ async function adjudicate(
 
   const now = Date.now();
 
-  const oldStatus = pause ? "Paused" : "Active";
-  const newStatus = pause ? "Active" : "Paused";
+  const oldStatus = pause ? "Active" : "Paused";
+  const newStatus = pause ? "Paused" : "Active";
 
   const { vendorConfig, metadata } = await getConfigs();
 
@@ -68,7 +68,7 @@ async function adjudicate(
 
   const milestones: Record<string, IMilestone> = {};
 
-  selections.forEach(async (index) => {
+  for (const index of selections) {
     const identifier = await input({
       message: `Enter identifier for payout ${index + 1}`,
       validate: (value) => (value ? true : "Identifier cannot be empty."),
@@ -78,16 +78,16 @@ async function adjudicate(
       validate: (value) => (value ? true : "Reason cannot be empty."),
     });
     let resolution = undefined;
-    if (!pause) {
+    if (pause) {
       resolution = await maybeInput({
-        message: `Enter resolution path for resumeing payout ${index + 1} (optional)`,
+        message: `Enter resolution path for resuming payout ${index + 1} (optional)`,
       });
     }
     milestones[identifier] = {
       reason,
       resolution,
     };
-  });
+  }
 
   const metadataBody = {
     event: pause ? "pause" : "resume",
