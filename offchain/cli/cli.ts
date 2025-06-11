@@ -5,6 +5,7 @@ import { fund } from "./treasury/fund";
 import { publish } from "./treasury/publish";
 import { withdraw as initialize } from "./treasury/withdraw";
 import { pause, resume } from "./vendor/adjudicate";
+import { withdraw } from "./vendor/withdraw";
 
 const program = new Command();
 
@@ -46,6 +47,13 @@ program
   .description("Resume one or more payouts in a vendor contract")
   .action(async () => {
     await resume();
+  });
+
+program
+  .command("withdraw")
+  .description("Withdraw one or more payouts in a vendor contract")
+  .action(async () => {
+    await withdraw();
   });
 
 program.parse(process.argv);

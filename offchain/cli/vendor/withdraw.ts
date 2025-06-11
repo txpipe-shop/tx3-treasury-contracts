@@ -1,4 +1,4 @@
-import { Address } from "@blaze-cardano/core";
+import { Address, TransactionUnspentOutput } from "@blaze-cardano/core";
 import * as Data from "@blaze-cardano/data";
 import { Blaze, Provider, Wallet } from "@blaze-cardano/sdk";
 import { input } from "@inquirer/prompts";
@@ -12,10 +12,14 @@ import {
   transactionDialog,
 } from "cli/shared";
 import { Vendor } from "src";
-import { toPermission } from "src/metadata/permission";
-import { IAnchorWithLabel, IMilestone, IWithdraw } from "src/metadata/withdraw";
+import { VendorDatum } from "src/generated-types/contracts";
+import { toPermission } from "src/metadata/types/permission";
+import {
+  IAnchorWithLabel,
+  IMilestone,
+  IWithdraw,
+} from "src/metadata/types/withdraw";
 import { loadVendorScript } from "src/shared";
-import { VendorDatum } from "src/types/contracts";
 
 async function getEvidence(): Promise<IAnchorWithLabel[]> {
   const evidence: IAnchorWithLabel[] = [];
@@ -32,11 +36,32 @@ async function getEvidence(): Promise<IAnchorWithLabel[]> {
   return evidence;
 }
 
-async function getFinishedMilestones(): Promise<Record<string, IMilestone>> {
+async function getFinishedMilestones(
+  vendorInputs: TransactionUnspentOutput[],
+): Promise<Record<string, IMilestone>> {
+  const maturedPayouts = vendorInputs
+    .map((input, index) => {
+      const data = input.output().datum()?.asInlineData();
+      if (!data) return undefined;
+      const datum = Data.parse(VendorDatum, data);
+      return datum.payouts
+        .filter(
+          (p) => p.status === "Active" && Number(p.maturation) <= Date.now(),
+        )
+        .map((p) => ({
+          index,
+          payout: p,
+        }));
+    })
+    .flat()
+    .filter((p) => p !== undefined);
+
   const milestones: Record<string, IMilestone> = {};
-  while (true) {
+
+  for (const { index, payout } of maturedPayouts) {
     const identifier = await input({
-      message: "Enter the milestone identifier (or leave empty to finish):",
+      message: `Enter the milestone identifier for milestone in vendor utxo ${index} maturing on ${new Date(Number(payout.maturation)).toLocaleString()}:`,
+      default: `${index}-${payout.maturation}`,
     });
     if (!identifier) {
       break;
@@ -58,7 +83,7 @@ export async function withdraw(
   if (!blazeInstance) {
     blazeInstance = await getBlazeInstance();
   }
-  const { vendorConfig } = await getConfigs();
+  const { vendorConfig, metadata } = await getConfigs();
 
   const { scriptAddress } = loadVendorScript(
     blazeInstance.provider.network,
@@ -105,18 +130,21 @@ export async function withdraw(
     return datum.vendor;
   });
 
-  const signers = (
-    await Promise.all(
-      vendors.map(async (vendor) => await getSigners(toPermission(vendor))),
-    )
-  ).flat();
+  const signers = [];
+  for (const vendor of vendors) {
+    const vendorSigners = await getSigners(toPermission(vendor));
+    signers.push(...vendorSigners);
+  }
 
   const metadataBody = {
     event: "withdraw",
-    milestones: await getFinishedMilestones(),
+    milestones: await getFinishedMilestones(inputs),
   } as IWithdraw;
 
-  const txMetadata = await getTransactionMetadata(metadataBody);
+  const txMetadata = await getTransactionMetadata(
+    metadata.instance,
+    metadataBody,
+  );
 
   const tx = await (
     await Vendor.withdraw(

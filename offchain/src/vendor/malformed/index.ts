@@ -30,7 +30,9 @@ export async function sweep_malformed<P extends Provider, W extends Wallet>(
   const registryInput = await blaze.provider.getUnspentOutputByNFT(
     AssetId(configs.treasury.registry_token + toHex(Buffer.from("REGISTRY"))),
   );
-  const refInput = await blaze.provider.resolveScriptRef(vendorScript.Script);
+  const refInput = await blaze.provider.resolveScriptRef(
+    vendorScript.Script.hash(),
+  );
   if (!refInput)
     throw new Error("Could not find vendor script reference on-chain");
   let tx = blaze

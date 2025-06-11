@@ -40,7 +40,7 @@ export async function withdraw<P extends Provider, W extends Wallet>(
     AssetId(config.registry_token + toHex(Buffer.from("REGISTRY"))),
   );
 
-  const refInput = await blaze.provider.resolveScriptRef(script.Script);
+  const refInput = await blaze.provider.resolveScriptRef(script.Script.hash());
   if (!refInput)
     throw new Error("Could not find vendor script reference on-chain");
 

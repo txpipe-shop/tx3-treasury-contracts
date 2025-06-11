@@ -17,16 +17,12 @@ import {
   TreasuryTreasurySpend,
   VendorVendorSpend,
 } from "src/generated-types/contracts";
-import {
-  toTxMetadata,
-  type ITransactionMetadata,
-} from "../../src/metadata/shared";
+import { toTxMetadata } from "../../src/metadata/shared";
 import { contractsValueToCoreValue } from "../../src/shared";
 import {
   deployTransaction,
   getConfigs,
   getProvider,
-  getTransactionMetadata,
   getWallet,
   transactionDialog,
 } from "../shared";
@@ -102,7 +98,7 @@ export async function publish(): Promise<void> {
               metadata.body.seed_utxo.output_index,
             ),
           ]);
-        
+
         const auxData = new AuxiliaryData();
         auxData.setMetadata(toTxMetadata(metadata));
         const tx = await blazeInstance

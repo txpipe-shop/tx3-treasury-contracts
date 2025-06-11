@@ -33,7 +33,7 @@ export async function reorganize<P extends Provider, W extends Wallet>(
   const registryInput = await blaze.provider.getUnspentOutputByNFT(
     AssetId(config.registry_token + toHex(Buffer.from("REGISTRY"))),
   );
-  const refInput = await blaze.provider.resolveScriptRef(script.Script);
+  const refInput = await blaze.provider.resolveScriptRef(script.Script.hash());
   if (!refInput)
     throw new Error("Could not find treasury script reference on-chain");
   let tx = blaze

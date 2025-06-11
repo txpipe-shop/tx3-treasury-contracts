@@ -36,7 +36,9 @@ export async function adjudicate<P extends Provider, W extends Wallet>(
   const registryInput = await blaze.provider.getUnspentOutputByNFT(
     AssetId(config.registry_token + toHex(Buffer.from("REGISTRY"))),
   );
-  const refInput = await blaze.provider.resolveScriptRef(vendorScript.Script);
+  const refInput = await blaze.provider.resolveScriptRef(
+    vendorScript.Script.hash(),
+  );
   if (!refInput)
     throw new Error("Could not find vendor script reference on-chain");
 
@@ -47,7 +49,9 @@ export async function adjudicate<P extends Provider, W extends Wallet>(
     .addReferenceInput(registryInput)
     .addReferenceInput(refInput)
     .setValidFrom(blaze.provider.unixToSlot(now.valueOf()))
-    .setValidUntil(blaze.provider.unixToSlot(now.valueOf() + thirty_six_hours - 1000))
+    .setValidUntil(
+      blaze.provider.unixToSlot(now.valueOf() + thirty_six_hours - 1000),
+    )
     .addInput(
       input,
       Data.serialize(VendorSpendRedeemer, {

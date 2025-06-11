@@ -41,7 +41,9 @@ export async function modify<P extends Provider, W extends Wallet>(
   const registryInput = await blaze.provider.getUnspentOutputByNFT(
     AssetId(configs.vendor.registry_token + toHex(Buffer.from("REGISTRY"))),
   );
-  const refInput = await blaze.provider.resolveScriptRef(vendorScript.Script);
+  const refInput = await blaze.provider.resolveScriptRef(
+    vendorScript.Script.hash(),
+  );
   if (!refInput)
     throw new Error("Could not find vendor script reference on-chain");
   const thirty_six_hours = 36 * 60 * 60 * 1000; // 36 hours in milliseconds
@@ -97,7 +99,9 @@ export async function cancel<P extends Provider, W extends Wallet>(
   const registryInput = await blaze.provider.getUnspentOutputByNFT(
     AssetId(configs.vendor.registry_token + toHex(Buffer.from("REGISTRY"))),
   );
-  const refInput = await blaze.provider.resolveScriptRef(vendorScript.Script);
+  const refInput = await blaze.provider.resolveScriptRef(
+    vendorScript.Script.hash(),
+  );
   if (!refInput)
     throw new Error("Could not find vendor script reference on-chain");
   const thirty_six_hours = 36 * 60 * 60 * 1000; // 36 hours in milliseconds

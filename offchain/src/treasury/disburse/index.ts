@@ -39,7 +39,9 @@ export async function disburse<P extends Provider, W extends Wallet>(
     AssetId(configs.treasury.registry_token + toHex(Buffer.from("REGISTRY"))),
   );
 
-  const refInput = await blaze.provider.resolveScriptRef(treasuryScript.Script);
+  const refInput = await blaze.provider.resolveScriptRef(
+    treasuryScript.Script.hash(),
+  );
   if (!refInput)
     throw new Error("Could not find treasury script reference on-chain");
   let tx = blaze

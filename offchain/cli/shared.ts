@@ -77,9 +77,11 @@ export async function getSigners(
       return await getSignersFromList(permission.anyOf.scripts, 1);
     }
 
-     if ("allOf" in permission) {
+    if ("allOf" in permission) {
       const allSigners = await Promise.all(
-        permission.allOf.scripts.map(async (script) => await getSigners(script)),
+        permission.allOf.scripts.map(
+          async (script) => await getSigners(script),
+        ),
       );
       signers.push(...allSigners.flat());
     }
@@ -525,8 +527,8 @@ export async function transactionDialog(
           choices: [{ name: "Press enter to continue.", value: "continue" }],
         });
       } catch {
-	console.log("Failed to copy to clipboard; expand the cbor instead");
-	await transactionDialog(txCbor, true);
+        console.log("Failed to copy to clipboard; expand the cbor instead");
+        await transactionDialog(txCbor, true);
       }
       break;
     case "back":
@@ -896,16 +898,47 @@ async function registerNewInstance(): Promise<{
   vendorConfig: VendorConfiguration;
   metadata: ITransactionMetadata<INewInstance>;
 }> {
-  const utxo = await input({
-    message:
-      "Enter some transaction output (txId#idx) to spend to ensure the registry NFT is unique ",
-    validate: function (value) {
-      return (
-        /[0-9A-Fa-f]{64}#[0-9]+/.test(value) ||
-        "Should be in the format txId#idx"
-      );
-    },
+  const utxoChoice = await select({
+    message: "How do you want to declare the bootstrap UTxO?",
+    choices: [
+      { name: "Manual", value: "manual" },
+      { name: "Select from wallet", value: "select" },
+      { name: "Use a random one", value: "random" },
+    ],
   });
+  let utxo = undefined;
+  switch (utxoChoice) {
+    case "manual": {
+      utxo = await input({
+        message:
+          "Enter some transaction output (txId#idx) to spend to ensure the registry NFT is unique ",
+        validate: function (value) {
+          return (
+            /[0-9A-Fa-f]{64}#[0-9]+/.test(value) ||
+            "Should be in the format txId#idx"
+          );
+        },
+      });
+      break;
+    }
+    default: {
+      const blazeInstance = await getBlazeInstance();
+      const utxos = await blazeInstance.provider.getUnspentOutputs(
+        await blazeInstance.wallet.getChangeAddress(),
+      );
+      if (utxos.length === 0) {
+        throw new Error("No UTxOs available in the wallet");
+      }
+      let selectedUtxo = undefined;
+      if (utxoChoice === "select") {
+        selectedUtxo = await selectUtxo(utxos);
+      } else {
+        selectedUtxo = utxos[0];
+      }
+      utxo = `${selectedUtxo.input().transactionId().toString()}#${selectedUtxo.input().index().toString()}`;
+      break;
+    }
+  }
   const bootstrapUtxo = {
     transaction_id: utxo.split("#")[0],
     output_index: BigInt(utxo.split("#")[1]),
