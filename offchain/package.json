@@ -1,6 +1,6 @@
 {
   "name": "@sundaeswap/treasury-funds",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "type": "module",
   "license": "MIT",
   "main": "./dist/cjs/index.js",
@@ -42,7 +42,11 @@
   },
   "bin": "./dist/cli/cli.js",
   "peerDependencies": {
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "@blaze-cardano/sdk": "^0.2.30",
+    "@blaze-cardano/data": "^0.6.0",
+    "@blaze-cardano/query": "^0.4.3",
+    "@blaze-cardano/uplc": "^0.3.1"
   },
   "devDependencies": {
     "@babel/cli": "^7.27.2",
@@ -63,10 +67,6 @@
     "standard-version": "^9.5.0"
   },
   "dependencies": {
-    "@blaze-cardano/data": "^0.6.0",
-    "@blaze-cardano/query": "^0.4.3",
-    "@blaze-cardano/sdk": "^0.2.30",
-    "@blaze-cardano/uplc": "^0.3.1",
     "@inquirer/prompts": "^7.5.3",
     "cbor": "^10.0.3",
     "clipboardy": "^4.0.0"
