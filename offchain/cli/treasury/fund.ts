@@ -3,7 +3,7 @@ import { Value } from "@blaze-cardano/core";
 import { Blaze, makeValue, Provider, Wallet } from "@blaze-cardano/sdk";
 import { input, select } from "@inquirer/prompts";
 import { IFund, IMilestone } from "src/metadata/types/fund";
-import { toMultisig } from "src/metadata/types/permission";
+import { toMultisig, TPermissionMetadata } from "src/metadata/types/permission";
 import { Treasury } from "../../src";
 import { loadTreasuryScript } from "../../src/shared";
 import {
@@ -102,7 +102,9 @@ export async function fund(
     blazeInstance = await getBlazeInstance();
   }
   const { treasuryConfig, vendorConfig, metadata } = await getConfigs();
-  const vendorPermissions = await getPermission("Which multisig should be able to use the funds?");
+  const vendorPermissions: TPermissionMetadata = (await getPermission(
+    "Which multisig should be able to use the funds?",
+  )) as TPermissionMetadata;
   const vendor = toMultisig(vendorPermissions);
 
   const metadataBody = {

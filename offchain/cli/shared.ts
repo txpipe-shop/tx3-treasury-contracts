@@ -47,7 +47,7 @@ async function getSignersFromList(
     message: "Select the keys that will be signing the transaction",
     choices,
     validate: (selected) => {
-      if (selected.length >= min) {
+      if (selected.length < min) {
         return "You must select at least one key";
       }
       return true;
