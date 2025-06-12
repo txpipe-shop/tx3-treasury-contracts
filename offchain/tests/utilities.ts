@@ -7,11 +7,7 @@ import {
   type TreasuryConfiguration,
   type VendorConfiguration,
 } from "../src/generated-types/contracts";
-import {
-  ICompiledScript,
-  ICompiledScripts,
-  loadScripts
-} from "../src/shared";
+import { ICompiledScript, ICompiledScripts, loadScripts } from "../src/shared";
 
 // TODO: this is a bit hacky, but our slot to time conversion is a bit messy so this is our escape hatch for tests
 export const EmulatorNetwork: Core.NetworkId = 2 as Core.NetworkId;
@@ -271,6 +267,7 @@ export async function setupEmulator(
         Core.NetworkId.Testnet,
         await sampleTreasuryConfig(emulator),
         await sampleVendorConfig(emulator),
+        true,
       ),
     );
   }

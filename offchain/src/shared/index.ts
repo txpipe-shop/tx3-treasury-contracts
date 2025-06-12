@@ -25,8 +25,9 @@ export interface ICompiledScript<T, C> {
 export function loadTreasuryScript(
   network: Core.NetworkId,
   config: TreasuryConfiguration,
+  trace?: boolean,
 ): ICompiledScript<TreasuryTreasuryWithdraw, TreasuryConfiguration> {
-  const script = new TreasuryTreasuryWithdraw(config);
+  const script = new TreasuryTreasuryWithdraw(config, trace);
   const credential: Cardano.Credential = {
     type: Core.CredentialType.ScriptHash,
     hash: script.Script.hash(),
@@ -50,8 +51,9 @@ export function loadTreasuryScript(
 export function loadVendorScript(
   network: Core.NetworkId,
   config: VendorConfiguration,
+  trace?: boolean,
 ): ICompiledScript<VendorVendorSpend, VendorConfiguration> {
-  const script = new VendorVendorSpend(config);
+  const script = new VendorVendorSpend(config, trace);
   const credential: Cardano.Credential = {
     type: Core.CredentialType.ScriptHash,
     hash: script.Script.hash(),
@@ -82,9 +84,10 @@ export function loadScripts(
   network: Core.NetworkId,
   treasuryConfig: TreasuryConfiguration,
   vendorConfig: VendorConfiguration,
+  trace?: boolean,
 ): ICompiledScripts {
-  const treasuryScript = loadTreasuryScript(network, treasuryConfig);
-  const vendorScript = loadVendorScript(network, vendorConfig);
+  const treasuryScript = loadTreasuryScript(network, treasuryConfig, trace);
+  const vendorScript = loadVendorScript(network, vendorConfig, trace);
   return {
     treasuryScript,
     vendorScript,

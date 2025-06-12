@@ -22,10 +22,12 @@ export async function withdraw<P extends Provider, W extends Wallet>(
   blaze: Blaze<P, W>,
   metadata?: ITransactionMetadata<IInitialize>,
   withdrawAmount: bigint | undefined = undefined,
+  trace?: boolean,
 ): Promise<TxBuilder> {
   const { script, rewardAccount, scriptAddress } = loadTreasuryScript(
     blaze.provider.network,
     config,
+    trace,
   );
   const registryInput = await blaze.provider.getUnspentOutputByNFT(
     AssetId(config.registry_token + toHex(Buffer.from("REGISTRY"))),

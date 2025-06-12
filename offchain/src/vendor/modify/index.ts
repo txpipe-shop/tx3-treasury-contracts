@@ -31,13 +31,15 @@ export async function modify<P extends Provider, W extends Wallet>(
   input: TransactionUnspentOutput,
   new_vendor: VendorDatum,
   signers: Ed25519KeyHashHex[],
+  trace?: boolean,
 ): Promise<TxBuilder> {
   const { scriptAddress: treasuryScriptAddress } = loadTreasuryScript(
     blaze.provider.network,
     configs.treasury,
+    trace,
   );
   const { scriptAddress: vendorScriptAddress, script: vendorScript } =
-    loadVendorScript(blaze.provider.network, configs.vendor);
+    loadVendorScript(blaze.provider.network, configs.vendor, trace);
   const registryInput = await blaze.provider.getUnspentOutputByNFT(
     AssetId(configs.vendor.registry_token + toHex(Buffer.from("REGISTRY"))),
   );
@@ -87,14 +89,17 @@ export async function cancel<P extends Provider, W extends Wallet>(
   now: Date,
   input: TransactionUnspentOutput,
   signers: Ed25519KeyHashHex[],
+  trace?: boolean,
 ): Promise<TxBuilder> {
   const { scriptAddress: treasuryScriptAddress } = loadTreasuryScript(
     blaze.provider.network,
     configs.treasury,
+    trace,
   );
   const { script: vendorScript } = loadVendorScript(
     blaze.provider.network,
     configs.vendor,
+    trace,
   );
   const registryInput = await blaze.provider.getUnspentOutputByNFT(
     AssetId(configs.vendor.registry_token + toHex(Buffer.from("REGISTRY"))),

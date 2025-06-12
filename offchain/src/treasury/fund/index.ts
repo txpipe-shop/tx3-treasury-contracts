@@ -38,13 +38,15 @@ export async function fund<P extends Provider, W extends Wallet>(
   schedule: { date: Date; amount: Value }[],
   signers: Ed25519KeyHashHex[],
   metadata?: ITransactionMetadata<IFund>,
+  trace?: boolean,
 ): Promise<TxBuilder> {
   const { scriptAddress: vendorScriptAddress } = loadVendorScript(
     blaze.provider.network,
     configs.vendor,
+    trace,
   );
   const { script: treasuryScript, scriptAddress: treasuryScriptAddress } =
-    loadTreasuryScript(blaze.provider.network, configs.treasury);
+    loadTreasuryScript(blaze.provider.network, configs.treasury, trace);
   const registryInput = await blaze.provider.getUnspentOutputByNFT(
     AssetId(configs.treasury.registry_token + toHex(Buffer.from("REGISTRY"))),
   );

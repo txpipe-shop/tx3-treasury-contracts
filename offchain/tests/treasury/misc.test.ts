@@ -35,7 +35,7 @@ describe("", () => {
   beforeEach(async () => {
     emulator = await setupEmulator();
     config = await sampleTreasuryConfig(emulator);
-    const treasury = loadTreasuryScript(Core.NetworkId.Testnet, config);
+    const treasury = loadTreasuryScript(Core.NetworkId.Testnet, config, true);
     credential = treasury.credential;
     // treasuryScript = treasury.script;
     scriptAddress = treasury.scriptAddress;
@@ -74,6 +74,7 @@ describe("", () => {
             [scriptInputNoDatum],
             [makeValue(100_000_000_000n), makeValue(400_000_000_000n)],
             [Ed25519KeyHashHex(await reorganize_key(emulator))],
+            true,
           ),
         );
       });
@@ -88,6 +89,7 @@ describe("", () => {
             [scriptInputRandomDatum],
             [makeValue(100_000_000_000n), makeValue(400_000_000_000n)],
             [Ed25519KeyHashHex(await reorganize_key(emulator))],
+            true,
           ),
         );
       });

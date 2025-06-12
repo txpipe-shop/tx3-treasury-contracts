@@ -21,7 +21,7 @@ import {
 import {
   loadTreasuryScript,
   loadVendorScript,
-  coreValueToContractsValue as translateValue
+  coreValueToContractsValue as translateValue,
 } from "../../src/shared";
 import { fund } from "../../src/treasury/fund";
 import {
@@ -59,10 +59,12 @@ describe("When funding", () => {
     const treasuryScriptManifest = loadTreasuryScript(
       Core.NetworkId.Testnet,
       treasuryConfig,
+      true,
     );
     const vendorScriptManifest = loadVendorScript(
       Core.NetworkId.Testnet,
       vendorConfig,
+      true,
     );
     configs = { treasury: treasuryConfig, vendor: vendorConfig };
     rewardAccount = treasuryScriptManifest.rewardAccount!;
@@ -152,6 +154,8 @@ describe("When funding", () => {
               Ed25519KeyHashHex(await fund_key(emulator)),
               Ed25519KeyHashHex(await vendor_key(emulator)),
             ],
+            undefined,
+            true,
           );
         });
         await emulator.expectValidMultisignedTransaction([Funder, Vendor], tx);
@@ -173,6 +177,8 @@ describe("When funding", () => {
               Ed25519KeyHashHex(await fund_key(emulator)),
               Ed25519KeyHashHex(await vendor_key(emulator)),
             ],
+            undefined,
+            true,
           );
         });
         await emulator.expectValidMultisignedTransaction([Funder, Vendor], tx);
@@ -198,6 +204,8 @@ describe("When funding", () => {
               Ed25519KeyHashHex(await fund_key(emulator)),
               Ed25519KeyHashHex(await vendor_key(emulator)),
             ],
+            undefined,
+            true,
           );
         });
         await emulator.expectValidMultisignedTransaction([Funder, Vendor], tx);
@@ -223,6 +231,8 @@ describe("When funding", () => {
               Ed25519KeyHashHex(await fund_key(emulator)),
               Ed25519KeyHashHex(await vendor_key(emulator)),
             ],
+            undefined,
+            true,
           );
         });
         await emulator.expectValidMultisignedTransaction([Funder, Vendor], tx);
@@ -244,6 +254,8 @@ describe("When funding", () => {
               Ed25519KeyHashHex(await fund_key(emulator)),
               Ed25519KeyHashHex(await vendor_key(emulator)),
             ],
+            undefined,
+            true,
           );
         });
         await emulator.expectValidMultisignedTransaction([Funder, Vendor], tx);
@@ -269,6 +281,8 @@ describe("When funding", () => {
               Ed25519KeyHashHex(await fund_key(emulator)),
               Ed25519KeyHashHex(await vendor_key(emulator)),
             ],
+            undefined,
+            true,
           );
         });
         await emulator.expectValidMultisignedTransaction([Funder, Vendor], tx);
@@ -634,6 +648,8 @@ describe("When funding", () => {
               Ed25519KeyHashHex(address.asBase()!.getPaymentCredential().hash),
               Ed25519KeyHashHex(await vendor_key(emulator)),
             ],
+            undefined,
+            true,
           ),
           /Trace satisfied\(permissions.fund/,
         );

@@ -35,7 +35,7 @@ describe("When sweeping", () => {
   beforeEach(async () => {
     emulator = await setupEmulator();
     config = await sampleTreasuryConfig(emulator);
-    const treasury = loadTreasuryScript(Core.NetworkId.Testnet, config);
+    const treasury = loadTreasuryScript(Core.NetworkId.Testnet, config, true);
     treasuryScript = treasury.script.Script;
     scriptAddress = treasury.scriptAddress;
     emulator.accounts.set(treasury.rewardAccount!, amount);
@@ -90,7 +90,7 @@ describe("When sweeping", () => {
         await emulator.as("Anyone", async (blaze) => {
           await emulator.expectValidTransaction(
             blaze,
-            await sweep(config, scriptInput, blaze),
+            await sweep(config, scriptInput, blaze, undefined, true),
           );
         });
       });
@@ -104,6 +104,7 @@ describe("When sweeping", () => {
               scriptInput,
               blaze,
               500_000_000_000n - 5_000_000n,
+              true,
             ),
           );
         });

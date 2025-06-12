@@ -19,7 +19,7 @@ import {
 import {
   coreValueToContractsValue,
   loadTreasuryScript,
-  loadVendorScript
+  loadVendorScript,
 } from "../../src/shared";
 import { withdraw } from "../../src/vendor/withdraw";
 import {
@@ -60,10 +60,12 @@ describe("When withdrawing from the vendor script", () => {
     const treasuryScriptManifest = loadTreasuryScript(
       Core.NetworkId.Testnet,
       treasuryConfig,
+      true,
     );
     const vendorScriptManifest = loadVendorScript(
       Core.NetworkId.Testnet,
       vendorConfig,
+      true,
     );
     config = vendorConfig;
     rewardAccount = treasuryScriptManifest.rewardAccount!;
@@ -241,6 +243,8 @@ describe("When withdrawing from the vendor script", () => {
             [scriptInput],
             vendorAddress,
             [vendorSigner],
+            undefined,
+            true,
           ),
         );
       });
@@ -257,6 +261,8 @@ describe("When withdrawing from the vendor script", () => {
             [secondScriptInput],
             vendorAddress,
             [vendorSigner],
+            undefined,
+            true,
           ),
         );
       });
@@ -273,6 +279,8 @@ describe("When withdrawing from the vendor script", () => {
             [fifthScriptInput],
             vendorAddress,
             [vendorSigner],
+            undefined,
+            true,
           ),
         );
       });
@@ -289,6 +297,8 @@ describe("When withdrawing from the vendor script", () => {
             [thirdScriptInput],
             vendorAddress,
             [vendorSigner],
+            undefined,
+            true,
           ),
         );
       });
@@ -305,6 +315,8 @@ describe("When withdrawing from the vendor script", () => {
             [thirdScriptInput],
             vendorAddress,
             [vendorSigner],
+            undefined,
+            true,
           ),
         );
       });
@@ -321,6 +333,8 @@ describe("When withdrawing from the vendor script", () => {
             [fourthScriptInput],
             vendorAddress,
             [vendorSigner],
+            undefined,
+            true,
           ),
         );
       });
@@ -338,6 +352,8 @@ describe("When withdrawing from the vendor script", () => {
             [scriptInput],
             vendorAddress,
             [vendorSigner],
+            undefined,
+            true,
           ),
         );
       });
@@ -639,6 +655,8 @@ describe("When withdrawing from the vendor script", () => {
             [scriptInput],
             signer,
             [Ed25519KeyHashHex(signer.asBase()!.getPaymentCredential().hash)],
+            undefined,
+            true,
           ),
           /Trace satisfied\(input_vendor_datum.vendor, extra_signatories, validity_range, withdrawals\)/,
         );

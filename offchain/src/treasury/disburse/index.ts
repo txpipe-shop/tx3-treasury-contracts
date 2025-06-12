@@ -32,9 +32,11 @@ export async function disburse<P extends Provider, W extends Wallet>(
   datum: Datum | undefined,
   signers: Ed25519KeyHashHex[],
   after: boolean = false,
+  trace?: boolean,
 ): Promise<TxBuilder> {
+  console.log("Disburse transaction started");
   const { script: treasuryScript, scriptAddress: treasuryScriptAddress } =
-    loadTreasuryScript(blaze.provider.network, configs.treasury);
+    loadTreasuryScript(blaze.provider.network, configs.treasury, trace);
   const registryInput = await blaze.provider.getUnspentOutputByNFT(
     AssetId(configs.treasury.registry_token + toHex(Buffer.from("REGISTRY"))),
   );

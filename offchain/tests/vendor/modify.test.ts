@@ -20,7 +20,7 @@ import {
 import {
   coreValueToContractsValue,
   loadTreasuryScript,
-  loadVendorScript
+  loadVendorScript,
 } from "../../src/shared";
 import { cancel, modify } from "../../src/vendor/modify";
 import {
@@ -68,10 +68,12 @@ describe("", () => {
     const treasuryScriptManifest = loadTreasuryScript(
       Core.NetworkId.Testnet,
       treasuryConfig,
+      true,
     );
     const vendorScriptManifest = loadVendorScript(
       Core.NetworkId.Testnet,
       vendorConfig,
+      true,
     );
     configs = { treasury: treasuryConfig, vendor: vendorConfig };
     rewardAccount = treasuryScriptManifest.rewardAccount!;
@@ -256,6 +258,7 @@ describe("", () => {
             scriptInput,
             fourthDatum,
             [modifySigner, vendorSigner],
+            true,
           );
         });
         await emulator.expectValidMultisignedTransaction(
@@ -276,6 +279,7 @@ describe("", () => {
             scriptInput,
             newVendorDatum,
             [modifySigner, vendorSigner, newVendorSigner],
+            true,
           );
         });
         emulator.expectValidMultisignedTransaction(
@@ -307,6 +311,7 @@ describe("", () => {
             scriptInput,
             new_datum,
             [modifySigner, vendorSigner],
+            true,
           );
         });
         await emulator.expectValidMultisignedTransaction(
@@ -338,6 +343,7 @@ describe("", () => {
             scriptInput,
             new_datum,
             [modifySigner, vendorSigner],
+            true,
           );
         });
         await emulator.expectValidMultisignedTransaction(
@@ -373,6 +379,7 @@ describe("", () => {
             fifthScriptInput,
             new_datum,
             [modifySigner, vendorSigner],
+            true,
           );
         });
         await emulator.expectValidMultisignedTransaction(
@@ -396,6 +403,7 @@ describe("", () => {
               scriptInput,
               newDatum,
               [modifySigner, newVendorSigner],
+              true,
             ),
             /Trace satisfied\(input_vendor_datum.vendor, extra_signatories, validity_range, withdrawals\)/,
           );
@@ -414,6 +422,7 @@ describe("", () => {
                 scriptInput,
                 newDatum,
                 [modifySigner, vendorSigner],
+                true,
               ),
               /Trace expect\s*satisfied\(v.vendor, extra_signatories, validity_range, withdrawals\)/,
             );
@@ -430,6 +439,7 @@ describe("", () => {
             new Date(Number(emulator.slotToUnix(Slot(0)))),
             scriptInput,
             [modifySigner, vendorSigner],
+            true,
           );
         });
         await emulator.expectValidMultisignedTransaction(
@@ -448,6 +458,7 @@ describe("", () => {
               new Date(Number(emulator.slotToUnix(Slot(0)))),
               scriptInput,
               [modifySigner],
+              true,
             ),
             /Trace satisfied\(input_vendor_datum.vendor, extra_signatories, validity_range, withdrawals\)/,
           );
@@ -487,6 +498,7 @@ describe("", () => {
               scriptInput,
               fourthDatum,
               [Ed25519KeyHashHex(await vendor_key(emulator))],
+              true,
             ),
             /Trace satisfied\(permissions.modify, extra_signatories, validity_range, withdrawals\)/,
           );
@@ -501,6 +513,7 @@ describe("", () => {
               new Date(Number(emulator.slotToUnix(Slot(0)))),
               scriptInput,
               [Ed25519KeyHashHex(signer.asBase()!.getPaymentCredential().hash)],
+              true,
             ),
             /Trace satisfied\(permissions.modify, extra_signatories, validity_range, withdrawals\)/,
           );
@@ -521,6 +534,7 @@ describe("", () => {
               fourthScriptInput,
               firstDatum,
               [Ed25519KeyHashHex(signer.asBase()!.getPaymentCredential().hash)],
+              true,
             ),
             /Trace expect\s*satisfied\(v.vendor, extra_signatories, validity_range, withdrawals\)/,
           );
@@ -535,6 +549,7 @@ describe("", () => {
               new Date(Number(emulator.slotToUnix(Slot(0)))),
               fourthScriptInput,
               [Ed25519KeyHashHex(signer.asBase()!.getPaymentCredential().hash)],
+              true,
             ),
             /Trace satisfied\(input_vendor_datum.vendor, extra_signatories, validity_range, withdrawals\)/,
           );

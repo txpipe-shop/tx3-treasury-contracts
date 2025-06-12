@@ -14,7 +14,7 @@ import {
 import {
   coreValueToContractsValue,
   loadTreasuryScript,
-  loadVendorScript
+  loadVendorScript,
 } from "../../src/shared";
 import { sweep } from "../../src/vendor/sweep";
 import {
@@ -55,10 +55,12 @@ describe("", () => {
     const treasuryScriptManifest = loadTreasuryScript(
       Core.NetworkId.Testnet,
       treasuryConfig,
+      true,
     );
     const vendorScriptManifest = loadVendorScript(
       Core.NetworkId.Testnet,
       vendorConfig,
+      true,
     );
     configs = { treasury: treasuryConfig, vendor: vendorConfig };
     now = new Date(Number(configs.vendor.expiration + 1000n));
@@ -242,6 +244,7 @@ describe("", () => {
               new Date(Number(emulator.slotToUnix(Slot(0)))),
               [scriptInput],
               blaze,
+              true,
             ),
             /Trace expect is_entirely_after\(validity_range, config.expiration\)/,
           );
@@ -262,7 +265,7 @@ describe("", () => {
           await emulator.as("Anyone", async (blaze) => {
             await emulator.expectValidTransaction(
               blaze,
-              await sweep(configs, now, [scriptInput], blaze),
+              await sweep(configs, now, [scriptInput], blaze, true),
             );
           });
         });
@@ -270,7 +273,7 @@ describe("", () => {
           await emulator.as("Anyone", async (blaze) => {
             await emulator.expectValidTransaction(
               blaze,
-              await sweep(configs, now, [fourthScriptInput], blaze),
+              await sweep(configs, now, [fourthScriptInput], blaze, true),
             );
           });
         });
@@ -278,7 +281,7 @@ describe("", () => {
           await emulator.as("Anyone", async (blaze) => {
             await emulator.expectValidTransaction(
               blaze,
-              await sweep(configs, now, [fifthScriptInput], blaze),
+              await sweep(configs, now, [fifthScriptInput], blaze, true),
             );
           });
         });

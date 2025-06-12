@@ -39,7 +39,7 @@ describe("When reorganizing", () => {
   beforeEach(async () => {
     emulator = await setupEmulator();
     config = await sampleTreasuryConfig(emulator);
-    const treasury = loadTreasuryScript(Core.NetworkId.Testnet, config);
+    const treasury = loadTreasuryScript(Core.NetworkId.Testnet, config, true);
     rewardAccount = treasury.rewardAccount!;
     treasuryScript = treasury.script;
     scriptAddress = treasury.scriptAddress;
@@ -94,6 +94,7 @@ describe("When reorganizing", () => {
             [scriptInput],
             [makeValue(100_000_000_000n), makeValue(400_000_000_000n)],
             [Ed25519KeyHashHex(await reorganize_key(emulator))],
+            true,
           ),
         );
       });
@@ -109,6 +110,7 @@ describe("When reorganizing", () => {
             [scriptInput, secondScriptInput],
             [makeValue(600_000_000_000n)],
             [Ed25519KeyHashHex(await reorganize_key(emulator))],
+            true,
           ),
         );
       });
@@ -128,6 +130,7 @@ describe("When reorganizing", () => {
               makeValue(200_000_000_000n),
             ],
             [Ed25519KeyHashHex(await reorganize_key(emulator))],
+            true,
           ),
         );
       });
@@ -143,6 +146,7 @@ describe("When reorganizing", () => {
             [scriptInput, thirdScriptInput],
             [makeValue(500_000_500_000n, ["a".repeat(56), 1n])],
             [Ed25519KeyHashHex(await reorganize_key(emulator))],
+            true,
           ),
         );
       });
@@ -158,6 +162,7 @@ describe("When reorganizing", () => {
             [thirdScriptInput],
             [makeValue(2_000_000n, ["a".repeat(56), 1n])],
             [Ed25519KeyHashHex(await reorganize_key(emulator))],
+            true,
           ),
         );
       });
@@ -339,6 +344,7 @@ describe("When reorganizing", () => {
             [scriptInput],
             [makeValue(100_000_000_000n), makeValue(400_000_000_000n)],
             [Ed25519KeyHashHex(address.asBase()!.getPaymentCredential().hash)],
+            true,
           ),
           /Trace satisfied\(config.permissions.reorganize/,
         );

@@ -8,10 +8,7 @@ import {
   VendorDatum,
   VendorSpendRedeemer,
 } from "../../src/generated-types/contracts";
-import {
-  coreValueToContractsValue,
-  loadScripts
-} from "../../src/shared";
+import { coreValueToContractsValue, loadScripts } from "../../src/shared";
 import {
   deployScripts,
   findRegistryInput,
@@ -42,12 +39,14 @@ describe("TxPipe Audit Findings", () => {
           Core.NetworkId.Testnet,
           await sampleTreasuryConfig(emulator, 1),
           await sampleVendorConfig(emulator, 1),
+          true,
         );
         await deployScripts(emulator, scripts_1);
         const scripts_2 = loadScripts(
           Core.NetworkId.Testnet,
           await sampleTreasuryConfig(emulator, 2),
           await sampleVendorConfig(emulator, 2),
+          true,
         );
         await deployScripts(emulator, scripts_2);
 
@@ -110,6 +109,7 @@ describe("TxPipe Audit Findings", () => {
           Core.NetworkId.Testnet,
           await sampleTreasuryConfig(emulator),
           await sampleVendorConfig(emulator),
+          true,
         );
         await deployScripts(emulator, scripts);
         const treasuryRefInput = emulator.lookupScript(
@@ -170,6 +170,7 @@ describe("TxPipe Audit Findings", () => {
           Core.NetworkId.Testnet,
           await sampleTreasuryConfig(emulator),
           await sampleVendorConfig(emulator),
+          true,
         );
         await deployScripts(emulator, scripts);
         const refInput = emulator.lookupScript(
@@ -267,6 +268,7 @@ describe("TxPipe Audit Findings", () => {
           Core.NetworkId.Testnet,
           await sampleTreasuryConfig(emulator),
           await sampleVendorConfig(emulator),
+          true,
         );
         await deployScripts(emulator, scripts);
         const refInput = emulator.lookupScript(
@@ -344,6 +346,7 @@ describe("TxPipe Audit Findings", () => {
           Core.NetworkId.Testnet,
           await sampleTreasuryConfig(emulator),
           await sampleVendorConfig(emulator),
+          true,
         );
         await deployScripts(emulator, scripts);
         const refInput = emulator.lookupScript(
@@ -428,12 +431,14 @@ describe("TxPipe Audit Findings", () => {
           Core.NetworkId.Testnet,
           await sampleTreasuryConfig(emulator, 1),
           await sampleVendorConfig(emulator, 1),
+          true,
         );
         await deployScripts(emulator, scripts_1);
         const scripts_2 = loadScripts(
           Core.NetworkId.Testnet,
           await sampleTreasuryConfig(emulator, 2),
           await sampleVendorConfig(emulator, 1), // Vendor script gets reused
+          true,
         );
         await deployScripts(emulator, scripts_2);
 
@@ -548,6 +553,7 @@ describe("TxPipe Audit Findings", () => {
           Core.NetworkId.Testnet,
           await sampleTreasuryConfig(emulator),
           await sampleVendorConfig(emulator),
+          true,
         );
         await deployScripts(emulator, scripts);
         const treasuryRefInput = emulator.lookupScript(
@@ -615,6 +621,7 @@ describe("TxPipe Audit Findings", () => {
           Core.NetworkId.Testnet,
           await sampleTreasuryConfig(emulator),
           await sampleVendorConfig(emulator),
+          true,
         );
         await deployScripts(emulator, scripts);
         const refInput = emulator.lookupScript(
@@ -718,6 +725,7 @@ describe("TxPipe Audit Findings", () => {
           Core.NetworkId.Testnet,
           await sampleTreasuryConfig(emulator),
           await sampleVendorConfig(emulator),
+          true,
         );
         await deployScripts(emulator, scripts);
 
@@ -769,6 +777,7 @@ describe("TxPipe Audit Findings", () => {
           Core.NetworkId.Testnet,
           await sampleTreasuryConfig(emulator),
           await sampleVendorConfig(emulator),
+          true,
         );
         await deployScripts(emulator, scripts);
         emulator.accounts.set(
@@ -807,6 +816,7 @@ describe("TxPipe Audit Findings", () => {
           Core.NetworkId.Testnet,
           await sampleTreasuryConfig(emulator),
           await sampleVendorConfig(emulator),
+          true,
         );
         await deployScripts(emulator, scripts);
 

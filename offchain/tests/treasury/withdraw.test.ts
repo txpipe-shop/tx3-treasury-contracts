@@ -30,7 +30,7 @@ describe("When withdrawing", () => {
   beforeEach(async () => {
     emulator = await setupEmulator();
     config = await sampleTreasuryConfig(emulator);
-    const treasury = loadTreasuryScript(Core.NetworkId.Testnet, config);
+    const treasury = loadTreasuryScript(Core.NetworkId.Testnet, config, true);
     rewardAccount = treasury.rewardAccount!;
     scriptAddress = treasury.scriptAddress;
     treasuryScript = treasury.script.Script;
@@ -52,7 +52,7 @@ describe("When withdrawing", () => {
       await emulator.as("Anyone", async (blaze) => {
         await emulator.expectValidTransaction(
           blaze,
-          await withdraw(config, [amount], blaze),
+          await withdraw(config, [amount], blaze, undefined, undefined, true),
         );
       });
     });

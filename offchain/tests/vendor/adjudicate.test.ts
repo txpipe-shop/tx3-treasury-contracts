@@ -60,10 +60,12 @@ describe("", () => {
     const treasuryScriptManifest = loadTreasuryScript(
       Core.NetworkId.Testnet,
       treasuryConfig,
+      true,
     );
     const vendorScriptManifest = loadVendorScript(
       Core.NetworkId.Testnet,
       vendorConfig,
+      true,
     );
     config = vendorConfig;
     rewardAccount = treasuryScriptManifest.rewardAccount!;
@@ -232,6 +234,8 @@ describe("", () => {
               scriptInput,
               ["Paused"],
               [pauseSigner],
+              undefined,
+              true,
             ),
           );
         });
@@ -247,6 +251,8 @@ describe("", () => {
               thirdScriptInput,
               ["Paused", "Paused", "Paused"],
               [pauseSigner],
+              undefined,
+              true,
             ),
           );
         });
@@ -262,6 +268,8 @@ describe("", () => {
               thirdScriptInput,
               ["Paused", "Active", "Paused"],
               [pauseSigner],
+              undefined,
+              true,
             ),
           );
         });
@@ -278,6 +286,8 @@ describe("", () => {
               thirdScriptInput,
               ["Active", "Paused", "Paused"],
               [pauseSigner],
+              undefined,
+              true,
             ),
           );
         });
@@ -295,6 +305,8 @@ describe("", () => {
               thirdScriptInput,
               ["Paused", "Active", "Active"],
               [pauseSigner],
+              undefined,
+              true,
             ),
             /if is_entirely_after\(validity_range, ip.maturation\) && ip.status == Active {/,
           );
@@ -313,6 +325,8 @@ describe("", () => {
               fourthScriptInput,
               ["Active", "Active", "Active"],
               [resumeSigner],
+              undefined,
+              true,
             ),
           );
         });
@@ -327,6 +341,8 @@ describe("", () => {
             fourthScriptInput,
             ["Paused", "Paused", "Paused"],
             [pauseSigner],
+            undefined,
+            true,
           );
           const completeTx = await tx.complete();
           const signedTx = await blaze.signTransaction(completeTx);
@@ -352,6 +368,8 @@ describe("", () => {
               newScriptInput,
               ["Paused", "Active", "Active"],
               [resumeSigner],
+              undefined,
+              true,
             ),
           );
         });
@@ -368,6 +386,8 @@ describe("", () => {
               fourthScriptInput,
               ["Active", "Active", "Active"],
               [resumeSigner],
+              undefined,
+              true,
             ),
           );
         });
@@ -383,6 +403,8 @@ describe("", () => {
             fourthScriptInput,
             ["Active", "Active", "Paused"],
             [resumeSigner, pauseSigner],
+            undefined,
+            true,
           );
         });
         await emulator.expectValidMultisignedTransaction([Resumer, Pauser], tx);
@@ -399,6 +421,8 @@ describe("", () => {
             fourthScriptInput,
             ["Active", "Paused", "Active"],
             [pauseSigner],
+            undefined,
+            true,
           ),
           /Trace or \{\n\s*pause_permission_needed\?,\s*resume_permission_needed\?,\s*}/,
         );
@@ -418,6 +442,8 @@ describe("", () => {
               fourthScriptInput,
               ["Active", "Paused", "Paused"],
               [Ed25519KeyHashHex(signer.asBase()!.getPaymentCredential().hash)],
+              undefined,
+              true,
             ),
             /Trace satisfied\(config.permissions.pause, extra_signatories, validity_range, withdrawals\)/,
           );
@@ -433,6 +459,8 @@ describe("", () => {
               fourthScriptInput,
               ["Active", "Active", "Active"],
               [Ed25519KeyHashHex(signer.asBase()!.getPaymentCredential().hash)],
+              undefined,
+              true,
             ),
             /Trace satisfied\(config.permissions.resume, extra_signatories, validity_range, withdrawals\)/,
           );

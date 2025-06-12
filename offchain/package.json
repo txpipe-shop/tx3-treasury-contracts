@@ -51,7 +51,7 @@
     "@babel/preset-env": "^7.27.2",
     "@babel/preset-typescript": "^7.27.1",
     "@blaze-cardano/emulator": "link:@blaze-cardano/emulator",
-    "@blaze-cardano/blueprint": "^0.6.0",
+    "@blaze-cardano/blueprint": "link:@blaze-cardano/blueprint",
     "@sundaeswap/babel-preset": "^2.0.15",
     "@sundaeswap/eslint-config": "^2.0.15",
     "@types/bun": "latest",

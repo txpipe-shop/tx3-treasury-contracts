@@ -11,10 +11,7 @@ import {
   VendorDatum,
   VendorSpendRedeemer,
 } from "../../src/generated-types/contracts";
-import {
-  coreValueToContractsValue,
-  loadScripts
-} from "../../src/shared";
+import { coreValueToContractsValue, loadScripts } from "../../src/shared";
 import {
   deployScripts,
   findRegistryInput,
@@ -46,11 +43,13 @@ describe("MLabs Audit Findings", () => {
         Core.NetworkId.Testnet,
         await sampleTreasuryConfig(emulator, 1),
         await sampleVendorConfig(emulator, 1),
+        true,
       );
       const treasuryConfig2 = loadScripts(
         Core.NetworkId.Testnet,
         await sampleTreasuryConfig(emulator, 2),
         await sampleVendorConfig(emulator, 2),
+        true,
       );
       const treasury1Input = scriptOutput(
         emulator,
@@ -116,6 +115,7 @@ describe("MLabs Audit Findings", () => {
         Core.NetworkId.Testnet,
         await sampleTreasuryConfig(emulator),
         await sampleVendorConfig(emulator),
+        true,
       );
       const treasuryInput = scriptOutput(
         emulator,
@@ -181,6 +181,7 @@ describe("MLabs Audit Findings", () => {
         Core.NetworkId.Testnet,
         await sampleTreasuryConfig(emulator),
         await sampleVendorConfig(emulator),
+        true,
       );
       await deployScripts(emulator, config);
 
@@ -300,6 +301,7 @@ describe("MLabs Audit Findings", () => {
         Core.NetworkId.Testnet,
         await sampleTreasuryConfig(emulator),
         await sampleVendorConfig(emulator),
+        true,
       );
       await deployScripts(emulator, configs);
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -329,6 +331,8 @@ describe("MLabs Audit Findings", () => {
             Core.Ed25519KeyHashHex(await fund_key(emulator)),
             Core.Ed25519KeyHashHex(await vendor_key(emulator)),
           ],
+          undefined,
+          true,
         );
         emulator.expectScriptFailure(tx, /Trace expect payout_count <= 24/);
       });
@@ -338,6 +342,7 @@ describe("MLabs Audit Findings", () => {
         Core.NetworkId.Testnet,
         await sampleTreasuryConfig(emulator),
         await sampleVendorConfig(emulator),
+        true,
       );
       await deployScripts(emulator, configs);
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -367,6 +372,8 @@ describe("MLabs Audit Findings", () => {
             Core.Ed25519KeyHashHex(await fund_key(emulator)),
             Core.Ed25519KeyHashHex(await vendor_key(emulator)),
           ],
+          undefined,
+          true,
         );
         emulator.expectScriptFailure(
           tx,
@@ -379,6 +386,7 @@ describe("MLabs Audit Findings", () => {
         Core.NetworkId.Testnet,
         await sampleTreasuryConfig(emulator),
         await sampleVendorConfig(emulator),
+        true,
       );
       await deployScripts(emulator, configs);
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -416,6 +424,7 @@ describe("MLabs Audit Findings", () => {
             Core.Ed25519KeyHashHex(await modify_key(emulator)),
             Core.Ed25519KeyHashHex(await vendor_key(emulator)),
           ],
+          true,
         );
         emulator.expectScriptFailure(tx, /Trace expect payout_count <= 24/);
       });
@@ -425,6 +434,7 @@ describe("MLabs Audit Findings", () => {
         Core.NetworkId.Testnet,
         await sampleTreasuryConfig(emulator),
         await sampleVendorConfig(emulator),
+        true,
       );
       await deployScripts(emulator, configs);
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -462,6 +472,7 @@ describe("MLabs Audit Findings", () => {
             Core.Ed25519KeyHashHex(await modify_key(emulator)),
             Core.Ed25519KeyHashHex(await vendor_key(emulator)),
           ],
+          true,
         );
         emulator.expectScriptFailure(
           tx,
@@ -477,6 +488,7 @@ describe("MLabs Audit Findings", () => {
         Core.NetworkId.Testnet,
         await sampleTreasuryConfig(emulator),
         await sampleVendorConfig(emulator),
+        true,
       );
       await deployScripts(emulator, scripts);
       const refInput = emulator.lookupScript(
@@ -571,6 +583,7 @@ describe("MLabs Audit Findings", () => {
         Core.NetworkId.Testnet,
         await sampleTreasuryConfig(emulator),
         await sampleVendorConfig(emulator),
+        true,
       );
       await deployScripts(emulator, config);
 
@@ -643,6 +656,7 @@ describe("MLabs Audit Findings", () => {
         Core.NetworkId.Testnet,
         await sampleTreasuryConfig(emulator),
         await sampleVendorConfig(emulator),
+        true,
       );
       await deployScripts(emulator, configs);
       const treasuryInput = scriptOutput(
@@ -676,6 +690,8 @@ describe("MLabs Audit Findings", () => {
               },
             ],
             [Ed25519KeyHashHex(await fund_key(emulator))],
+            undefined,
+            true,
           ),
           /Trace expect\s*satisfied\(v.vendor,/,
         );
@@ -686,6 +702,7 @@ describe("MLabs Audit Findings", () => {
         Core.NetworkId.Testnet,
         await sampleTreasuryConfig(emulator),
         await sampleVendorConfig(emulator),
+        true,
       );
       await deployScripts(emulator, configs);
       const treasuryInput = scriptOutput(
@@ -723,6 +740,8 @@ describe("MLabs Audit Findings", () => {
               Ed25519KeyHashHex(await fund_key(emulator)),
               Ed25519KeyHashHex(await vendor_key(emulator)),
             ],
+            undefined,
+            true,
           ),
           /Trace expect p.maturation <= config.payout_upperbound/,
         );
@@ -736,6 +755,7 @@ describe("MLabs Audit Findings", () => {
         Core.NetworkId.Testnet,
         await sampleTreasuryConfig(emulator),
         await sampleVendorConfig(emulator),
+        true,
       );
       await deployScripts(emulator, configs);
       const validVendor: MultisigScript = {
@@ -784,6 +804,7 @@ describe("MLabs Audit Findings", () => {
               Ed25519KeyHashHex(await fund_key(emulator)),
               Ed25519KeyHashHex(await vendor_key(emulator)),
             ],
+            true,
           ),
           /Trace expect\s*satisfied\(v.vendor,/,
         );
@@ -794,6 +815,7 @@ describe("MLabs Audit Findings", () => {
         Core.NetworkId.Testnet,
         await sampleTreasuryConfig(emulator),
         await sampleVendorConfig(emulator),
+        true,
       );
       await deployScripts(emulator, configs);
       const validVendor: MultisigScript = {
@@ -842,6 +864,7 @@ describe("MLabs Audit Findings", () => {
               Ed25519KeyHashHex(await fund_key(emulator)),
               Ed25519KeyHashHex(await vendor_key(emulator)),
             ],
+            true,
           ),
           // Note: becauae of the awkwardness of getting payout_upperbound into the vendor script
           // we accept the use of config.expiration here; this is envisioned to be a short time
@@ -860,6 +883,7 @@ describe("MLabs Audit Findings", () => {
         Core.NetworkId.Testnet,
         await sampleTreasuryConfig(emulator),
         await sampleVendorConfig(emulator),
+        true,
       );
       await deployScripts(emulator, scripts);
       const refInput = emulator.lookupScript(
@@ -935,6 +959,7 @@ describe("MLabs Audit Findings", () => {
         Core.NetworkId.Testnet,
         await sampleTreasuryConfig(emulator),
         await sampleVendorConfig(emulator),
+        true,
       );
       await deployScripts(emulator, scripts);
       const treasuryRefInput = emulator.lookupScript(
@@ -991,6 +1016,7 @@ describe("MLabs Audit Findings", () => {
         Core.NetworkId.Testnet,
         await sampleTreasuryConfig(emulator),
         await sampleVendorConfig(emulator),
+        true,
       );
       await deployScripts(emulator, scripts);
       const refInput = emulator.lookupScript(
@@ -1071,6 +1097,7 @@ describe("MLabs Audit Findings", () => {
         Core.NetworkId.Testnet,
         await sampleTreasuryConfig(emulator),
         await sampleVendorConfig(emulator),
+        true,
       );
       await deployScripts(emulator, scripts);
       const treasuryRefInput = emulator.lookupScript(
@@ -1174,6 +1201,7 @@ describe("MLabs Audit Findings", () => {
         Core.NetworkId.Testnet,
         await sampleTreasuryConfig(emulator),
         await sampleVendorConfig(emulator),
+        true,
       );
       await deployScripts(emulator, scripts);
 
@@ -1222,6 +1250,7 @@ describe("MLabs Audit Findings", () => {
         Core.NetworkId.Testnet,
         await sampleTreasuryConfig(emulator),
         await sampleVendorConfig(emulator),
+        true,
       );
       await deployScripts(emulator, scripts);
 

@@ -30,9 +30,10 @@ export async function adjudicate<P extends Provider, W extends Wallet>(
   statuses: PayoutStatus[],
   signers: Ed25519KeyHashHex[],
   metadata?: ITransactionMetadata<IPause | IResume>,
+  trace?: boolean,
 ): Promise<TxBuilder> {
   const { scriptAddress: vendorScriptAddress, script: vendorScript } =
-    loadVendorScript(blaze.provider.network, config);
+    loadVendorScript(blaze.provider.network, config, trace);
   const registryInput = await blaze.provider.getUnspentOutputByNFT(
     AssetId(config.registry_token + toHex(Buffer.from("REGISTRY"))),
   );

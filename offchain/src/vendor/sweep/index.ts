@@ -24,13 +24,15 @@ export async function sweep<P extends Provider, W extends Wallet>(
   now: Date,
   inputs: TransactionUnspentOutput[],
   blaze: Blaze<P, W>,
+  trace?: boolean,
 ): Promise<TxBuilder> {
   const { scriptAddress: treasuryScriptAddress } = loadTreasuryScript(
     blaze.provider.network,
     configs.treasury,
+    trace,
   );
   const { scriptAddress: vendorScriptAddress, script: vendorScript } =
-    loadVendorScript(blaze.provider.network, configs.vendor);
+    loadVendorScript(blaze.provider.network, configs.vendor, trace);
   const registryInput = await blaze.provider.getUnspentOutputByNFT(
     AssetId(configs.treasury.registry_token + toHex(Buffer.from("REGISTRY"))),
   );

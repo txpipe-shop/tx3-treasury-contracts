@@ -31,10 +31,12 @@ export async function withdraw<P extends Provider, W extends Wallet>(
   destination: Address,
   signers: Ed25519KeyHashHex[],
   metadata?: ITransactionMetadata<IWithdraw>,
+  trace?: boolean,
 ): Promise<TxBuilder> {
   const { script, scriptAddress } = loadVendorScript(
     blaze.provider.network,
     config,
+    trace,
   );
   const registryInput = await blaze.provider.getUnspentOutputByNFT(
     AssetId(config.registry_token + toHex(Buffer.from("REGISTRY"))),
