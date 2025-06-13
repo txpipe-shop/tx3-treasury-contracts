@@ -1,6 +1,7 @@
 import {
   AssetId,
   Ed25519KeyHashHex,
+  Script,
   Slot,
   toHex,
   TransactionUnspentOutput,
@@ -35,6 +36,8 @@ export interface IFundArgs<P extends Provider, W extends Wallet> {
   vendor: MultisigScript;
   schedule: { date: Date; amount: Value }[];
   signers: Ed25519KeyHashHex[];
+  treasuryScriptRef?: TransactionUnspentOutput;
+  treasuryScriptBytes?: Script;
 }
 
 export async function fund<P extends Provider, W extends Wallet>({
@@ -44,6 +47,8 @@ export async function fund<P extends Provider, W extends Wallet>({
   schedule,
   signers,
   vendor,
+  treasuryScriptRef,
+  treasuryScriptBytes,
 }: IFundArgs<P, W>): Promise<TxBuilder> {
   const { scriptAddress: vendorScriptAddress } = loadVendorScript(
     blaze.provider.network,
@@ -54,14 +59,24 @@ export async function fund<P extends Provider, W extends Wallet>({
   const registryInput = await blaze.provider.getUnspentOutputByNFT(
     AssetId(configs.treasury.registry_token + toHex(Buffer.from("REGISTRY"))),
   );
-  const refInput = await blaze.provider.resolveScriptRef(treasuryScript.Script);
-  if (!refInput)
-    throw new Error("Could not find treasury script reference on-chain");
+
   let tx = blaze
     .newTransaction()
     .setValidUntil(Slot(Number(configs.treasury.expiration / 1000n) - 1))
-    .addReferenceInput(registryInput)
-    .addReferenceInput(refInput);
+    .addReferenceInput(registryInput);
+
+  if (!treasuryScriptBytes) {
+    treasuryScriptRef ??= await blaze.provider.resolveScriptRef(
+      treasuryScript.Script,
+    );
+
+    if (!treasuryScriptRef) {
+      throw new Error("Could not find treasury script reference on-chain");
+    }
+    tx.addReferenceInput(treasuryScriptRef);
+  } else {
+    tx.provideScript(treasuryScriptBytes);
+  }
 
   for (const signer of signers) {
     tx = tx.addRequiredSigner(signer);

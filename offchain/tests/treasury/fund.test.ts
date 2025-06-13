@@ -228,6 +228,64 @@ describe("When funding", () => {
         });
         await emulator.expectValidMultisignedTransaction([Funder, Vendor], tx);
       });
+      test("can fund a new project by providing the treausry script bytes manually", async () => {
+        const tx = await emulator.as(Funder, async (blaze) => {
+          return fund({
+            configs,
+            blaze,
+            input: fourthScriptInput,
+            vendor,
+            schedule: [
+              {
+                date: new Date(Number(slot_to_unix(Slot(12)))),
+                amount: makeValue(0n, ["b".repeat(56), 50n]),
+              },
+            ],
+            signers: [
+              Ed25519KeyHashHex(await fund_key(emulator)),
+              Ed25519KeyHashHex(await vendor_key(emulator)),
+            ],
+            treasuryScriptBytes: treasuryScript.Script,
+          });
+        });
+
+        await emulator.expectValidMultisignedTransaction([Funder, Vendor], tx);
+      });
+      test("can fund a new project by providing the treausry script ref manually", async () => {
+        const tx = await emulator.as(Funder, async (blaze) => {
+          return fund({
+            configs,
+            blaze,
+            input: fourthScriptInput,
+            vendor,
+            schedule: [
+              {
+                date: new Date(Number(slot_to_unix(Slot(12)))),
+                amount: makeValue(0n, ["b".repeat(56), 50n]),
+              },
+            ],
+            signers: [
+              Ed25519KeyHashHex(await fund_key(emulator)),
+              Ed25519KeyHashHex(await vendor_key(emulator)),
+            ],
+            treasuryScriptRef: Core.TransactionUnspentOutput.fromCore([
+              {
+                index: 9,
+                txId: Core.TransactionId("0".repeat(64)),
+              },
+              {
+                address: Core.PaymentAddress(
+                  "addr_test1wza7ec20249sqg87yu2aqkqp735qa02q6yd93u28gzul93gvc4wuw",
+                ),
+                value: new Core.Value(5000001n).toCore(),
+                scriptReference: treasuryScript.Script.asPlutusV3()?.toCore(),
+              },
+            ]),
+          });
+        });
+
+        await emulator.expectValidMultisignedTransaction([Funder, Vendor], tx);
+      });
       test("can fund a new project with *only* native tokens", async () => {
         const tx = await emulator.as(Funder, async (blaze) => {
           return fund({
