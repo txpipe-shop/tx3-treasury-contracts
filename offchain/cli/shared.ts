@@ -67,14 +67,16 @@ export async function getSigners(
     }
 
     if ("atLeast" in permission) {
-      return await getSignersFromList(
-        permission.atLeast.scripts,
-        Number(permission.atLeast.required),
+      signers.push(
+        ...(await getSignersFromList(
+          permission.atLeast.scripts,
+          Number(permission.atLeast.required),
+        )),
       );
     }
 
     if ("anyOf" in permission) {
-      return await getSignersFromList(permission.anyOf.scripts, 1);
+      signers.push(...(await getSignersFromList(permission.anyOf.scripts, 1)));
     }
 
     if ("allOf" in permission) {
