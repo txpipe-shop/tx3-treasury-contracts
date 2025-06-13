@@ -5,12 +5,13 @@ import {
   MetadatumMap,
 } from "@blaze-cardano/core";
 import { decodeFirst } from "cbor";
-import { IPause, IResume } from "./types/adjudicate";
-import { ETransactionEvent } from "./types/events";
-import { IFund } from "./types/fund";
-import { IInitialize } from "./types/initialize-reorganize";
-import { INewInstance } from "./types/new-instance";
-import { IWithdraw } from "./types/withdraw";
+
+import { IPause, IResume } from "./types/adjudicate.js";
+import { ETransactionEvent } from "./types/events.js";
+import { IFund } from "./types/fund.js";
+import { IInitialize } from "./types/initialize-reorganize.js";
+import { INewInstance } from "./types/new-instance.js";
+import { IWithdraw } from "./types/withdraw.js";
 
 export interface IAnchor {
   anchorUrl: string;

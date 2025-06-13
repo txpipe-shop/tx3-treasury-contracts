@@ -1,5 +1,5 @@
-import { IAnchor, IMetadataBodyBase } from "../shared";
-import { ETransactionEvent } from "./events";
+import { IAnchor, IMetadataBodyBase } from "../shared.js";
+import { ETransactionEvent } from "./events.js";
 
 export interface IAnchorWithLabel extends IAnchor {
   label: string;

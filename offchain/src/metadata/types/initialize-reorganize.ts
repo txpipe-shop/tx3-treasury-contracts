@@ -1,5 +1,5 @@
-import { IMetadataBodyBase } from "../shared";
-import { ETransactionEvent } from "./events";
+import { IMetadataBodyBase } from "../shared.js";
+import { ETransactionEvent } from "./events.js";
 
 export interface IOutput {
   identifier: string;
