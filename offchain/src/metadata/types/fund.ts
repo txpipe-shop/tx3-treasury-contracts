@@ -1,4 +1,5 @@
 import { IAnchor, IMetadataBodyBase } from "../shared";
+import { ETransactionEvent } from "./events";
 
 export interface IVendor {
   label: string;
@@ -14,7 +15,7 @@ export interface IMilestone {
 }
 
 export interface IFund extends IMetadataBodyBase {
-  event: "fund";
+  event: ETransactionEvent.FUND;
   identifier: string;
   otherIdentifiers: string[];
   label: string;

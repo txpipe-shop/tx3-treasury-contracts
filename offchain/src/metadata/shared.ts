@@ -5,6 +5,12 @@ import {
   MetadatumMap,
 } from "@blaze-cardano/core";
 import { decodeFirst } from "cbor";
+import { IPause, IResume } from "./types/adjudicate";
+import { ETransactionEvent } from "./types/events";
+import { IFund } from "./types/fund";
+import { IInitialize } from "./types/initialize-reorganize";
+import { INewInstance } from "./types/new-instance";
+import { IWithdraw } from "./types/withdraw";
 
 export interface IAnchor {
   anchorUrl: string;
@@ -12,13 +18,21 @@ export interface IAnchor {
 }
 
 export interface IMetadataBodyBase {
-  event: string;
+  event: ETransactionEvent;
 }
 
-export interface ITransactionMetadata<MB = IMetadataBodyBase> {
+export type TMetadataBody =
+  | IPause
+  | IResume
+  | IFund
+  | IInitialize
+  | IWithdraw
+  | INewInstance;
+
+export interface ITransactionMetadata<B = TMetadataBody> {
   "@context": string;
   hashAlgorithm: "blake2b-256";
-  body: MB;
+  body: B;
   comment?: string;
   txAuthor: string;
   instance: string;

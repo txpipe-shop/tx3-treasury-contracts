@@ -5,11 +5,11 @@ import {
   ITransactionMetadata,
   toTxMetadata,
 } from "src/metadata/shared";
-import { INewInstance } from "src/metadata/types/new-instance";
+import { ETransactionEvent } from "src/metadata/types/events";
 
-const exampleMetadata: ITransactionMetadata<INewInstance> = {
+const exampleMetadata: ITransactionMetadata = {
   body: {
-    event: "publish",
+    event: ETransactionEvent.PUBLISH,
     label: "Sample Instance 12",
     seed_utxo: {
       output_index: 1n,

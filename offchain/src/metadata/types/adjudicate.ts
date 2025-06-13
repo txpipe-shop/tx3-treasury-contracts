@@ -1,4 +1,5 @@
 import { IMetadataBodyBase } from "../shared";
+import { ETransactionEvent } from "./events";
 
 export interface IMilestone {
   reason: string;
@@ -10,9 +11,9 @@ interface IAdjudicate extends IMetadataBodyBase {
 }
 
 export interface IPause extends IAdjudicate {
-  event: "pause";
+  event: ETransactionEvent.PAUSE;
 }
 
 export interface IResume extends IAdjudicate {
-  event: "resume";
+  event: ETransactionEvent.RESUME;
 }

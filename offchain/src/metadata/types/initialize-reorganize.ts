@@ -1,4 +1,5 @@
 import { IMetadataBodyBase } from "../shared";
+import { ETransactionEvent } from "./events";
 
 export interface IOutput {
   identifier: string;
@@ -11,9 +12,9 @@ interface IInitializeReorganize extends IMetadataBodyBase {
 }
 
 export interface IInitialize extends IInitializeReorganize {
-  event: "initialize";
+  event: ETransactionEvent.INITIALIZE;
 }
 
 export interface IReorganize extends IInitializeReorganize {
-  event: "reorganize";
+  event: ETransactionEvent.REORGANIZE;
 }
