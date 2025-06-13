@@ -28,14 +28,23 @@ import {
   loadVendorScript,
 } from "../../shared";
 
-export async function fund<P extends Provider, W extends Wallet>(
-  configs: { treasury: TreasuryConfiguration; vendor: VendorConfiguration },
-  blaze: Blaze<P, W>,
-  input: TransactionUnspentOutput,
-  vendor: MultisigScript,
-  schedule: { date: Date; amount: Value }[],
-  signers: Ed25519KeyHashHex[],
-): Promise<TxBuilder> {
+export interface IFundArgs<P extends Provider, W extends Wallet> {
+  configs: { treasury: TreasuryConfiguration; vendor: VendorConfiguration };
+  blaze: Blaze<P, W>;
+  input: TransactionUnspentOutput;
+  vendor: MultisigScript;
+  schedule: { date: Date; amount: Value }[];
+  signers: Ed25519KeyHashHex[];
+}
+
+export async function fund<P extends Provider, W extends Wallet>({
+  blaze,
+  configs,
+  input,
+  schedule,
+  signers,
+  vendor,
+}: IFundArgs<P, W>): Promise<TxBuilder> {
   const { scriptAddress: vendorScriptAddress } = loadVendorScript(
     blaze.provider.network,
     configs.vendor,

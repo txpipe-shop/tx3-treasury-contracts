@@ -4,7 +4,7 @@ import {
   fromTxMetadata,
   ITransactionMetadata,
   toTxMetadata,
-} from "src/metadata/shared";
+} from "../../src/metadata/shared.js";
 
 const exampleMetadata: ITransactionMetadata = {
   "@context": "example",
