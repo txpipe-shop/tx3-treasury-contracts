@@ -19,6 +19,7 @@ import {
   type TreasuryTreasuryWithdraw,
 } from "../../src/generated-types/contracts";
 import {
+  constructScripts,
   loadTreasuryScript,
   loadVendorScript,
   slot_to_unix,
@@ -230,8 +231,16 @@ describe("When funding", () => {
       });
       test("can fund a new project by providing the treausry script bytes manually", async () => {
         const tx = await emulator.as(Funder, async (blaze) => {
+          const scripts = constructScripts(
+            Core.NetworkId.Testnet,
+            configs.treasury,
+            treasuryScript.Script,
+            configs.vendor,
+            vendorScript.Script,
+          );
           return fund({
             configs,
+            scripts,
             blaze,
             input: fourthScriptInput,
             vendor,
@@ -245,7 +254,6 @@ describe("When funding", () => {
               Ed25519KeyHashHex(await fund_key(emulator)),
               Ed25519KeyHashHex(await vendor_key(emulator)),
             ],
-            treasuryScriptBytes: treasuryScript.Script,
           });
         });
 
@@ -253,22 +261,13 @@ describe("When funding", () => {
       });
       test("can fund a new project by providing the treausry script ref manually", async () => {
         const tx = await emulator.as(Funder, async (blaze) => {
-          return fund({
-            configs,
-            blaze,
-            input: fourthScriptInput,
-            vendor,
-            schedule: [
-              {
-                date: new Date(Number(slot_to_unix(Slot(12)))),
-                amount: makeValue(0n, ["b".repeat(56), 50n]),
-              },
-            ],
-            signers: [
-              Ed25519KeyHashHex(await fund_key(emulator)),
-              Ed25519KeyHashHex(await vendor_key(emulator)),
-            ],
-            treasuryScriptRef: Core.TransactionUnspentOutput.fromCore([
+          const scripts = constructScripts(
+            Core.NetworkId.Testnet,
+            configs.treasury,
+            treasuryScript.Script,
+            configs.vendor,
+            vendorScript.Script,
+            Core.TransactionUnspentOutput.fromCore([
               {
                 index: 9,
                 txId: Core.TransactionId("0".repeat(64)),
@@ -281,6 +280,23 @@ describe("When funding", () => {
                 scriptReference: treasuryScript.Script.asPlutusV3()?.toCore(),
               },
             ]),
+          );
+          return fund({
+            configs,
+            scripts,
+            blaze,
+            input: fourthScriptInput,
+            vendor,
+            schedule: [
+              {
+                date: new Date(Number(slot_to_unix(Slot(12)))),
+                amount: makeValue(0n, ["b".repeat(56), 50n]),
+              },
+            ],
+            signers: [
+              Ed25519KeyHashHex(await fund_key(emulator)),
+              Ed25519KeyHashHex(await vendor_key(emulator)),
+            ],
           });
         });
 

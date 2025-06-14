@@ -1,7 +1,6 @@
 import {
   AssetId,
   Ed25519KeyHashHex,
-  Script,
   Slot,
   toHex,
   TransactionUnspentOutput,
@@ -27,8 +26,6 @@ import {
   coreValueToContractsValue,
   ICompiledScripts,
   loadScripts,
-  loadTreasuryScript,
-  loadVendorScript,
 } from "../../shared";
 
 export interface IFundArgs<P extends Provider, W extends Wallet> {
