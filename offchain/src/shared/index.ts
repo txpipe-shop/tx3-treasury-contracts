@@ -4,7 +4,9 @@ import { type Cardano } from "@cardano-sdk/core";
 import {
   Address,
   RewardAccount,
+  Script,
   Slot,
+  TransactionUnspentOutput,
   Value,
   type CredentialCore,
 } from "@blaze-cardano/core";
@@ -21,16 +23,27 @@ export interface ICompiledScript<T, C> {
   credential: CredentialCore;
   rewardAccount?: RewardAccount;
   scriptAddress: Address;
+  scriptRef?: TransactionUnspentOutput;
 }
 
 export function loadTreasuryScript(
   network: Core.NetworkId,
   config: TreasuryConfiguration,
+  scriptRef?: TransactionUnspentOutput,
 ): ICompiledScript<TreasuryTreasuryWithdraw, TreasuryConfiguration> {
   const script = new TreasuryTreasuryWithdraw(config);
+  return constructTreasuryScript(network, config, script.Script, scriptRef);
+}
+
+export function constructTreasuryScript(
+  network: Core.NetworkId,
+  config: TreasuryConfiguration,
+  script: Script,
+  scriptRef?: TransactionUnspentOutput,
+): ICompiledScript<TreasuryTreasuryWithdraw, TreasuryConfiguration> {
   const credential: Cardano.Credential = {
     type: Core.CredentialType.ScriptHash,
-    hash: script.Script.hash(),
+    hash: script.hash(),
   };
   const rewardAccount = Core.RewardAccount.fromCredential(credential, network);
   const scriptAddress = new Core.Address({
@@ -39,23 +52,39 @@ export function loadTreasuryScript(
     paymentPart: credential,
     delegationPart: credential,
   });
+  if (scriptRef && scriptRef?.output()?.scriptRef()?.hash() !== script.hash()) {
+    throw new Error("Script ref points to the wrong script!");
+  }
   return {
     config,
-    script,
+    script: {
+      Script: script,
+    },
     credential,
     rewardAccount,
     scriptAddress,
+    scriptRef,
   };
 }
 
 export function loadVendorScript(
   network: Core.NetworkId,
   config: VendorConfiguration,
+  scriptRef?: TransactionUnspentOutput,
 ): ICompiledScript<VendorVendorSpend, VendorConfiguration> {
   const script = new VendorVendorSpend(config);
+  return constructVendorScript(network, config, script.Script, scriptRef);
+}
+
+export function constructVendorScript(
+  network: Core.NetworkId,
+  config: VendorConfiguration,
+  script: Script,
+  scriptRef?: TransactionUnspentOutput,
+): ICompiledScript<VendorVendorSpend, VendorConfiguration> {
   const credential: Cardano.Credential = {
     type: Core.CredentialType.ScriptHash,
-    hash: script.Script.hash(),
+    hash: script.hash(),
   };
   const scriptAddress = new Core.Address({
     type: Core.AddressType.BasePaymentScriptStakeScript,
@@ -63,11 +92,17 @@ export function loadVendorScript(
     paymentPart: credential,
     delegationPart: credential,
   });
+  if (scriptRef && scriptRef?.output()?.scriptRef()?.hash() !== script.hash()) {
+    throw new Error("Script ref points to the wrong script!");
+  }
   return {
     config,
-    script,
+    script: {
+      Script: script,
+    },
     credential,
     scriptAddress,
+    scriptRef,
   };
 }
 
@@ -90,6 +125,30 @@ export function loadScripts(
     treasuryScript,
     vendorScript,
   };
+}
+
+export function constructScripts(
+  network: Core.NetworkId,
+  treasuryConfig: TreasuryConfiguration,
+  rawTreasuryScript: Script,
+  vendorConfig: VendorConfiguration,
+  rawVendorScript: Script,
+  treasuryScriptRef?: TransactionUnspentOutput,
+  vendorScriptRef?: TransactionUnspentOutput,
+): ICompiledScripts {
+  const treasuryScript = constructTreasuryScript(
+    network,
+    treasuryConfig,
+    rawTreasuryScript,
+    treasuryScriptRef,
+  );
+  const vendorScript = constructVendorScript(
+    network,
+    vendorConfig,
+    rawVendorScript,
+    vendorScriptRef,
+  );
+  return { treasuryScript, vendorScript };
 }
 
 export function unix_to_slot(unix: bigint): Slot {
