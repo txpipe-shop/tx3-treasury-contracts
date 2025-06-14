@@ -19,7 +19,7 @@ export async function sweep<P extends Provider, W extends Wallet>(
   input: TransactionUnspentOutput,
   blaze: Blaze<P, W>,
   amount?: bigint,
-  trace?: boolean,
+  _trace?: boolean,
 ): Promise<TxBuilder> {
   amount ??= input.output().amount().coin();
   const { script, scriptAddress } = loadTreasuryScript(
