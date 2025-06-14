@@ -14,14 +14,18 @@ import {
   type Provider,
   type Wallet,
 } from "@blaze-cardano/sdk";
-import { ITransactionMetadata, toTxMetadata } from "src/metadata/shared";
-import { IWithdraw } from "src/metadata/types/withdraw";
+
 import {
   VendorConfiguration,
   VendorDatum,
   VendorSpendRedeemer,
-} from "../../generated-types/contracts";
-import { contractsValueToCoreValue, loadVendorScript } from "../../shared";
+} from "../../generated-types/contracts.js";
+import { ITransactionMetadata, toTxMetadata } from "../../metadata/shared.js";
+import { IWithdraw } from "../../metadata/types/withdraw.js";
+import {
+  contractsValueToCoreValue,
+  loadVendorScript,
+} from "../../shared/index.js";
 
 export async function withdraw<P extends Provider, W extends Wallet>(
   config: VendorConfiguration,

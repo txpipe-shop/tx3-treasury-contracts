@@ -19,6 +19,7 @@ import {
   type TreasuryTreasuryWithdraw,
 } from "../../src/generated-types/contracts";
 import {
+  constructScripts,
   loadTreasuryScript,
   loadVendorScript,
   coreValueToContractsValue as translateValue,
@@ -39,7 +40,11 @@ describe("When funding", () => {
   const amount = 340_000_000_000_000n;
 
   let emulator: Emulator;
-  let configs: { treasury: TreasuryConfiguration; vendor: VendorConfiguration };
+  let configs: {
+    treasury: TreasuryConfiguration;
+    vendor: VendorConfiguration;
+    trace: boolean;
+  };
   let scriptInput: Core.TransactionUnspentOutput;
   let secondScriptInput: Core.TransactionUnspentOutput;
   let thirdScriptInput: Core.TransactionUnspentOutput;
@@ -66,7 +71,7 @@ describe("When funding", () => {
       vendorConfig,
       true,
     );
-    configs = { treasury: treasuryConfig, vendor: vendorConfig };
+    configs = { treasury: treasuryConfig, vendor: vendorConfig, trace: true };
     rewardAccount = treasuryScriptManifest.rewardAccount!;
     treasuryScript = treasuryScriptManifest.script;
     vendorScript = vendorScriptManifest.script;
@@ -139,58 +144,54 @@ describe("When funding", () => {
     describe("before the expiration", async () => {
       test("can fund a new project", async () => {
         const tx = await emulator.as(Funder, async (blaze) => {
-          return fund(
+          return fund({
             configs,
             blaze,
-            scriptInput,
+            input: scriptInput,
             vendor,
-            [
+            schedule: [
               {
                 date: new Date(Number(emulator.slotToUnix(Slot(10)))),
                 amount: makeValue(10_000_000_000n),
               },
             ],
-            [
+            signers: [
               Ed25519KeyHashHex(await fund_key(emulator)),
               Ed25519KeyHashHex(await vendor_key(emulator)),
             ],
-            undefined,
-            true,
-          );
+          });
         });
         await emulator.expectValidMultisignedTransaction([Funder, Vendor], tx);
       });
       test("can fund a new project without change", async () => {
         const tx = await emulator.as(Funder, async (blaze) => {
-          return fund(
+          return fund({
             configs,
             blaze,
-            scriptInput,
+            input: scriptInput,
             vendor,
-            [
+            schedule: [
               {
                 date: new Date(Number(emulator.slotToUnix(Slot(10)))),
                 amount: makeValue(500_000_000_000n),
               },
             ],
-            [
+            signers: [
               Ed25519KeyHashHex(await fund_key(emulator)),
               Ed25519KeyHashHex(await vendor_key(emulator)),
             ],
-            undefined,
-            true,
-          );
+          });
         });
         await emulator.expectValidMultisignedTransaction([Funder, Vendor], tx);
       });
       test("can fund a new project with multiple payouts", async () => {
         const tx = await emulator.as(Funder, async (blaze) => {
-          return fund(
+          return fund({
             configs,
             blaze,
-            scriptInput,
+            input: scriptInput,
             vendor,
-            [
+            schedule: [
               {
                 date: new Date(Number(emulator.slotToUnix(Slot(10)))),
                 amount: makeValue(250_000_000_000n),
@@ -200,24 +201,22 @@ describe("When funding", () => {
                 amount: makeValue(250_000_000_000n),
               },
             ],
-            [
+            signers: [
               Ed25519KeyHashHex(await fund_key(emulator)),
               Ed25519KeyHashHex(await vendor_key(emulator)),
             ],
-            undefined,
-            true,
-          );
+          });
         });
         await emulator.expectValidMultisignedTransaction([Funder, Vendor], tx);
       });
       test("can fund a new project with native tokens", async () => {
         const tx = await emulator.as(Funder, async (blaze) => {
-          return fund(
+          return fund({
             configs,
             blaze,
-            fourthScriptInput,
+            input: fourthScriptInput,
             vendor,
-            [
+            schedule: [
               {
                 date: new Date(Number(emulator.slotToUnix(Slot(10)))),
                 amount: makeValue(10_000_000n),
@@ -227,47 +226,116 @@ describe("When funding", () => {
                 amount: makeValue(10_000_000n, ["b".repeat(56), 50n]),
               },
             ],
-            [
+            signers: [
               Ed25519KeyHashHex(await fund_key(emulator)),
               Ed25519KeyHashHex(await vendor_key(emulator)),
             ],
-            undefined,
-            true,
-          );
+          });
         });
         await emulator.expectValidMultisignedTransaction([Funder, Vendor], tx);
       });
-      test("can fund a new project with *only* native tokens", async () => {
+      test("can fund a new project by providing the treausry script bytes manually", async () => {
         const tx = await emulator.as(Funder, async (blaze) => {
-          return fund(
+          const scripts = constructScripts(
+            Core.NetworkId.Testnet,
+            configs.treasury,
+            treasuryScript.Script,
+            configs.vendor,
+            vendorScript.Script,
+          );
+          return fund({
             configs,
+            scripts,
             blaze,
-            fourthScriptInput,
+            input: fourthScriptInput,
             vendor,
-            [
+            schedule: [
               {
                 date: new Date(Number(emulator.slotToUnix(Slot(12)))),
                 amount: makeValue(0n, ["b".repeat(56), 50n]),
               },
             ],
-            [
+            signers: [
               Ed25519KeyHashHex(await fund_key(emulator)),
               Ed25519KeyHashHex(await vendor_key(emulator)),
             ],
-            undefined,
-            true,
+          });
+        });
+
+        await emulator.expectValidMultisignedTransaction([Funder, Vendor], tx);
+      });
+      test("can fund a new project by providing the treausry script ref manually", async () => {
+        const tx = await emulator.as(Funder, async (blaze) => {
+          const scripts = constructScripts(
+            Core.NetworkId.Testnet,
+            configs.treasury,
+            treasuryScript.Script,
+            configs.vendor,
+            vendorScript.Script,
+            Core.TransactionUnspentOutput.fromCore([
+              {
+                index: 9,
+                txId: Core.TransactionId("0".repeat(64)),
+              },
+              {
+                address: Core.PaymentAddress(
+                  "addr_test1wza7ec20249sqg87yu2aqkqp735qa02q6yd93u28gzul93gvc4wuw",
+                ),
+                value: new Core.Value(5000001n).toCore(),
+                scriptReference: treasuryScript.Script.asPlutusV3()?.toCore(),
+              },
+            ]),
           );
+          return fund({
+            configs,
+            scripts,
+            blaze,
+            input: fourthScriptInput,
+            vendor,
+            schedule: [
+              {
+                date: new Date(Number(emulator.slotToUnix(Slot(12)))),
+                amount: makeValue(0n, ["b".repeat(56), 50n]),
+              },
+            ],
+            signers: [
+              Ed25519KeyHashHex(await fund_key(emulator)),
+              Ed25519KeyHashHex(await vendor_key(emulator)),
+            ],
+          });
+        });
+
+        await emulator.expectValidMultisignedTransaction([Funder, Vendor], tx);
+      });
+      test("can fund a new project with *only* native tokens", async () => {
+        const tx = await emulator.as(Funder, async (blaze) => {
+          return fund({
+            configs,
+            blaze,
+            input: fourthScriptInput,
+            vendor,
+            schedule: [
+              {
+                date: new Date(Number(emulator.slotToUnix(Slot(12)))),
+                amount: makeValue(0n, ["b".repeat(56), 50n]),
+              },
+            ],
+            signers: [
+              Ed25519KeyHashHex(await fund_key(emulator)),
+              Ed25519KeyHashHex(await vendor_key(emulator)),
+            ],
+          });
         });
         await emulator.expectValidMultisignedTransaction([Funder, Vendor], tx);
       });
       test("can fund a new project with minUtXO problems", async () => {
         const tx = await emulator.as(Funder, async (blaze) => {
-          return fund(
+          return fund({
             configs,
             blaze,
-            fourthScriptInput,
+            input: fourthScriptInput,
             vendor,
-            [
+            schedule: [
               {
                 date: new Date(Number(emulator.slotToUnix(Slot(10)))),
                 amount: makeValue(25_000_000n),
@@ -277,13 +345,11 @@ describe("When funding", () => {
                 amount: makeValue(25_000_000n, ["b".repeat(56), 50n]),
               },
             ],
-            [
+            signers: [
               Ed25519KeyHashHex(await fund_key(emulator)),
               Ed25519KeyHashHex(await vendor_key(emulator)),
             ],
-            undefined,
-            true,
-          );
+          });
         });
         await emulator.expectValidMultisignedTransaction([Funder, Vendor], tx);
       });
@@ -633,24 +699,22 @@ describe("When funding", () => {
     test("cannot fund projects", async () => {
       await emulator.as("MaliciousUser", async (blaze, address) => {
         await emulator.expectScriptFailure(
-          await fund(
+          await fund({
             configs,
             blaze,
-            scriptInput,
+            input: scriptInput,
             vendor,
-            [
+            schedule: [
               {
                 date: new Date(Number(emulator.slotToUnix(Slot(10)))),
                 amount: makeValue(10_000_000_000n),
               },
             ],
-            [
+            signers: [
               Ed25519KeyHashHex(address.asBase()!.getPaymentCredential().hash),
               Ed25519KeyHashHex(await vendor_key(emulator)),
             ],
-            undefined,
-            true,
-          ),
+          }),
           /Trace satisfied\(permissions.fund/,
         );
       });

@@ -1,18 +1,20 @@
-import { Core, makeValue } from "@blaze-cardano/sdk";
-import { type Cardano } from "@cardano-sdk/core";
-
 import {
   Address,
   RewardAccount,
+  Script,
+  TransactionUnspentOutput,
   Value,
   type CredentialCore,
 } from "@blaze-cardano/core";
+import { cborToScript, Core, makeValue } from "@blaze-cardano/sdk";
+import { type Cardano } from "@cardano-sdk/core";
+
 import {
   TreasuryConfiguration,
   TreasuryTreasuryWithdraw,
   VendorConfiguration,
   VendorVendorSpend,
-} from "../generated-types/contracts";
+} from "../generated-types/contracts.js";
 
 export interface ICompiledScript<T, C> {
   config: C;
@@ -20,17 +22,42 @@ export interface ICompiledScript<T, C> {
   credential: CredentialCore;
   rewardAccount?: RewardAccount;
   scriptAddress: Address;
+  scriptRef?: TransactionUnspentOutput;
 }
 
 export function loadTreasuryScript(
   network: Core.NetworkId,
   config: TreasuryConfiguration,
   trace?: boolean,
+  scriptRef?: TransactionUnspentOutput,
 ): ICompiledScript<TreasuryTreasuryWithdraw, TreasuryConfiguration> {
   const script = new TreasuryTreasuryWithdraw(config, trace);
+  return constructTreasuryScript(network, config, script.Script, scriptRef);
+}
+
+export function constructTreasuryScriptFromBytes(
+  network: Core.NetworkId,
+  config: TreasuryConfiguration,
+  scriptBytesHex: string,
+  scriptRef?: TransactionUnspentOutput,
+): ICompiledScript<TreasuryTreasuryWithdraw, TreasuryConfiguration> {
+  return constructTreasuryScript(
+    network,
+    config,
+    cborToScript(scriptBytesHex, "PlutusV3"),
+    scriptRef,
+  );
+}
+
+export function constructTreasuryScript(
+  network: Core.NetworkId,
+  config: TreasuryConfiguration,
+  script: Script,
+  scriptRef?: TransactionUnspentOutput,
+): ICompiledScript<TreasuryTreasuryWithdraw, TreasuryConfiguration> {
   const credential: Cardano.Credential = {
     type: Core.CredentialType.ScriptHash,
-    hash: script.Script.hash(),
+    hash: script.hash(),
   };
   const rewardAccount = Core.RewardAccount.fromCredential(credential, network);
   const scriptAddress = new Core.Address({
@@ -39,12 +66,18 @@ export function loadTreasuryScript(
     paymentPart: credential,
     delegationPart: credential,
   });
+  if (scriptRef && scriptRef?.output()?.scriptRef()?.hash() !== script.hash()) {
+    throw new Error("Script ref points to the wrong script!");
+  }
   return {
     config,
-    script,
+    script: {
+      Script: script,
+    },
     credential,
     rewardAccount,
     scriptAddress,
+    scriptRef,
   };
 }
 
@@ -52,11 +85,35 @@ export function loadVendorScript(
   network: Core.NetworkId,
   config: VendorConfiguration,
   trace?: boolean,
+  scriptRef?: TransactionUnspentOutput,
 ): ICompiledScript<VendorVendorSpend, VendorConfiguration> {
   const script = new VendorVendorSpend(config, trace);
+  return constructVendorScript(network, config, script.Script, scriptRef);
+}
+
+export function constructVendorScriptFromBytes(
+  network: Core.NetworkId,
+  config: VendorConfiguration,
+  scriptBytesHex: string,
+  scriptRef?: TransactionUnspentOutput,
+): ICompiledScript<VendorVendorSpend, VendorConfiguration> {
+  return constructVendorScript(
+    network,
+    config,
+    cborToScript(scriptBytesHex, "PlutusV3"),
+    scriptRef,
+  );
+}
+
+export function constructVendorScript(
+  network: Core.NetworkId,
+  config: VendorConfiguration,
+  script: Script,
+  scriptRef?: TransactionUnspentOutput,
+): ICompiledScript<VendorVendorSpend, VendorConfiguration> {
   const credential: Cardano.Credential = {
     type: Core.CredentialType.ScriptHash,
-    hash: script.Script.hash(),
+    hash: script.hash(),
   };
   const scriptAddress = new Core.Address({
     type: Core.AddressType.BasePaymentScriptStakeScript,
@@ -64,11 +121,17 @@ export function loadVendorScript(
     paymentPart: credential,
     delegationPart: credential,
   });
+  if (scriptRef && scriptRef?.output()?.scriptRef()?.hash() !== script.hash()) {
+    throw new Error("Script ref points to the wrong script!");
+  }
   return {
     config,
-    script,
+    script: {
+      Script: script,
+    },
     credential,
     scriptAddress,
+    scriptRef,
   };
 }
 
@@ -85,13 +148,69 @@ export function loadScripts(
   treasuryConfig: TreasuryConfiguration,
   vendorConfig: VendorConfiguration,
   trace?: boolean,
+  treasuryScriptRef?: TransactionUnspentOutput,
+  vendorScriptRef?: TransactionUnspentOutput,
 ): ICompiledScripts {
-  const treasuryScript = loadTreasuryScript(network, treasuryConfig, trace);
-  const vendorScript = loadVendorScript(network, vendorConfig, trace);
+  const treasuryScript = loadTreasuryScript(
+    network,
+    treasuryConfig,
+    trace,
+    treasuryScriptRef,
+  );
+  const vendorScript = loadVendorScript(
+    network,
+    vendorConfig,
+    trace,
+    vendorScriptRef,
+  );
   return {
     treasuryScript,
     vendorScript,
   };
+}
+
+export function constructScriptsFromBytes(
+  network: Core.NetworkId,
+  treasuryConfig: TreasuryConfiguration,
+  rawTreasuryScriptHex: string,
+  vendorConfig: VendorConfiguration,
+  rawVendorScriptHex: string,
+  treasuryScriptRef?: TransactionUnspentOutput,
+  vendorScriptRef?: TransactionUnspentOutput,
+): ICompiledScripts {
+  return constructScripts(
+    network,
+    treasuryConfig,
+    cborToScript(rawTreasuryScriptHex, "PlutusV3"),
+    vendorConfig,
+    cborToScript(rawVendorScriptHex, "PlutusV3"),
+    treasuryScriptRef,
+    vendorScriptRef,
+  );
+}
+
+export function constructScripts(
+  network: Core.NetworkId,
+  treasuryConfig: TreasuryConfiguration,
+  rawTreasuryScript: Script,
+  vendorConfig: VendorConfiguration,
+  rawVendorScript: Script,
+  treasuryScriptRef?: TransactionUnspentOutput,
+  vendorScriptRef?: TransactionUnspentOutput,
+): ICompiledScripts {
+  const treasuryScript = constructTreasuryScript(
+    network,
+    treasuryConfig,
+    rawTreasuryScript,
+    treasuryScriptRef,
+  );
+  const vendorScript = constructVendorScript(
+    network,
+    vendorConfig,
+    rawVendorScript,
+    vendorScriptRef,
+  );
+  return { treasuryScript, vendorScript };
 }
 
 export function coreValueToContractsValue(amount: Value): {

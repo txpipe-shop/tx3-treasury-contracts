@@ -318,22 +318,21 @@ describe("MLabs Audit Findings", () => {
         Data.Void(),
       );
       await emulator.as(Funder, async (blaze) => {
-        const tx = await fund(
-          {
+        const tx = await fund({
+          configs: {
             treasury: configs.treasuryScript.config,
             vendor: configs.vendorScript.config,
+            trace: true,
           },
           blaze,
-          treasuryInput,
+          input: treasuryInput,
           vendor,
           schedule,
-          [
+          signers: [
             Core.Ed25519KeyHashHex(await fund_key(emulator)),
             Core.Ed25519KeyHashHex(await vendor_key(emulator)),
           ],
-          undefined,
-          true,
-        );
+        });
         emulator.expectScriptFailure(tx, /Trace expect payout_count <= 24/);
       });
     });
@@ -359,22 +358,21 @@ describe("MLabs Audit Findings", () => {
         Data.Void(),
       );
       await emulator.as(Funder, async (blaze) => {
-        const tx = await fund(
-          {
+        const tx = await fund({
+          configs: {
             treasury: configs.treasuryScript.config,
             vendor: configs.vendorScript.config,
+            trace: true,
           },
           blaze,
-          treasuryInput,
+          input: treasuryInput,
           vendor,
           schedule,
-          [
+          signers: [
             Core.Ed25519KeyHashHex(await fund_key(emulator)),
             Core.Ed25519KeyHashHex(await vendor_key(emulator)),
           ],
-          undefined,
-          true,
-        );
+        });
         emulator.expectScriptFailure(
           tx,
           /Trace expect 4 >= \( value |> assets.flatten |> list.length \)/,
@@ -673,15 +671,16 @@ describe("MLabs Audit Findings", () => {
       };
       await emulator.as(Funder, async (blaze) => {
         emulator.expectScriptFailure(
-          await fund(
-            {
+          await fund({
+            configs: {
               treasury: configs.treasuryScript.config,
               vendor: configs.vendorScript.config,
+              trace: true,
             },
             blaze,
-            treasuryInput,
+            input: treasuryInput,
             vendor,
-            [
+            schedule: [
               {
                 date: new Date(
                   Number(blaze.provider.slotToUnix(Core.Slot(10))),
@@ -689,10 +688,8 @@ describe("MLabs Audit Findings", () => {
                 amount: makeValue(100_000_000n),
               },
             ],
-            [Ed25519KeyHashHex(await fund_key(emulator))],
-            undefined,
-            true,
-          ),
+            signers: [Ed25519KeyHashHex(await fund_key(emulator))],
+          }),
           /Trace expect\s*satisfied\(v.vendor,/,
         );
       });
@@ -718,15 +715,16 @@ describe("MLabs Audit Findings", () => {
       };
       await emulator.as(Funder, async (blaze) => {
         emulator.expectScriptFailure(
-          await fund(
-            {
+          await fund({
+            configs: {
               treasury: configs.treasuryScript.config,
               vendor: configs.vendorScript.config,
+              trace: true,
             },
             blaze,
-            treasuryInput,
+            input: treasuryInput,
             vendor,
-            [
+            schedule: [
               {
                 date: new Date(
                   Number(
@@ -736,13 +734,11 @@ describe("MLabs Audit Findings", () => {
                 amount: makeValue(100_000_000n),
               },
             ],
-            [
+            signers: [
               Ed25519KeyHashHex(await fund_key(emulator)),
               Ed25519KeyHashHex(await vendor_key(emulator)),
             ],
-            undefined,
-            true,
-          ),
+          }),
           /Trace expect p.maturation <= config.payout_upperbound/,
         );
       });

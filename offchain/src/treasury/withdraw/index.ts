@@ -11,10 +11,11 @@ import {
   type Provider,
   type Wallet,
 } from "@blaze-cardano/sdk";
-import { ITransactionMetadata, toTxMetadata } from "src/metadata/shared";
-import { IInitialize } from "src/metadata/types/initialize-reorganize";
-import type { TreasuryConfiguration } from "../../generated-types/contracts";
-import { loadTreasuryScript } from "../../shared";
+
+import type { TreasuryConfiguration } from "../../generated-types/contracts.js";
+import { ITransactionMetadata, toTxMetadata } from "../../metadata/shared.js";
+import { IInitialize } from "../../metadata/types/initialize-reorganize.js";
+import { loadTreasuryScript } from "../../shared/index.js";
 
 export async function withdraw<P extends Provider, W extends Wallet>(
   config: TreasuryConfiguration,

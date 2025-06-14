@@ -27,50 +27,75 @@ import { ITransactionMetadata, toTxMetadata } from "../../metadata/shared.js";
 import { IFund } from "../../metadata/types/fund.js";
 import {
   coreValueToContractsValue,
-  loadTreasuryScript,
-  loadVendorScript,
+  ICompiledScripts,
+  loadScripts,
 } from "../../shared/index.js";
 
-export async function fund<P extends Provider, W extends Wallet>(
-  configs: { treasury: TreasuryConfiguration; vendor: VendorConfiguration },
-  blaze: Blaze<P, W>,
-  input: TransactionUnspentOutput,
-  vendor: MultisigScript,
-  schedule: { date: Date; amount: Value }[],
-  signers: Ed25519KeyHashHex[],
-  metadata?: ITransactionMetadata<IFund>,
-  trace?: boolean,
-): Promise<TxBuilder> {
-  const { scriptAddress: vendorScriptAddress } = loadVendorScript(
-    blaze.provider.network,
-    configs.vendor,
-    trace,
-  );
-  const { script: treasuryScript, scriptAddress: treasuryScriptAddress } =
-    loadTreasuryScript(blaze.provider.network, configs.treasury, trace);
+export interface IFundArgs<P extends Provider, W extends Wallet> {
+  configs?: {
+    treasury: TreasuryConfiguration;
+    vendor: VendorConfiguration;
+    trace?: boolean;
+  };
+  scripts?: ICompiledScripts;
+  blaze: Blaze<P, W>;
+  input: TransactionUnspentOutput;
+  vendor: MultisigScript;
+  schedule: { date: Date; amount: Value }[];
+  signers: Ed25519KeyHashHex[];
+  metadata?: ITransactionMetadata<IFund>;
+}
+
+export async function fund<P extends Provider, W extends Wallet>({
+  blaze,
+  configs,
+  scripts,
+  input,
+  schedule,
+  signers,
+  metadata,
+  vendor,
+}: IFundArgs<P, W>): Promise<TxBuilder> {
+  if (!configs && !scripts) {
+    throw new Error("Either configs or scripts must be provided");
+  }
+  if (configs) {
+    scripts = loadScripts(
+      blaze.provider.network,
+      configs.treasury,
+      configs.vendor,
+      configs.trace,
+    );
+  } else if (scripts) {
+    configs = {
+      treasury: scripts.treasuryScript.config,
+      vendor: scripts.vendorScript.config,
+    };
+  }
+  if (!configs || !scripts) {
+    throw new Error("Couldn't load scripts");
+  }
   const registryInput = await blaze.provider.getUnspentOutputByNFT(
     AssetId(configs.treasury.registry_token + toHex(Buffer.from("REGISTRY"))),
   );
-  const refInput = await blaze.provider.resolveScriptRef(
-    treasuryScript.Script.hash(),
-  );
-  if (!refInput)
-    throw new Error("Could not find treasury script reference on-chain");
 
-  // expiration can be far into the future, so we set a max of 3 days
-  // to avoid the transaction being rejected for being "PastHorizon".
   let tx = blaze
     .newTransaction()
     .setValidUntil(
-      blaze.provider.unixToSlot(
-        Math.min(
-          Date.now().valueOf() + 1 * 60 * 60 * 1000, // 36 hours in milliseconds
-          Number(configs.treasury.expiration) - 1,
-        ),
-      ),
+      blaze.provider.unixToSlot(configs.treasury.expiration - 1000n),
     )
-    .addReferenceInput(registryInput)
-    .addReferenceInput(refInput);
+    .addReferenceInput(registryInput);
+
+  if (!scripts.treasuryScript.scriptRef) {
+    scripts.treasuryScript.scriptRef = await blaze.provider.resolveScriptRef(
+      scripts.treasuryScript.script.Script,
+    );
+  }
+  if (scripts.treasuryScript.scriptRef) {
+    tx.addReferenceInput(scripts.treasuryScript.scriptRef);
+  } else {
+    tx.provideScript(scripts.treasuryScript.script.Script);
+  }
 
   if (metadata) {
     const auxData = new AuxiliaryData();
@@ -108,7 +133,7 @@ export async function fund<P extends Provider, W extends Wallet>(
   };
 
   tx.lockAssets(
-    vendorScriptAddress,
+    scripts.vendorScript.scriptAddress,
     totalPayout,
     Data.serialize(VendorDatum, datum),
   );
@@ -118,7 +143,7 @@ export async function fund<P extends Provider, W extends Wallet>(
     Tx.Value.negate(totalPayout),
   );
   if (!Tx.Value.empty(remainder)) {
-    tx.lockAssets(treasuryScriptAddress, remainder, Data.Void());
+    tx.lockAssets(scripts.treasuryScript.scriptAddress, remainder, Data.Void());
   }
 
   return tx;

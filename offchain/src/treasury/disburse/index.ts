@@ -16,12 +16,16 @@ import {
   type Wallet,
 } from "@blaze-cardano/sdk";
 import * as Tx from "@blaze-cardano/tx";
+
 import {
   TreasuryConfiguration,
   TreasurySpendRedeemer,
   VendorConfiguration,
-} from "../../generated-types/contracts";
-import { coreValueToContractsValue, loadTreasuryScript } from "../../shared";
+} from "../../generated-types/contracts.js";
+import {
+  coreValueToContractsValue,
+  loadTreasuryScript,
+} from "../../shared/index.js";
 
 export async function disburse<P extends Provider, W extends Wallet>(
   configs: { treasury: TreasuryConfiguration; vendor: VendorConfiguration },
