@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.0.9](https://github.com/SundaeSwap-finance/treasury-contracts/compare/v0.0.8...v0.0.9) (2025-06-14)
+
+
+### Bug Fixes
+
+* export ([55c3e93](https://github.com/SundaeSwap-finance/treasury-contracts/commit/55c3e93a4c6477fe54fb324c1c23d2c1c67b3bbc))
+* test ([263d762](https://github.com/SundaeSwap-finance/treasury-contracts/commit/263d762f76dadda82d5e1b1f83ff561c8921e3b6))
+
 ### [0.0.8](https://github.com/SundaeSwap-finance/treasury-contracts/compare/v0.0.7...v0.0.8) (2025-06-14)
 
 ### [0.0.7](https://github.com/SundaeSwap-finance/treasury-contracts/compare/v0.0.6...v0.0.7) (2025-06-14)
