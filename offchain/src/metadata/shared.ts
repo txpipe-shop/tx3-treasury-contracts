@@ -152,6 +152,3 @@ function convertNumbersToBigints<T>(obj: T): T {
   }
   return obj;
 }
-
-// Expose event types
-export { ETransactionEvent } from "./types/events.js";

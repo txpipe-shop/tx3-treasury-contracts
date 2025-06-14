@@ -13,7 +13,11 @@ import {
 } from "cli/shared";
 import { Vendor } from "src";
 import { VendorDatum } from "src/generated-types/contracts";
-import { IMilestone, IPause, IResume } from "src/metadata/types/adjudicate";
+import {
+  IAdjudicatedMilestone,
+  IPause,
+  IResume,
+} from "src/metadata/types/adjudicate";
 import { loadVendorScript } from "src/shared";
 
 async function adjudicate(
@@ -66,7 +70,7 @@ async function adjudicate(
     statuses[index] = newStatus;
   });
 
-  const milestones: Record<string, IMilestone> = {};
+  const milestones: Record<string, IAdjudicatedMilestone> = {};
 
   for (const index of selections) {
     const identifier = await input({

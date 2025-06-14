@@ -6,7 +6,7 @@ export interface IVendor {
   details?: IAnchor;
 }
 
-export interface IMilestone {
+export interface IFundMilestone {
   identifier: string;
   label?: string;
   description?: string;
@@ -22,5 +22,5 @@ export interface IFund extends IMetadataBodyBase {
   description: string;
   vendor: IVendor;
   contract?: IAnchor;
-  milestones: IMilestone[];
+  milestones: IFundMilestone[];
 }
