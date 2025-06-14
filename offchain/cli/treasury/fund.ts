@@ -2,7 +2,7 @@
 import { Value } from "@blaze-cardano/core";
 import { Blaze, makeValue, Provider, Wallet } from "@blaze-cardano/sdk";
 import { input, select } from "@inquirer/prompts";
-import { IFund, IMilestone } from "src/metadata/types/fund";
+import { IFund, IFundMilestone } from "src/metadata/types/fund";
 import { toMultisig, TPermissionMetadata } from "src/metadata/types/permission";
 import { Treasury } from "../../src";
 import { loadTreasuryScript } from "../../src/shared";
@@ -23,9 +23,9 @@ import {
 
 async function getMilestones(): Promise<{
   schedules: { date: Date; amount: Value }[];
-  milestones: IMilestone[];
+  milestones: IFundMilestone[];
 }> {
-  const milestones: IMilestone[] = [];
+  const milestones: IFundMilestone[] = [];
   const schedules: { date: Date; amount: Value }[] = [];
   let moreMilestones = true;
 
@@ -64,7 +64,7 @@ async function getMilestones(): Promise<{
         undefined,
         getAnchor,
       ),
-    } as IMilestone;
+    } as IFundMilestone;
 
     schedules.push({ date, amount });
     milestones.push(meta);

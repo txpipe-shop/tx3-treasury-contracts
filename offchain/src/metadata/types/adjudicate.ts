@@ -1,13 +1,13 @@
 import { IMetadataBodyBase } from "../shared.js";
 import { ETransactionEvent } from "./events.js";
 
-export interface IMilestone {
+export interface IAdjudicatedMilestone {
   reason: string;
   resolution?: string;
 }
 
 interface IAdjudicate extends IMetadataBodyBase {
-  milestones: Record<string, IMilestone>;
+  milestones: Record<string, IAdjudicatedMilestone>;
 }
 
 export interface IPause extends IAdjudicate {
