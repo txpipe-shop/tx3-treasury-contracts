@@ -2,11 +2,11 @@ import { Core } from "@blaze-cardano/sdk";
 import { describe, expect, it } from "bun:test";
 
 import {
-  ETransactionEvent,
   fromTxMetadata,
   ITransactionMetadata,
   toTxMetadata,
-} from "../../src/metadata/shared";
+} from "../../src/metadata/shared.js";
+import { ETransactionEvent } from "../../src/metadata/types/events.js";
 
 const exampleMetadata: ITransactionMetadata = {
   body: {
