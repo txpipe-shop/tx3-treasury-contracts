@@ -1,7 +1,7 @@
 import {
   AssetId,
+  AuxiliaryData,
   Ed25519KeyHashHex,
-  Slot,
   toHex,
   TransactionUnspentOutput,
   Value,
@@ -15,27 +15,35 @@ import {
   type Wallet,
 } from "@blaze-cardano/sdk";
 import * as Tx from "@blaze-cardano/tx";
+
 import {
   MultisigScript,
   TreasuryConfiguration,
   TreasurySpendRedeemer,
   VendorConfiguration,
   VendorDatum,
-} from "../../generated-types/contracts";
+} from "../../generated-types/contracts.js";
+import { ITransactionMetadata, toTxMetadata } from "../../metadata/shared.js";
+import { IFund } from "../../metadata/types/fund.js";
 import {
   coreValueToContractsValue,
   ICompiledScripts,
   loadScripts,
-} from "../../shared";
+} from "../../shared/index.js";
 
 export interface IFundArgs<P extends Provider, W extends Wallet> {
-  configs?: { treasury: TreasuryConfiguration; vendor: VendorConfiguration };
+  configs?: {
+    treasury: TreasuryConfiguration;
+    vendor: VendorConfiguration;
+    trace?: boolean;
+  };
   scripts?: ICompiledScripts;
   blaze: Blaze<P, W>;
   input: TransactionUnspentOutput;
   vendor: MultisigScript;
   schedule: { date: Date; amount: Value }[];
   signers: Ed25519KeyHashHex[];
+  metadata?: ITransactionMetadata<IFund>;
 }
 
 export async function fund<P extends Provider, W extends Wallet>({
@@ -45,6 +53,7 @@ export async function fund<P extends Provider, W extends Wallet>({
   input,
   schedule,
   signers,
+  metadata,
   vendor,
 }: IFundArgs<P, W>): Promise<TxBuilder> {
   if (!configs && !scripts) {
@@ -55,6 +64,7 @@ export async function fund<P extends Provider, W extends Wallet>({
       blaze.provider.network,
       configs.treasury,
       configs.vendor,
+      configs.trace,
     );
   } else if (scripts) {
     configs = {
@@ -71,7 +81,9 @@ export async function fund<P extends Provider, W extends Wallet>({
 
   let tx = blaze
     .newTransaction()
-    .setValidUntil(Slot(Number(configs.treasury.expiration / 1000n) - 1))
+    .setValidUntil(
+      blaze.provider.unixToSlot(configs.treasury.expiration - 1000n),
+    )
     .addReferenceInput(registryInput);
 
   if (!scripts.treasuryScript.scriptRef) {
@@ -83,6 +95,12 @@ export async function fund<P extends Provider, W extends Wallet>({
     tx.addReferenceInput(scripts.treasuryScript.scriptRef);
   } else {
     tx.provideScript(scripts.treasuryScript.script.Script);
+  }
+
+  if (metadata) {
+    const auxData = new AuxiliaryData();
+    auxData.setMetadata(toTxMetadata(metadata));
+    tx = tx.setAuxiliaryData(auxData);
   }
 
   for (const signer of signers) {

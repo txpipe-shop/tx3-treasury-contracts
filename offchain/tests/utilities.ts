@@ -7,12 +7,10 @@ import {
   type TreasuryConfiguration,
   type VendorConfiguration,
 } from "../src/generated-types/contracts";
-import {
-  ICompiledScript,
-  ICompiledScripts,
-  loadScripts,
-  slot_to_unix,
-} from "../src/shared";
+import { ICompiledScript, ICompiledScripts, loadScripts } from "../src/shared";
+
+// TODO: this is a bit hacky, but our slot to time conversion is a bit messy so this is our escape hatch for tests
+export const EmulatorNetwork: Core.NetworkId = 2 as Core.NetworkId;
 
 export function registryTokenName(): string {
   return toHex(Buffer.from("REGISTRY"));
@@ -103,8 +101,10 @@ export async function sampleTreasuryConfig(
   const [policyId] = registryToken(idx);
   return {
     registry_token: policyId,
-    expiration: slot_to_unix(Slot(36 * 60 * 60 + 10 * (idx ?? 0))),
-    payout_upperbound: slot_to_unix(Slot(45 * 60 * 60)),
+    expiration: BigInt(
+      emulator.slotToUnix(Slot(36 * 60 * 60 + 10 * (idx ?? 0))),
+    ),
+    payout_upperbound: BigInt(emulator.slotToUnix(Slot(45 * 60 * 60))),
     permissions: {
       sweep: {
         Signature: {
@@ -137,7 +137,9 @@ export async function sampleVendorConfig(
   const [policyId] = registryToken(idx);
   return {
     registry_token: policyId,
-    expiration: slot_to_unix(Slot(60 * 60 * 60 + 10 * (idx ?? 0))),
+    expiration: BigInt(
+      emulator.slotToUnix(Slot(60 * 60 * 60 + 10 * (idx ?? 0))),
+    ),
     permissions: {
       pause: {
         Signature: {
@@ -265,6 +267,7 @@ export async function setupEmulator(
         Core.NetworkId.Testnet,
         await sampleTreasuryConfig(emulator),
         await sampleVendorConfig(emulator),
+        true,
       ),
     );
   }

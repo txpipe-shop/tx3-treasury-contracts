@@ -8,11 +8,7 @@ import {
   VendorDatum,
   VendorSpendRedeemer,
 } from "../../src/generated-types/contracts";
-import {
-  coreValueToContractsValue,
-  loadScripts,
-  unix_to_slot,
-} from "../../src/shared";
+import { coreValueToContractsValue, loadScripts } from "../../src/shared";
 import {
   deployScripts,
   findRegistryInput,
@@ -43,12 +39,14 @@ describe("TxPipe Audit Findings", () => {
           Core.NetworkId.Testnet,
           await sampleTreasuryConfig(emulator, 1),
           await sampleVendorConfig(emulator, 1),
+          true,
         );
         await deployScripts(emulator, scripts_1);
         const scripts_2 = loadScripts(
           Core.NetworkId.Testnet,
           await sampleTreasuryConfig(emulator, 2),
           await sampleVendorConfig(emulator, 2),
+          true,
         );
         await deployScripts(emulator, scripts_2);
 
@@ -90,7 +88,7 @@ describe("TxPipe Audit Findings", () => {
                 inputB,
                 Data.serialize(TreasurySpendRedeemer, "SweepTreasury"),
               )
-              .setValidFrom(unix_to_slot(future))
+              .setValidFrom(blaze.provider.unixToSlot(future))
               .addReferenceInput(refInput_1)
               .addReferenceInput(refInput_2)
               .addReferenceInput(registryInput1)
@@ -111,6 +109,7 @@ describe("TxPipe Audit Findings", () => {
           Core.NetworkId.Testnet,
           await sampleTreasuryConfig(emulator),
           await sampleVendorConfig(emulator),
+          true,
         );
         await deployScripts(emulator, scripts);
         const treasuryRefInput = emulator.lookupScript(
@@ -171,6 +170,7 @@ describe("TxPipe Audit Findings", () => {
           Core.NetworkId.Testnet,
           await sampleTreasuryConfig(emulator),
           await sampleVendorConfig(emulator),
+          true,
         );
         await deployScripts(emulator, scripts);
         const refInput = emulator.lookupScript(
@@ -192,7 +192,7 @@ describe("TxPipe Audit Findings", () => {
           Data.Void(),
         );
 
-        const upperBound = unix_to_slot(
+        const upperBound = emulator.unixToSlot(
           scripts.treasuryScript.config.expiration - 10000n,
         );
         const fundRedeemer = {
@@ -268,6 +268,7 @@ describe("TxPipe Audit Findings", () => {
           Core.NetworkId.Testnet,
           await sampleTreasuryConfig(emulator),
           await sampleVendorConfig(emulator),
+          true,
         );
         await deployScripts(emulator, scripts);
         const refInput = emulator.lookupScript(
@@ -345,6 +346,7 @@ describe("TxPipe Audit Findings", () => {
           Core.NetworkId.Testnet,
           await sampleTreasuryConfig(emulator),
           await sampleVendorConfig(emulator),
+          true,
         );
         await deployScripts(emulator, scripts);
         const refInput = emulator.lookupScript(
@@ -429,12 +431,14 @@ describe("TxPipe Audit Findings", () => {
           Core.NetworkId.Testnet,
           await sampleTreasuryConfig(emulator, 1),
           await sampleVendorConfig(emulator, 1),
+          true,
         );
         await deployScripts(emulator, scripts_1);
         const scripts_2 = loadScripts(
           Core.NetworkId.Testnet,
           await sampleTreasuryConfig(emulator, 2),
           await sampleVendorConfig(emulator, 1), // Vendor script gets reused
+          true,
         );
         await deployScripts(emulator, scripts_2);
 
@@ -514,7 +518,7 @@ describe("TxPipe Audit Findings", () => {
                   },
                 }),
               )
-              .setValidUntil(unix_to_slot(1000n))
+              .setValidUntil(Core.Slot(1))
               .addRequiredSigner(Ed25519KeyHashHex(await fund_key(emulator)))
               .addReferenceInput(refInput_1)
               .addReferenceInput(refInput_2)
@@ -549,6 +553,7 @@ describe("TxPipe Audit Findings", () => {
           Core.NetworkId.Testnet,
           await sampleTreasuryConfig(emulator),
           await sampleVendorConfig(emulator),
+          true,
         );
         await deployScripts(emulator, scripts);
         const treasuryRefInput = emulator.lookupScript(
@@ -616,6 +621,7 @@ describe("TxPipe Audit Findings", () => {
           Core.NetworkId.Testnet,
           await sampleTreasuryConfig(emulator),
           await sampleVendorConfig(emulator),
+          true,
         );
         await deployScripts(emulator, scripts);
         const refInput = emulator.lookupScript(
@@ -702,7 +708,7 @@ describe("TxPipe Audit Findings", () => {
                 makeValue(40_000_000n),
                 Data.serialize(VendorDatum, updatedDatum),
               )
-              .setValidFrom(unix_to_slot(future))
+              .setValidFrom(blaze.provider.unixToSlot(future))
               .addReferenceInput(refInput)
               .addReferenceInput(registryInput),
             /Trace expect vendor_output.address.stake_credential == Some\(Inline\(account\)\)/,
@@ -719,6 +725,7 @@ describe("TxPipe Audit Findings", () => {
           Core.NetworkId.Testnet,
           await sampleTreasuryConfig(emulator),
           await sampleVendorConfig(emulator),
+          true,
         );
         await deployScripts(emulator, scripts);
 
@@ -751,7 +758,7 @@ describe("TxPipe Audit Findings", () => {
                 amount - 1n,
                 Data.Void(),
               )
-              .setValidFrom(unix_to_slot(future))
+              .setValidFrom(blaze.provider.unixToSlot(future))
               .addReferenceInput(refInput)
               .addReferenceInput(registryInput)
               .setDonation(1n),
@@ -770,6 +777,7 @@ describe("TxPipe Audit Findings", () => {
           Core.NetworkId.Testnet,
           await sampleTreasuryConfig(emulator),
           await sampleVendorConfig(emulator),
+          true,
         );
         await deployScripts(emulator, scripts);
         emulator.accounts.set(
@@ -808,6 +816,7 @@ describe("TxPipe Audit Findings", () => {
           Core.NetworkId.Testnet,
           await sampleTreasuryConfig(emulator),
           await sampleVendorConfig(emulator),
+          true,
         );
         await deployScripts(emulator, scripts);
 
@@ -839,7 +848,7 @@ describe("TxPipe Audit Findings", () => {
                 Data.Void(),
                 scripts.treasuryScript.script.Script,
               )
-              .setValidFrom(unix_to_slot(future))
+              .setValidFrom(blaze.provider.unixToSlot(future))
               .addReferenceInput(refInput)
               .addReferenceInput(registryInput),
             /Trace expect\s*outputs\s*|> list.all\(fn\(output\) { option.is_none\(output.reference_script\) }\)/,

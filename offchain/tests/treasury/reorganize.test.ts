@@ -13,7 +13,7 @@ import {
   type TreasuryConfiguration,
   type TreasuryTreasuryWithdraw,
 } from "../../src/generated-types/contracts";
-import { loadTreasuryScript, unix_to_slot } from "../../src/shared";
+import { loadTreasuryScript } from "../../src/shared";
 import { reorganize } from "../../src/treasury/reorganize";
 import {
   registryToken,
@@ -39,7 +39,7 @@ describe("When reorganizing", () => {
   beforeEach(async () => {
     emulator = await setupEmulator();
     config = await sampleTreasuryConfig(emulator);
-    const treasury = loadTreasuryScript(Core.NetworkId.Testnet, config);
+    const treasury = loadTreasuryScript(Core.NetworkId.Testnet, config, true);
     rewardAccount = treasury.rewardAccount!;
     treasuryScript = treasury.script;
     scriptAddress = treasury.scriptAddress;
@@ -94,6 +94,7 @@ describe("When reorganizing", () => {
             [scriptInput],
             [makeValue(100_000_000_000n), makeValue(400_000_000_000n)],
             [Ed25519KeyHashHex(await reorganize_key(emulator))],
+            true,
           ),
         );
       });
@@ -109,6 +110,7 @@ describe("When reorganizing", () => {
             [scriptInput, secondScriptInput],
             [makeValue(600_000_000_000n)],
             [Ed25519KeyHashHex(await reorganize_key(emulator))],
+            true,
           ),
         );
       });
@@ -128,6 +130,7 @@ describe("When reorganizing", () => {
               makeValue(200_000_000_000n),
             ],
             [Ed25519KeyHashHex(await reorganize_key(emulator))],
+            true,
           ),
         );
       });
@@ -143,6 +146,7 @@ describe("When reorganizing", () => {
             [scriptInput, thirdScriptInput],
             [makeValue(500_000_500_000n, ["a".repeat(56), 1n])],
             [Ed25519KeyHashHex(await reorganize_key(emulator))],
+            true,
           ),
         );
       });
@@ -158,6 +162,7 @@ describe("When reorganizing", () => {
             [thirdScriptInput],
             [makeValue(2_000_000n, ["a".repeat(56), 1n])],
             [Ed25519KeyHashHex(await reorganize_key(emulator))],
+            true,
           ),
         );
       });
@@ -175,7 +180,7 @@ describe("When reorganizing", () => {
             .addRequiredSigner(
               Ed25519KeyHashHex(await reorganize_key(emulator)),
             )
-            .setValidUntil(unix_to_slot(config.expiration - 1000n))
+            .setValidUntil(emulator.unixToSlot(config.expiration - 1000n))
             .addReferenceInput(registryInput)
             .addReferenceInput(refInput),
           /Trace equal_plus_min_ada\(input_sum, output_sum\)/,
@@ -197,7 +202,7 @@ describe("When reorganizing", () => {
             )
             .lockAssets(scriptAddress, makeValue(499_999_999_999n), Data.Void())
             .payLovelace(address, 1_000_000n)
-            .setValidUntil(unix_to_slot(config.expiration - 1000n))
+            .setValidUntil(emulator.unixToSlot(config.expiration - 1000n))
             .addReferenceInput(registryInput)
             .addReferenceInput(refInput),
           /Trace equal_plus_min_ada\(input_sum, output_sum\)/,
@@ -223,7 +228,7 @@ describe("When reorganizing", () => {
             )
             .lockAssets(scriptAddress, makeValue(500_000_500_000n), Data.Void())
             .payAssets(address, makeValue(2_000_000n, ["a".repeat(56), 1n]))
-            .setValidUntil(unix_to_slot(config.expiration - 1000n))
+            .setValidUntil(emulator.unixToSlot(config.expiration - 1000n))
             .addReferenceInput(registryInput)
             .addReferenceInput(refInput),
           /Trace equal_plus_min_ada\(input_sum, output_sum\)/,
@@ -252,7 +257,7 @@ describe("When reorganizing", () => {
               scriptInput,
               Data.serialize(TreasurySpendRedeemer, "Reorganize"),
             )
-            .setValidUntil(unix_to_slot(config.expiration - 1000n))
+            .setValidUntil(emulator.unixToSlot(config.expiration - 1000n))
             .addReferenceInput(registryInput)
             .addReferenceInput(refInput)
             .addRequiredSigner(
@@ -289,7 +294,7 @@ describe("When reorganizing", () => {
             .addRequiredSigner(
               Ed25519KeyHashHex(await reorganize_key(emulator)),
             )
-            .setValidUntil(unix_to_slot(config.expiration - 1000n))
+            .setValidUntil(emulator.unixToSlot(config.expiration - 1000n))
             .addReferenceInput(registryInput)
             .addReferenceInput(refInput),
           /Trace equal_plus_min_ada\(input_sum, output_sum\)/,
@@ -307,7 +312,7 @@ describe("When reorganizing", () => {
           await emulator.expectScriptFailure(
             blaze
               .newTransaction()
-              .setValidUntil(unix_to_slot(config.expiration + 5000n))
+              .setValidUntil(emulator.unixToSlot(config.expiration + 5000n))
               .addReferenceInput(registryInput)
               .addReferenceInput(refInput)
               .addRequiredSigner(
@@ -339,6 +344,7 @@ describe("When reorganizing", () => {
             [scriptInput],
             [makeValue(100_000_000_000n), makeValue(400_000_000_000n)],
             [Ed25519KeyHashHex(address.asBase()!.getPaymentCredential().hash)],
+            true,
           ),
           /Trace satisfied\(config.permissions.reorganize/,
         );

@@ -49,7 +49,11 @@ describe("When disbursing", () => {
     emulator = await setupEmulator();
     const treasuryConfig = await sampleTreasuryConfig(emulator);
     const vendorConfig = await sampleVendorConfig(emulator);
-    const treasury = loadTreasuryScript(Core.NetworkId.Testnet, treasuryConfig);
+    const treasury = loadTreasuryScript(
+      Core.NetworkId.Testnet,
+      treasuryConfig,
+      true,
+    );
     // const vendorScript = loadVendorScript(Core.NetworkId.Testnet, vendorConfig);
     configs = { treasury: treasuryConfig, vendor: vendorConfig };
     rewardAccount = treasury.rewardAccount!;
@@ -127,6 +131,8 @@ describe("When disbursing", () => {
               makeValue(10_000_000n),
               undefined,
               [Ed25519KeyHashHex(await disburse_key(emulator))],
+              undefined,
+              true,
             ),
           );
         });
@@ -144,6 +150,8 @@ describe("When disbursing", () => {
               makeValue(500_000_000_000n),
               undefined,
               [Ed25519KeyHashHex(await disburse_key(emulator))],
+              undefined,
+              true,
             ),
           );
         });
@@ -161,6 +169,8 @@ describe("When disbursing", () => {
               makeValue(2_000_000n, ["b".repeat(56), 50n]),
               undefined,
               [Ed25519KeyHashHex(await disburse_key(emulator))],
+              undefined,
+              true,
             ),
           );
         });
@@ -178,6 +188,8 @@ describe("When disbursing", () => {
               makeValue(0n, ["b".repeat(56), 50n]),
               undefined,
               [Ed25519KeyHashHex(await disburse_key(emulator))],
+              undefined,
+              true,
             ),
           );
         });
@@ -272,6 +284,7 @@ describe("When disbursing", () => {
               makeValue(0n, ["b".repeat(56), 50n]),
               undefined,
               [Ed25519KeyHashHex(await disburse_key(emulator))],
+              true,
               true,
             ),
           );

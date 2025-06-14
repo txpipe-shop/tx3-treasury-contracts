@@ -5,7 +5,6 @@ import {
   Address,
   RewardAccount,
   Script,
-  Slot,
   TransactionUnspentOutput,
   Value,
   type CredentialCore,
@@ -29,9 +28,10 @@ export interface ICompiledScript<T, C> {
 export function loadTreasuryScript(
   network: Core.NetworkId,
   config: TreasuryConfiguration,
+  trace?: boolean,
   scriptRef?: TransactionUnspentOutput,
 ): ICompiledScript<TreasuryTreasuryWithdraw, TreasuryConfiguration> {
-  const script = new TreasuryTreasuryWithdraw(config);
+  const script = new TreasuryTreasuryWithdraw(config, trace);
   return constructTreasuryScript(network, config, script.Script, scriptRef);
 }
 
@@ -84,9 +84,10 @@ export function constructTreasuryScript(
 export function loadVendorScript(
   network: Core.NetworkId,
   config: VendorConfiguration,
+  trace?: boolean,
   scriptRef?: TransactionUnspentOutput,
 ): ICompiledScript<VendorVendorSpend, VendorConfiguration> {
-  const script = new VendorVendorSpend(config);
+  const script = new VendorVendorSpend(config, trace);
   return constructVendorScript(network, config, script.Script, scriptRef);
 }
 
@@ -146,9 +147,22 @@ export function loadScripts(
   network: Core.NetworkId,
   treasuryConfig: TreasuryConfiguration,
   vendorConfig: VendorConfiguration,
+  trace?: boolean,
+  treasuryScriptRef?: TransactionUnspentOutput,
+  vendorScriptRef?: TransactionUnspentOutput,
 ): ICompiledScripts {
-  const treasuryScript = loadTreasuryScript(network, treasuryConfig);
-  const vendorScript = loadVendorScript(network, vendorConfig);
+  const treasuryScript = loadTreasuryScript(
+    network,
+    treasuryConfig,
+    trace,
+    treasuryScriptRef,
+  );
+  const vendorScript = loadVendorScript(
+    network,
+    vendorConfig,
+    trace,
+    vendorScriptRef,
+  );
   return {
     treasuryScript,
     vendorScript,
@@ -197,14 +211,6 @@ export function constructScripts(
     vendorScriptRef,
   );
   return { treasuryScript, vendorScript };
-}
-
-export function unix_to_slot(unix: bigint): Slot {
-  return Slot(Number(unix / 1000n));
-}
-
-export function slot_to_unix(slot: Slot): bigint {
-  return BigInt(slot) * 1000n;
 }
 
 export function coreValueToContractsValue(amount: Value): {

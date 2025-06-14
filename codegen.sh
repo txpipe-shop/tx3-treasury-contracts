@@ -1,6 +1,7 @@
 #! /usr/bin/env bash
 set -e
 
-mkdir -p offchain/src/types/
-aiken build -t verbose
-npx ~/proj/blaze-cardano/packages/blaze-blueprint plutus.json -o ./offchain/src/generated-types/contracts.ts
+mkdir -p offchain/src/generated-types/
+aiken build -t silent # verbose
+aiken build -t verbose -o plutus-trace.json
+bunx @blaze-cardano/blueprint plutus.json plutus-trace.json -o ./offchain/src/generated-types/contracts.ts

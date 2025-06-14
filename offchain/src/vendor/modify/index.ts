@@ -22,7 +22,6 @@ import {
   contractsValueToCoreValue,
   loadTreasuryScript,
   loadVendorScript,
-  unix_to_slot,
 } from "../../shared";
 
 export async function modify<P extends Provider, W extends Wallet>(
@@ -32,26 +31,30 @@ export async function modify<P extends Provider, W extends Wallet>(
   input: TransactionUnspentOutput,
   new_vendor: VendorDatum,
   signers: Ed25519KeyHashHex[],
+  trace?: boolean,
 ): Promise<TxBuilder> {
   const { scriptAddress: treasuryScriptAddress } = loadTreasuryScript(
     blaze.provider.network,
     configs.treasury,
+    trace,
   );
   const { scriptAddress: vendorScriptAddress, script: vendorScript } =
-    loadVendorScript(blaze.provider.network, configs.vendor);
+    loadVendorScript(blaze.provider.network, configs.vendor, trace);
   const registryInput = await blaze.provider.getUnspentOutputByNFT(
     AssetId(configs.vendor.registry_token + toHex(Buffer.from("REGISTRY"))),
   );
-  const refInput = await blaze.provider.resolveScriptRef(vendorScript.Script);
+  const refInput = await blaze.provider.resolveScriptRef(
+    vendorScript.Script.hash(),
+  );
   if (!refInput)
     throw new Error("Could not find vendor script reference on-chain");
-  const thirty_six_hours = 36n * 60n * 60n * 1000n;
+  const thirty_six_hours = 36 * 60 * 60 * 1000; // 36 hours in milliseconds
   let tx = blaze
     .newTransaction()
     .addReferenceInput(registryInput)
     .addReferenceInput(refInput)
-    .setValidFrom(unix_to_slot(BigInt(now.valueOf())))
-    .setValidUntil(unix_to_slot(BigInt(now.valueOf()) + thirty_six_hours))
+    .setValidFrom(blaze.provider.unixToSlot(now.valueOf()))
+    .setValidUntil(blaze.provider.unixToSlot(now.valueOf() + thirty_six_hours))
     .addInput(input, Data.serialize(VendorSpendRedeemer, "Modify"));
   for (const signer of signers) {
     tx = tx.addRequiredSigner(signer);
@@ -86,28 +89,33 @@ export async function cancel<P extends Provider, W extends Wallet>(
   now: Date,
   input: TransactionUnspentOutput,
   signers: Ed25519KeyHashHex[],
+  trace?: boolean,
 ): Promise<TxBuilder> {
   const { scriptAddress: treasuryScriptAddress } = loadTreasuryScript(
     blaze.provider.network,
     configs.treasury,
+    trace,
   );
   const { script: vendorScript } = loadVendorScript(
     blaze.provider.network,
     configs.vendor,
+    trace,
   );
   const registryInput = await blaze.provider.getUnspentOutputByNFT(
     AssetId(configs.vendor.registry_token + toHex(Buffer.from("REGISTRY"))),
   );
-  const refInput = await blaze.provider.resolveScriptRef(vendorScript.Script);
+  const refInput = await blaze.provider.resolveScriptRef(
+    vendorScript.Script.hash(),
+  );
   if (!refInput)
     throw new Error("Could not find vendor script reference on-chain");
-  const thirty_six_hours = 36n * 60n * 60n * 1000n;
+  const thirty_six_hours = 36 * 60 * 60 * 1000; // 36 hours in milliseconds
   let tx = blaze
     .newTransaction()
     .addReferenceInput(registryInput)
     .addReferenceInput(refInput)
-    .setValidFrom(unix_to_slot(BigInt(now.valueOf())))
-    .setValidUntil(unix_to_slot(BigInt(now.valueOf()) + thirty_six_hours))
+    .setValidFrom(blaze.provider.unixToSlot(now.valueOf()))
+    .setValidUntil(blaze.provider.unixToSlot(now.valueOf() + thirty_six_hours))
     .addInput(input, Data.serialize(VendorSpendRedeemer, "Modify"));
   for (const signer of signers) {
     tx = tx.addRequiredSigner(signer);

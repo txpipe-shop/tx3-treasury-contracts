@@ -1,14 +1,17 @@
+import { IMetadataBodyBase } from "../shared.js";
+import { ETransactionEvent } from "./events.js";
 import type { TPermissionMetadata, TPermissionName } from "./permission.js";
 
-export interface INewInstance {
-  event: "publish";
-  identifier: string;
+export interface INewInstance extends IMetadataBodyBase {
+  event: ETransactionEvent.PUBLISH;
   label?: string;
   description?: string;
   expiration: bigint;
   payoutUpperbound: bigint;
   vendorExpiration: bigint;
   permissions: Record<TPermissionName, TPermissionMetadata | TPermissionName>;
-  comment?: string;
-  txAuthor: string;
+  seed_utxo: {
+    transaction_id: string;
+    output_index: bigint;
+  };
 }

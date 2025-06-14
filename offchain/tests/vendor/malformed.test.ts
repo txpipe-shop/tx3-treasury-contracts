@@ -49,10 +49,12 @@ describe("With a malformed datum", () => {
     const treasuryScriptManifest = loadTreasuryScript(
       Core.NetworkId.Testnet,
       treasuryConfig,
+      true,
     );
     const vendorScriptManifest = loadVendorScript(
       Core.NetworkId.Testnet,
       vendorConfig,
+      true,
     );
     configs = { treasury: treasuryConfig, vendor: vendorConfig };
     rewardAccount = treasuryScriptManifest.rewardAccount!;
@@ -136,7 +138,7 @@ describe("With a malformed datum", () => {
       await emulator.as("Anyone", async (blaze) => {
         await emulator.expectValidTransaction(
           blaze,
-          await sweep_malformed(configs, [scriptInput], blaze),
+          await sweep_malformed(configs, [scriptInput], blaze, true),
         );
       });
     });
@@ -148,6 +150,7 @@ describe("With a malformed datum", () => {
             configs,
             [scriptInput, secondScriptInput],
             blaze,
+            true,
           ),
         );
       });
@@ -156,14 +159,14 @@ describe("With a malformed datum", () => {
       await emulator.as("Anyone", async (blaze) => {
         await emulator.expectValidTransaction(
           blaze,
-          await sweep_malformed(configs, [thirdScriptInput], blaze),
+          await sweep_malformed(configs, [thirdScriptInput], blaze, true),
         );
       });
     });
     test("cannot sweep with valid datum", async () => {
       await emulator.as("Anyone", async (blaze) => {
         await emulator.expectScriptFailure(
-          await sweep_malformed(configs, [fourthScriptInput], blaze),
+          await sweep_malformed(configs, [fourthScriptInput], blaze, true),
           /Trace expect\n {18}inputs\n {20}|> list.filter\(/,
         );
       });
