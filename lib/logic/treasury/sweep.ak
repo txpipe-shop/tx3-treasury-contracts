@@ -53,8 +53,6 @@ pub fn logic(
 
   // Funds can be swept back to the treasury by anyone after the deadline,
   // or with permissions from the oversight committee early
-  trace validity_range
-  trace config.expiration
   expect or {
       is_entirely_after(validity_range, config.expiration),
       satisfied(
