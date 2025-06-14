@@ -1,7 +1,7 @@
 import {
   AssetId,
+  AuxiliaryData,
   Ed25519KeyHashHex,
-  Slot,
   toHex,
   TransactionUnspentOutput,
   Value,
@@ -15,6 +15,8 @@ import {
   type Wallet,
 } from "@blaze-cardano/sdk";
 import * as Tx from "@blaze-cardano/tx";
+import { ITransactionMetadata, toTxMetadata } from "src/metadata/shared";
+import { IFund } from "src/metadata/types/fund";
 import {
   MultisigScript,
   TreasuryConfiguration,
@@ -35,24 +37,45 @@ export async function fund<P extends Provider, W extends Wallet>(
   vendor: MultisigScript,
   schedule: { date: Date; amount: Value }[],
   signers: Ed25519KeyHashHex[],
+  metadata?: ITransactionMetadata<IFund>,
+  trace?: boolean,
 ): Promise<TxBuilder> {
   const { scriptAddress: vendorScriptAddress } = loadVendorScript(
     blaze.provider.network,
     configs.vendor,
+    trace,
   );
   const { script: treasuryScript, scriptAddress: treasuryScriptAddress } =
-    loadTreasuryScript(blaze.provider.network, configs.treasury);
+    loadTreasuryScript(blaze.provider.network, configs.treasury, trace);
   const registryInput = await blaze.provider.getUnspentOutputByNFT(
     AssetId(configs.treasury.registry_token + toHex(Buffer.from("REGISTRY"))),
   );
-  const refInput = await blaze.provider.resolveScriptRef(treasuryScript.Script);
+  const refInput = await blaze.provider.resolveScriptRef(
+    treasuryScript.Script.hash(),
+  );
   if (!refInput)
     throw new Error("Could not find treasury script reference on-chain");
+
+  // expiration can be far into the future, so we set a max of 3 days
+  // to avoid the transaction being rejected for being "PastHorizon".
   let tx = blaze
     .newTransaction()
-    .setValidUntil(Slot(Number(configs.treasury.expiration / 1000n) - 1))
+    .setValidUntil(
+      blaze.provider.unixToSlot(
+        Math.min(
+          Date.now().valueOf() + 1 * 60 * 60 * 1000, // 36 hours in milliseconds
+          Number(configs.treasury.expiration) - 1,
+        ),
+      ),
+    )
     .addReferenceInput(registryInput)
     .addReferenceInput(refInput);
+
+  if (metadata) {
+    const auxData = new AuxiliaryData();
+    auxData.setMetadata(toTxMetadata(metadata));
+    tx = tx.setAuxiliaryData(auxData);
+  }
 
   for (const signer of signers) {
     tx = tx.addRequiredSigner(signer);

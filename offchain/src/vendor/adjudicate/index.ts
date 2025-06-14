@@ -1,5 +1,6 @@
 import {
   AssetId,
+  AuxiliaryData,
   Ed25519KeyHashHex,
   toHex,
   TransactionUnspentOutput,
@@ -11,13 +12,15 @@ import {
   type Provider,
   type Wallet,
 } from "@blaze-cardano/sdk";
+import { ITransactionMetadata, toTxMetadata } from "src/metadata/shared";
+import { IPause, IResume } from "src/metadata/types/adjudicate";
 import {
   PayoutStatus,
   VendorConfiguration,
   VendorDatum,
   VendorSpendRedeemer,
 } from "../../generated-types/contracts";
-import { loadVendorScript, unix_to_slot } from "../../shared";
+import { loadVendorScript } from "../../shared";
 
 export async function adjudicate<P extends Provider, W extends Wallet>(
   config: VendorConfiguration,
@@ -26,22 +29,30 @@ export async function adjudicate<P extends Provider, W extends Wallet>(
   input: TransactionUnspentOutput,
   statuses: PayoutStatus[],
   signers: Ed25519KeyHashHex[],
+  metadata?: ITransactionMetadata<IPause | IResume>,
+  trace?: boolean,
 ): Promise<TxBuilder> {
   const { scriptAddress: vendorScriptAddress, script: vendorScript } =
-    loadVendorScript(blaze.provider.network, config);
+    loadVendorScript(blaze.provider.network, config, trace);
   const registryInput = await blaze.provider.getUnspentOutputByNFT(
     AssetId(config.registry_token + toHex(Buffer.from("REGISTRY"))),
   );
-  const refInput = await blaze.provider.resolveScriptRef(vendorScript.Script);
+  const refInput = await blaze.provider.resolveScriptRef(
+    vendorScript.Script.hash(),
+  );
   if (!refInput)
     throw new Error("Could not find vendor script reference on-chain");
-  const thirty_six_hours = 36n * 60n * 60n * 1000n;
+
+  // TODO: switch based on network? on preview we can only project 12 hours in the future
+  const thirty_six_hours = 12 * 60 * 60 * 1000; // 36 hours in milliseconds
   let tx = blaze
     .newTransaction()
     .addReferenceInput(registryInput)
     .addReferenceInput(refInput)
-    .setValidFrom(unix_to_slot(BigInt(now.valueOf())))
-    .setValidUntil(unix_to_slot(BigInt(now.valueOf()) + thirty_six_hours))
+    .setValidFrom(blaze.provider.unixToSlot(now.valueOf()))
+    .setValidUntil(
+      blaze.provider.unixToSlot(now.valueOf() + thirty_six_hours - 1000),
+    )
     .addInput(
       input,
       Data.serialize(VendorSpendRedeemer, {
@@ -50,6 +61,12 @@ export async function adjudicate<P extends Provider, W extends Wallet>(
         },
       }),
     );
+  if (metadata) {
+    const auxData = new AuxiliaryData();
+    auxData.setMetadata(toTxMetadata(metadata));
+
+    tx = tx.setAuxiliaryData(auxData);
+  }
   for (const signer of signers) {
     tx = tx.addRequiredSigner(signer);
   }

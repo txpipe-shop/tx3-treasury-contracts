@@ -25,15 +25,17 @@ export async function reorganize<P extends Provider, W extends Wallet>(
   inputs: TransactionUnspentOutput[],
   outputAmounts: Value[],
   signers: Ed25519KeyHashHex[],
+  trace?: boolean,
 ): Promise<TxBuilder> {
   const { script, scriptAddress } = loadTreasuryScript(
     blaze.provider.network,
     config,
+    trace,
   );
   const registryInput = await blaze.provider.getUnspentOutputByNFT(
     AssetId(config.registry_token + toHex(Buffer.from("REGISTRY"))),
   );
-  const refInput = await blaze.provider.resolveScriptRef(script.Script);
+  const refInput = await blaze.provider.resolveScriptRef(script.Script.hash());
   if (!refInput)
     throw new Error("Could not find treasury script reference on-chain");
   let tx = blaze

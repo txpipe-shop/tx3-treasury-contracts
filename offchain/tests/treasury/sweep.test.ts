@@ -12,7 +12,7 @@ import {
   TreasuryConfiguration,
   TreasurySpendRedeemer,
 } from "../../src/generated-types/contracts";
-import { loadTreasuryScript, unix_to_slot } from "../../src/shared";
+import { loadTreasuryScript } from "../../src/shared";
 import { sweep } from "../../src/treasury/sweep";
 import {
   registryToken,
@@ -35,7 +35,7 @@ describe("When sweeping", () => {
   beforeEach(async () => {
     emulator = await setupEmulator();
     config = await sampleTreasuryConfig(emulator);
-    const treasury = loadTreasuryScript(Core.NetworkId.Testnet, config);
+    const treasury = loadTreasuryScript(Core.NetworkId.Testnet, config, true);
     treasuryScript = treasury.script.Script;
     scriptAddress = treasury.scriptAddress;
     emulator.accounts.set(treasury.rewardAccount!, amount);
@@ -82,7 +82,7 @@ describe("When sweeping", () => {
 
   describe("after the timeout", () => {
     beforeEach(() => {
-      emulator.stepForwardToUnix(config.expiration + 1n);
+      emulator.stepForwardToUnix(config.expiration + 1000n);
     });
 
     describe("anyone", () => {
@@ -90,7 +90,7 @@ describe("When sweeping", () => {
         await emulator.as("Anyone", async (blaze) => {
           await emulator.expectValidTransaction(
             blaze,
-            await sweep(config, scriptInput, blaze),
+            await sweep(config, scriptInput, blaze, undefined, true),
           );
         });
       });
@@ -104,6 +104,7 @@ describe("When sweeping", () => {
               scriptInput,
               blaze,
               500_000_000_000n - 5_000_000n,
+              true,
             ),
           );
         });
@@ -119,7 +120,7 @@ describe("When sweeping", () => {
                 scriptInput,
                 Data.serialize(TreasurySpendRedeemer, "SweepTreasury"),
               )
-              .setValidFrom(unix_to_slot(config.expiration + 1000n))
+              .setValidFrom(emulator.unixToSlot(config.expiration + 1000n))
               .addReferenceInput(registryInput)
               .addReferenceInput(refInput)
               .setDonation(scriptInput.output().amount().coin() + 1_000_000n),
@@ -141,7 +142,7 @@ describe("When sweeping", () => {
                 secondScriptInput,
                 Data.serialize(TreasurySpendRedeemer, "SweepTreasury"),
               )
-              .setValidFrom(unix_to_slot(config.expiration + 1000n))
+              .setValidFrom(emulator.unixToSlot(config.expiration + 1000n))
               .addReferenceInput(registryInput)
               .addReferenceInput(refInput)
               .setDonation(
@@ -167,7 +168,7 @@ describe("When sweeping", () => {
                 makeValue(2_000_000n, ["a".repeat(56), 1n]),
                 Data.Void(),
               )
-              .setValidFrom(unix_to_slot(config.expiration + 1000n))
+              .setValidFrom(emulator.unixToSlot(config.expiration + 1000n))
               .addReferenceInput(registryInput)
               .addReferenceInput(refInput)
               .setDonation(withAssetScriptInput.output().amount().coin()),
@@ -184,7 +185,7 @@ describe("When sweeping", () => {
                 scriptInput,
                 Data.serialize(TreasurySpendRedeemer, "SweepTreasury"),
               )
-              .setValidFrom(unix_to_slot(config.expiration + 1000n))
+              .setValidFrom(emulator.unixToSlot(config.expiration + 1000n))
               .addReferenceInput(registryInput)
               .addReferenceInput(refInput)
               .setDonation(scriptInput.output().amount().coin() / 2n),
@@ -208,7 +209,7 @@ describe("When sweeping", () => {
                 secondScriptInput,
                 Data.serialize(TreasurySpendRedeemer, "SweepTreasury"),
               )
-              .setValidFrom(unix_to_slot(config.expiration + 1000n))
+              .setValidFrom(emulator.unixToSlot(config.expiration + 1000n))
               .addReferenceInput(registryInput)
               .addReferenceInput(refInput)
               .setDonation(
@@ -229,7 +230,7 @@ describe("When sweeping", () => {
                 withAssetScriptInput,
                 Data.serialize(TreasurySpendRedeemer, "SweepTreasury"),
               )
-              .setValidFrom(unix_to_slot(config.expiration + 1000n))
+              .setValidFrom(emulator.unixToSlot(config.expiration + 1000n))
               .addReferenceInput(registryInput)
               .addReferenceInput(refInput)
               .setDonation(withAssetScriptInput.output().amount().coin()),
@@ -263,7 +264,7 @@ describe("When sweeping", () => {
                 makeValue(2_000_000n, ["a".repeat(56), 1n]),
                 Data.Void(),
               )
-              .setValidFrom(unix_to_slot(config.expiration + 1000n))
+              .setValidFrom(emulator.unixToSlot(config.expiration + 1000n))
               .addReferenceInput(registryInput)
               .addReferenceInput(refInput)
               .setDonation(withAssetScriptInput.output().amount().coin()),
@@ -284,7 +285,7 @@ describe("When sweeping", () => {
                 scriptInput,
                 Data.serialize(TreasurySpendRedeemer, "SweepTreasury"),
               )
-              .setValidFrom(unix_to_slot(config.expiration - 1000n))
+              .setValidFrom(emulator.unixToSlot(config.expiration - 1000n))
               .addReferenceInput(registryInput)
               .addReferenceInput(refInput)
               .setDonation(500_000_000_000n),

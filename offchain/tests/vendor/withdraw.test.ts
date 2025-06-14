@@ -20,7 +20,6 @@ import {
   coreValueToContractsValue,
   loadTreasuryScript,
   loadVendorScript,
-  slot_to_unix,
 } from "../../src/shared";
 import { withdraw } from "../../src/vendor/withdraw";
 import {
@@ -61,10 +60,12 @@ describe("When withdrawing from the vendor script", () => {
     const treasuryScriptManifest = loadTreasuryScript(
       Core.NetworkId.Testnet,
       treasuryConfig,
+      true,
     );
     const vendorScriptManifest = loadVendorScript(
       Core.NetworkId.Testnet,
       vendorConfig,
+      true,
     );
     config = vendorConfig;
     rewardAccount = treasuryScriptManifest.rewardAccount!;
@@ -238,10 +239,12 @@ describe("When withdrawing from the vendor script", () => {
           await withdraw(
             config,
             blaze,
-            new Date(Number(slot_to_unix(Slot(2)))),
+            new Date(Number(emulator.slotToUnix(Slot(2)))),
             [scriptInput],
             vendorAddress,
             [vendorSigner],
+            undefined,
+            true,
           ),
         );
       });
@@ -254,10 +257,12 @@ describe("When withdrawing from the vendor script", () => {
           await withdraw(
             config,
             blaze,
-            new Date(Number(slot_to_unix(Slot(101)))),
+            new Date(Number(emulator.slotToUnix(Slot(101)))),
             [secondScriptInput],
             vendorAddress,
             [vendorSigner],
+            undefined,
+            true,
           ),
         );
       });
@@ -270,10 +275,12 @@ describe("When withdrawing from the vendor script", () => {
           await withdraw(
             config,
             blaze,
-            new Date(Number(slot_to_unix(Slot(101)))),
+            new Date(Number(emulator.slotToUnix(Slot(101)))),
             [fifthScriptInput],
             vendorAddress,
             [vendorSigner],
+            undefined,
+            true,
           ),
         );
       });
@@ -286,10 +293,12 @@ describe("When withdrawing from the vendor script", () => {
           await withdraw(
             config,
             blaze,
-            new Date(Number(slot_to_unix(Slot(3)))),
+            new Date(Number(emulator.slotToUnix(Slot(3)))),
             [thirdScriptInput],
             vendorAddress,
             [vendorSigner],
+            undefined,
+            true,
           ),
         );
       });
@@ -302,10 +311,12 @@ describe("When withdrawing from the vendor script", () => {
           await withdraw(
             config,
             blaze,
-            new Date(Number(slot_to_unix(Slot(101)))),
+            new Date(Number(emulator.slotToUnix(Slot(101)))),
             [thirdScriptInput],
             vendorAddress,
             [vendorSigner],
+            undefined,
+            true,
           ),
         );
       });
@@ -318,10 +329,12 @@ describe("When withdrawing from the vendor script", () => {
           await withdraw(
             config,
             blaze,
-            new Date(Number(slot_to_unix(Slot(11)))),
+            new Date(Number(emulator.slotToUnix(Slot(11)))),
             [fourthScriptInput],
             vendorAddress,
             [vendorSigner],
+            undefined,
+            true,
           ),
         );
       });
@@ -335,10 +348,12 @@ describe("When withdrawing from the vendor script", () => {
           await withdraw(
             config,
             blaze,
-            new Date(Number(slot_to_unix(Slot(0)))),
+            new Date(Number(emulator.slotToUnix(Slot(0)))),
             [scriptInput],
             vendorAddress,
             [vendorSigner],
+            undefined,
+            true,
           ),
         );
       });
@@ -636,10 +651,12 @@ describe("When withdrawing from the vendor script", () => {
           await withdraw(
             config,
             blaze,
-            new Date(Number(slot_to_unix(Slot(2)))),
+            new Date(Number(emulator.slotToUnix(Slot(2)))),
             [scriptInput],
             signer,
             [Ed25519KeyHashHex(signer.asBase()!.getPaymentCredential().hash)],
+            undefined,
+            true,
           ),
           /Trace satisfied\(input_vendor_datum.vendor, extra_signatories, validity_range, withdrawals\)/,
         );

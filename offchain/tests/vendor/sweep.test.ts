@@ -15,8 +15,6 @@ import {
   coreValueToContractsValue,
   loadTreasuryScript,
   loadVendorScript,
-  slot_to_unix,
-  unix_to_slot,
 } from "../../src/shared";
 import { sweep } from "../../src/vendor/sweep";
 import {
@@ -57,10 +55,12 @@ describe("", () => {
     const treasuryScriptManifest = loadTreasuryScript(
       Core.NetworkId.Testnet,
       treasuryConfig,
+      true,
     );
     const vendorScriptManifest = loadVendorScript(
       Core.NetworkId.Testnet,
       vendorConfig,
+      true,
     );
     configs = { treasury: treasuryConfig, vendor: vendorConfig };
     now = new Date(Number(configs.vendor.expiration + 1000n));
@@ -241,9 +241,10 @@ describe("", () => {
           await emulator.expectScriptFailure(
             await sweep(
               configs,
-              new Date(Number(slot_to_unix(Slot(0)))),
+              new Date(Number(emulator.slotToUnix(Slot(0)))),
               [scriptInput],
               blaze,
+              true,
             ),
             /Trace expect is_entirely_after\(validity_range, config.expiration\)/,
           );
@@ -255,7 +256,7 @@ describe("", () => {
   describe("after the expiration", () => {
     beforeEach(() => {
       emulator.stepForwardToSlot(
-        unix_to_slot(configs.vendor.expiration + 1000n),
+        emulator.unixToSlot(configs.vendor.expiration + 1000n),
       );
     });
     describe("anyone", () => {
@@ -264,7 +265,7 @@ describe("", () => {
           await emulator.as("Anyone", async (blaze) => {
             await emulator.expectValidTransaction(
               blaze,
-              await sweep(configs, now, [scriptInput], blaze),
+              await sweep(configs, now, [scriptInput], blaze, true),
             );
           });
         });
@@ -272,7 +273,7 @@ describe("", () => {
           await emulator.as("Anyone", async (blaze) => {
             await emulator.expectValidTransaction(
               blaze,
-              await sweep(configs, now, [fourthScriptInput], blaze),
+              await sweep(configs, now, [fourthScriptInput], blaze, true),
             );
           });
         });
@@ -280,7 +281,7 @@ describe("", () => {
           await emulator.as("Anyone", async (blaze) => {
             await emulator.expectValidTransaction(
               blaze,
-              await sweep(configs, now, [fifthScriptInput], blaze),
+              await sweep(configs, now, [fifthScriptInput], blaze, true),
             );
           });
         });
@@ -293,9 +294,9 @@ describe("", () => {
                 .newTransaction()
                 .addReferenceInput(registryInput)
                 .addReferenceInput(refInput)
-                .setValidFrom(unix_to_slot(BigInt(now.valueOf())))
+                .setValidFrom(emulator.unixToSlot(BigInt(now.valueOf())))
                 .setValidUntil(
-                  unix_to_slot(BigInt(now.valueOf()) + thirtSixHours),
+                  emulator.unixToSlot(BigInt(now.valueOf()) + thirtSixHours),
                 )
                 .addInput(
                   secondScriptInput,

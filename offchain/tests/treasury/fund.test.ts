@@ -21,7 +21,6 @@ import {
 import {
   loadTreasuryScript,
   loadVendorScript,
-  slot_to_unix,
   coreValueToContractsValue as translateValue,
 } from "../../src/shared";
 import { fund } from "../../src/treasury/fund";
@@ -60,10 +59,12 @@ describe("When funding", () => {
     const treasuryScriptManifest = loadTreasuryScript(
       Core.NetworkId.Testnet,
       treasuryConfig,
+      true,
     );
     const vendorScriptManifest = loadVendorScript(
       Core.NetworkId.Testnet,
       vendorConfig,
+      true,
     );
     configs = { treasury: treasuryConfig, vendor: vendorConfig };
     rewardAccount = treasuryScriptManifest.rewardAccount!;
@@ -145,7 +146,7 @@ describe("When funding", () => {
             vendor,
             [
               {
-                date: new Date(Number(slot_to_unix(Slot(10)))),
+                date: new Date(Number(emulator.slotToUnix(Slot(10)))),
                 amount: makeValue(10_000_000_000n),
               },
             ],
@@ -153,6 +154,8 @@ describe("When funding", () => {
               Ed25519KeyHashHex(await fund_key(emulator)),
               Ed25519KeyHashHex(await vendor_key(emulator)),
             ],
+            undefined,
+            true,
           );
         });
         await emulator.expectValidMultisignedTransaction([Funder, Vendor], tx);
@@ -166,7 +169,7 @@ describe("When funding", () => {
             vendor,
             [
               {
-                date: new Date(Number(slot_to_unix(Slot(10)))),
+                date: new Date(Number(emulator.slotToUnix(Slot(10)))),
                 amount: makeValue(500_000_000_000n),
               },
             ],
@@ -174,6 +177,8 @@ describe("When funding", () => {
               Ed25519KeyHashHex(await fund_key(emulator)),
               Ed25519KeyHashHex(await vendor_key(emulator)),
             ],
+            undefined,
+            true,
           );
         });
         await emulator.expectValidMultisignedTransaction([Funder, Vendor], tx);
@@ -187,11 +192,11 @@ describe("When funding", () => {
             vendor,
             [
               {
-                date: new Date(Number(slot_to_unix(Slot(10)))),
+                date: new Date(Number(emulator.slotToUnix(Slot(10)))),
                 amount: makeValue(250_000_000_000n),
               },
               {
-                date: new Date(Number(slot_to_unix(Slot(12)))),
+                date: new Date(Number(emulator.slotToUnix(Slot(12)))),
                 amount: makeValue(250_000_000_000n),
               },
             ],
@@ -199,6 +204,8 @@ describe("When funding", () => {
               Ed25519KeyHashHex(await fund_key(emulator)),
               Ed25519KeyHashHex(await vendor_key(emulator)),
             ],
+            undefined,
+            true,
           );
         });
         await emulator.expectValidMultisignedTransaction([Funder, Vendor], tx);
@@ -212,11 +219,11 @@ describe("When funding", () => {
             vendor,
             [
               {
-                date: new Date(Number(slot_to_unix(Slot(10)))),
+                date: new Date(Number(emulator.slotToUnix(Slot(10)))),
                 amount: makeValue(10_000_000n),
               },
               {
-                date: new Date(Number(slot_to_unix(Slot(12)))),
+                date: new Date(Number(emulator.slotToUnix(Slot(12)))),
                 amount: makeValue(10_000_000n, ["b".repeat(56), 50n]),
               },
             ],
@@ -224,6 +231,8 @@ describe("When funding", () => {
               Ed25519KeyHashHex(await fund_key(emulator)),
               Ed25519KeyHashHex(await vendor_key(emulator)),
             ],
+            undefined,
+            true,
           );
         });
         await emulator.expectValidMultisignedTransaction([Funder, Vendor], tx);
@@ -237,7 +246,7 @@ describe("When funding", () => {
             vendor,
             [
               {
-                date: new Date(Number(slot_to_unix(Slot(12)))),
+                date: new Date(Number(emulator.slotToUnix(Slot(12)))),
                 amount: makeValue(0n, ["b".repeat(56), 50n]),
               },
             ],
@@ -245,6 +254,8 @@ describe("When funding", () => {
               Ed25519KeyHashHex(await fund_key(emulator)),
               Ed25519KeyHashHex(await vendor_key(emulator)),
             ],
+            undefined,
+            true,
           );
         });
         await emulator.expectValidMultisignedTransaction([Funder, Vendor], tx);
@@ -258,11 +269,11 @@ describe("When funding", () => {
             vendor,
             [
               {
-                date: new Date(Number(slot_to_unix(Slot(10)))),
+                date: new Date(Number(emulator.slotToUnix(Slot(10)))),
                 amount: makeValue(25_000_000n),
               },
               {
-                date: new Date(Number(slot_to_unix(Slot(12)))),
+                date: new Date(Number(emulator.slotToUnix(Slot(12)))),
                 amount: makeValue(25_000_000n, ["b".repeat(56), 50n]),
               },
             ],
@@ -270,6 +281,8 @@ describe("When funding", () => {
               Ed25519KeyHashHex(await fund_key(emulator)),
               Ed25519KeyHashHex(await vendor_key(emulator)),
             ],
+            undefined,
+            true,
           );
         });
         await emulator.expectValidMultisignedTransaction([Funder, Vendor], tx);
@@ -627,7 +640,7 @@ describe("When funding", () => {
             vendor,
             [
               {
-                date: new Date(Number(slot_to_unix(Slot(10)))),
+                date: new Date(Number(emulator.slotToUnix(Slot(10)))),
                 amount: makeValue(10_000_000_000n),
               },
             ],
@@ -635,6 +648,8 @@ describe("When funding", () => {
               Ed25519KeyHashHex(address.asBase()!.getPaymentCredential().hash),
               Ed25519KeyHashHex(await vendor_key(emulator)),
             ],
+            undefined,
+            true,
           ),
           /Trace satisfied\(permissions.fund/,
         );
