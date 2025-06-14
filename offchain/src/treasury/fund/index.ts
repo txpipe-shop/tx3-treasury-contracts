@@ -15,20 +15,21 @@ import {
   type Wallet,
 } from "@blaze-cardano/sdk";
 import * as Tx from "@blaze-cardano/tx";
-import { ITransactionMetadata, toTxMetadata } from "src/metadata/shared";
-import { IFund } from "src/metadata/types/fund";
+
 import {
   MultisigScript,
   TreasuryConfiguration,
   TreasurySpendRedeemer,
   VendorConfiguration,
   VendorDatum,
-} from "../../generated-types/contracts";
+} from "../../generated-types/contracts.js";
+import { ITransactionMetadata, toTxMetadata } from "../../metadata/shared.js";
+import { IFund } from "../../metadata/types/fund.js";
 import {
   coreValueToContractsValue,
   loadTreasuryScript,
   loadVendorScript,
-} from "../../shared";
+} from "../../shared/index.js";
 
 export async function fund<P extends Provider, W extends Wallet>(
   configs: { treasury: TreasuryConfiguration; vendor: VendorConfiguration },
