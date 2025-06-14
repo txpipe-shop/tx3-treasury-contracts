@@ -1,4 +1,4 @@
-import { Core, makeValue } from "@blaze-cardano/sdk";
+import { cborToScript, Core, makeValue } from "@blaze-cardano/sdk";
 import { type Cardano } from "@cardano-sdk/core";
 
 import {
@@ -33,6 +33,20 @@ export function loadTreasuryScript(
 ): ICompiledScript<TreasuryTreasuryWithdraw, TreasuryConfiguration> {
   const script = new TreasuryTreasuryWithdraw(config);
   return constructTreasuryScript(network, config, script.Script, scriptRef);
+}
+
+export function constructTreasuryScriptFromBytes(
+  network: Core.NetworkId,
+  config: TreasuryConfiguration,
+  scriptBytesHex: string,
+  scriptRef?: TransactionUnspentOutput,
+): ICompiledScript<TreasuryTreasuryWithdraw, TreasuryConfiguration> {
+  return constructTreasuryScript(
+    network,
+    config,
+    cborToScript(scriptBytesHex, "PlutusV3"),
+    scriptRef,
+  );
 }
 
 export function constructTreasuryScript(
@@ -74,6 +88,20 @@ export function loadVendorScript(
 ): ICompiledScript<VendorVendorSpend, VendorConfiguration> {
   const script = new VendorVendorSpend(config);
   return constructVendorScript(network, config, script.Script, scriptRef);
+}
+
+export function constructVendorScriptFromBytes(
+  network: Core.NetworkId,
+  config: VendorConfiguration,
+  scriptBytesHex: string,
+  scriptRef?: TransactionUnspentOutput,
+): ICompiledScript<VendorVendorSpend, VendorConfiguration> {
+  return constructVendorScript(
+    network,
+    config,
+    cborToScript(scriptBytesHex, "PlutusV3"),
+    scriptRef,
+  );
 }
 
 export function constructVendorScript(
@@ -125,6 +153,26 @@ export function loadScripts(
     treasuryScript,
     vendorScript,
   };
+}
+
+export function constructScriptsFromBytes(
+  network: Core.NetworkId,
+  treasuryConfig: TreasuryConfiguration,
+  rawTreasuryScriptHex: string,
+  vendorConfig: VendorConfiguration,
+  rawVendorScriptHex: string,
+  treasuryScriptRef?: TransactionUnspentOutput,
+  vendorScriptRef?: TransactionUnspentOutput,
+): ICompiledScripts {
+  return constructScripts(
+    network,
+    treasuryConfig,
+    cborToScript(rawTreasuryScriptHex, "PlutusV3"),
+    vendorConfig,
+    cborToScript(rawVendorScriptHex, "PlutusV3"),
+    treasuryScriptRef,
+    vendorScriptRef,
+  );
 }
 
 export function constructScripts(
