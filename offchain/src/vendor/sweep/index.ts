@@ -7,17 +7,18 @@ import {
   type Provider,
   type Wallet,
 } from "@blaze-cardano/sdk";
+
 import {
   TreasuryConfiguration,
   VendorConfiguration,
   VendorDatum,
   VendorSpendRedeemer,
-} from "../../generated-types/contracts";
+} from "../../generated-types/contracts.js";
 import {
   contractsValueToCoreValue,
   loadTreasuryScript,
   loadVendorScript,
-} from "../../shared";
+} from "../../shared/index.js";
 
 export async function sweep<P extends Provider, W extends Wallet>(
   configs: { treasury: TreasuryConfiguration; vendor: VendorConfiguration },

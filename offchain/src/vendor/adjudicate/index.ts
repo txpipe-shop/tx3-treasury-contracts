@@ -12,15 +12,19 @@ import {
   type Provider,
   type Wallet,
 } from "@blaze-cardano/sdk";
-import { ITransactionMetadata, toTxMetadata } from "src/metadata/shared";
-import { IPause, IResume } from "src/metadata/types/adjudicate";
+
 import {
   PayoutStatus,
   VendorConfiguration,
   VendorDatum,
   VendorSpendRedeemer,
-} from "../../generated-types/contracts";
-import { loadVendorScript } from "../../shared";
+} from "../../generated-types/contracts.js";
+import {
+  toTxMetadata,
+  type ITransactionMetadata,
+} from "../../metadata/shared.js";
+import type { IPause, IResume } from "../../metadata/types/adjudicate.js";
+import { loadVendorScript } from "../../shared/index.js";
 
 export async function adjudicate<P extends Provider, W extends Wallet>(
   config: VendorConfiguration,

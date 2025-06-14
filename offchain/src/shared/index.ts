@@ -1,6 +1,3 @@
-import { cborToScript, Core, makeValue } from "@blaze-cardano/sdk";
-import { type Cardano } from "@cardano-sdk/core";
-
 import {
   Address,
   RewardAccount,
@@ -9,12 +6,15 @@ import {
   Value,
   type CredentialCore,
 } from "@blaze-cardano/core";
+import { cborToScript, Core, makeValue } from "@blaze-cardano/sdk";
+import { type Cardano } from "@cardano-sdk/core";
+
 import {
   TreasuryConfiguration,
   TreasuryTreasuryWithdraw,
   VendorConfiguration,
   VendorVendorSpend,
-} from "../generated-types/contracts";
+} from "../generated-types/contracts.js";
 
 export interface ICompiledScript<T, C> {
   config: C;
