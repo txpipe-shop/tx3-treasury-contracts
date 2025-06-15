@@ -1,7 +1,7 @@
 import { Blaze, Provider, Wallet } from "@blaze-cardano/sdk";
 import { input } from "@inquirer/prompts";
 import { IInitialize } from "src/metadata/types/initialize-reorganize";
-import { Treasury } from "../../src";
+import { ETransactionEvent, Treasury } from "src";
 import {
   getBlazeInstance,
   getConfigs,
@@ -23,7 +23,7 @@ export async function withdraw(
   const { amounts, outputs } = await getOutputs();
 
   const body: IInitialize = {
-    event: "initialize",
+    event: ETransactionEvent.INITIALIZE,
     reason: await maybeInput({
       message: "Enter a reason for the withdrawal (optional)",
     }),
@@ -52,5 +52,9 @@ export async function withdraw(
     withdrawAmount,
   );
   const finalTx = await tx.complete();
-  await transactionDialog(finalTx.toCbor().toString(), false);
+  await transactionDialog(
+    blazeInstance.provider.network,
+    finalTx.toCbor().toString(),
+    false,
+  );
 }

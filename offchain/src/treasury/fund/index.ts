@@ -2,6 +2,8 @@ import {
   AssetId,
   AuxiliaryData,
   Ed25519KeyHashHex,
+  NetworkId,
+  Slot,
   toHex,
   TransactionUnspentOutput,
   Value,
@@ -79,11 +81,17 @@ export async function fund<P extends Provider, W extends Wallet>({
     AssetId(configs.treasury.registry_token + toHex(Buffer.from("REGISTRY"))),
   );
 
+  const maxHorizon = blaze.provider.network === NetworkId.Testnet ? 6 : 36;
+  const upperBoundUnix = Math.min(
+    Number(configs.treasury.expiration),
+    new Date().valueOf() + maxHorizon * 60 * 60 * 1000,
+  );
+  console.log(maxHorizon);
+  console.log(upperBoundUnix);
+  const upperBoundSlot = blaze.provider.unixToSlot(upperBoundUnix) - 30;
   let tx = blaze
     .newTransaction()
-    .setValidUntil(
-      blaze.provider.unixToSlot(configs.treasury.expiration - 1000n),
-    )
+    .setValidUntil(Slot(upperBoundSlot))
     .addReferenceInput(registryInput);
 
   if (!scripts.treasuryScript.scriptRef) {

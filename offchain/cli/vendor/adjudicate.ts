@@ -127,7 +127,7 @@ async function adjudicate(
     )
   ).complete();
 
-  await transactionDialog(tx.toCbor(), false);
+  await transactionDialog(blazeInstance.provider.network, tx.toCbor(), false);
 }
 
 export async function pause(
