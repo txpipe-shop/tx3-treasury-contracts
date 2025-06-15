@@ -32,11 +32,11 @@ import {
   toMultisig,
 } from "src/metadata/types/permission";
 import {
-  ETransactionEvent,
   type IAnchor,
   type ITransactionMetadata,
 } from "../src/metadata/shared";
 import { fetch } from "bun";
+import { ETransactionEvent } from "src";
 
 async function getSignersFromList(
   permissions: TPermissionMetadata[],
