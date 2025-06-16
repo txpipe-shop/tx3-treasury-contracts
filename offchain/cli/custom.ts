@@ -17,7 +17,7 @@ import { Core } from "@blaze-cardano/sdk";
 import { input } from "@inquirer/prompts";
 
 const sanchonetParameters: Core.ProtocolParameters = {
-  coinsPerUtxoByte: 410,
+  coinsPerUtxoByte: 4310,
   maxTxSize: 16384,
   minFeeCoefficient: 44,
   minFeeConstant: 155381,
