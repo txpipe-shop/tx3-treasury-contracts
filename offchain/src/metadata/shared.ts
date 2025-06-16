@@ -107,8 +107,8 @@ export async function fromTxMetadata(
 
   const obj = await decodeFirst(meta.toCbor());
   const sanitized = convertNumbersToBigints<ITransactionMetadata>(obj);
-
-  return sanitized;
+  const rejoined = convertArraysToStrings<ITransactionMetadata>(sanitized);
+  return rejoined;
 }
 
 export function toTxMetadata(m: ITransactionMetadata): Metadata {
@@ -147,6 +147,31 @@ function convertNumbersToBigints<T>(obj: T): T {
       } else {
         newObject[key] = value;
       }
+    }
+    return newObject as T;
+  }
+  return obj;
+}
+
+function convertArraysToStrings<T>(obj: T): T {
+  if (Array.isArray(obj)) {
+    // Grab the subset array while including instances where there is only
+    // two chunks of a string (where the last is less than 64).
+    const subsetArray =
+      obj.length < 3 ? obj.slice(0, 1) : obj.slice(0, obj.length - 2);
+    if (
+      obj.length > 0 &&
+      // Ensure that every string in the subset is 64 characters in length.
+      subsetArray.every((v) => typeof v === "string" && v.length === 64)
+    ) {
+      return obj.join("") as unknown as T;
+    }
+
+    return obj.map(convertArraysToStrings) as unknown as T;
+  } else if (obj !== null && typeof obj === "object") {
+    const newObject: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj)) {
+      newObject[key] = convertArraysToStrings(value);
     }
     return newObject as T;
   }
