@@ -43,7 +43,7 @@ When publishing the scriptRegistry datum, which includes the script hashes of th
 
 ```json
 {
-  "@context": "",
+  "@context": "https://github.com/SundaeSwap-finance/treasury-contracts/blob/main/offchain/src/metadata/spec.md",
   "hashAlgorithm": "blake2b-256",
   "txAuthor": "c27...",
   "instance": "1ef...",
@@ -98,7 +98,7 @@ In each of these transactions, the following metadata will be attached:
 
 ```json
 {
-  "@context": "",
+  "@context": "https://raw.githubusercontent.com/SundaeSwap-finance/treasury-contracts/refs/heads/main/offchain/src/metadata/context.jsonld",
   "hashAlgorithm": "blake2b-256",
   "txAuthor": "c27...",
   "instance": "1ef...",
@@ -124,7 +124,7 @@ When we pay funds out of the treasury smart contract, into the vendor contract, 
 
 ```json
 {
-  "@context": "",
+  "@context": "https://raw.githubusercontent.com/SundaeSwap-finance/treasury-contracts/refs/heads/main/offchain/src/metadata/context.jsonld",
   "hashAlgorithm": "blake2b-256",
   "txAuthor": "c27...",
   "instance": "1ef...",
@@ -174,7 +174,7 @@ A disburse transaction will have the following metadata attached to it:
 
 ```json
 {
-  "@context": "",
+  "@context": "https://raw.githubusercontent.com/SundaeSwap-finance/treasury-contracts/refs/heads/main/offchain/src/metadata/context.jsonld",
   "hashAlgorithm": "blake2b-256",
   "txAuthor": "c27...",
   "instance": "1ef...",
@@ -206,7 +206,7 @@ The vendor contract can be spent to “withdraw” funds, and withdraw zero fund
 
 ```json
 {
-  "@context": "",
+  "@context": "https://raw.githubusercontent.com/SundaeSwap-finance/treasury-contracts/refs/heads/main/offchain/src/metadata/context.jsonld",
   "hashAlgorithm": "blake2b-256",
   "txAuthor": "c27...",
   "instance": "1ef...",
@@ -240,7 +240,7 @@ Funds may be withdrawn from the vendor contract. In such cases, the metadata wil
 
 ```json
 {
-  "@context": "",
+  "@context": "https://raw.githubusercontent.com/SundaeSwap-finance/treasury-contracts/refs/heads/main/offchain/src/metadata/context.jsonld",
   "hashAlgorithm": "blake2b-256",
   "txAuthor": "c27...",
   "instance": "1ef...",
@@ -261,7 +261,7 @@ The oversight committee may pause funds, preventing them from being withdrawn. I
 
 ```json
 {
-  "@context": "",
+  "@context": "https://raw.githubusercontent.com/SundaeSwap-finance/treasury-contracts/refs/heads/main/offchain/src/metadata/context.jsonld",
   "hashAlgorithm": "blake2b-256",
   "txAuthor": "c27...",
   "instance": "1ef...",
@@ -285,7 +285,7 @@ After resolving the issue with a milestone, the oversight committee can resume t
 
 ```json
 {
-  "@context": "",
+  "@context": "https://raw.githubusercontent.com/SundaeSwap-finance/treasury-contracts/refs/heads/main/offchain/src/metadata/context.jsonld",
   "hashAlgorithm": "blake2b-256",
   "txAuthor": "c27...",
   "instance": "1ef...",
@@ -306,7 +306,7 @@ In rare cases, the vendor and the oversight committee both agree to modify a pro
 
 ```json
 {
-  "@context": "",
+  "@context": "https://raw.githubusercontent.com/SundaeSwap-finance/treasury-contracts/refs/heads/main/offchain/src/metadata/context.jsonld",
   "hashAlgorithm": "blake2b-256",
   "txAuthor": "c27...",
   "instance": "1ef...",
@@ -345,7 +345,7 @@ As a special case, the project may be completely cancelled and refunded to the t
 
 ```json
 {
-  "@context": "",
+  "@context": "https://raw.githubusercontent.com/SundaeSwap-finance/treasury-contracts/refs/heads/main/offchain/src/metadata/context.jsonld",
   "hashAlgorithm": "blake2b-256",
   "txAuthor": "c27...",
   "instance": "1ef...",
@@ -362,7 +362,7 @@ Finally, at the end of the lifecycle of funds, any surplus may be swept back to 
 
 ```json
 {
-  "@context": "",
+  "@context": "https://raw.githubusercontent.com/SundaeSwap-finance/treasury-contracts/refs/heads/main/offchain/src/metadata/context.jsonld",
   "hashAlgorithm": "blake2b-256",
   "txAuthor": "c27...",
   "instance": "1ef...",

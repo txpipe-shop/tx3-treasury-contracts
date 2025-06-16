@@ -1,6 +1,6 @@
 {
   "CIP100": "https://github.com/cardano-foundation/CIPs/blob/master/CIP-0100/README.md#",
-  "tom": "https://cdn.sundaeswap.finance/cip-100/TOM-metadata-standard.md#",
+  "tom": "https://github.com/SundaeSwap-finance/treasury-contracts/blob/main/offchain/src/metadata/spec.md#",
   "hashAlgorithm": "CIP100:hashAlgorithm",
   "txAuthor": "tom:txAuthor",
   "instance": "tom:instance",
