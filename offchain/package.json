@@ -70,6 +70,7 @@
   "dependencies": {
     "@inquirer/prompts": "^7.5.3",
     "cbor": "^10.0.3",
-    "clipboardy": "^4.0.0"
+    "clipboardy": "^4.0.0",
+    "node-fetch": "^3.3.2"
   }
 }
