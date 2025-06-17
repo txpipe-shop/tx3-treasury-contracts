@@ -40,6 +40,10 @@ import { CustomProvider } from "./custom";
 import fetch from "node-fetch";
 import { ETransactionEvent } from "src";
 
+const BLOCKFROST_VAR = "BLOCKFROST_KEY";
+const MAESTRO_VAR = "MAESTRO_KEY";
+const WALLET_VAR = "WALLET_ADDRESS";
+
 async function getSignersFromList(
   permissions: TPermissionMetadata[],
   min: number,
@@ -600,19 +604,30 @@ export async function transactionDialog(
 }
 
 export async function getProvider(): Promise<Provider> {
-  const providerType = await select({
-    message: "Select the provider type",
-    choices: [
-      { name: "Blockfrost", value: "blockfrost" },
-      { name: "Maestro", value: "maestro" },
-      { name: "Custom", value: "custom" },
-    ],
-  });
+  let providerType;
+
+  if (process.env[BLOCKFROST_VAR] !== undefined) {
+    console.log(`${BLOCKFROST_VAR} detected in env, assuming Blockfrost provider.`);
+    providerType = "blockfrost";
+  } else if (process.env[MAESTRO_VAR] !== undefined) {
+    console.log(`${MAESTRO_VAR} detected in env, assuming Maestro provider.`);
+    providerType = "maestro";
+  } else {
+    providerType = await select({
+      message: "Select the provider type",
+      choices: [
+        { name: "Blockfrost", value: "blockfrost" },
+        { name: "Maestro", value: "maestro" },
+        { name: "Custom", value: "custom" },
+      ],
+    });
+  }
+
   switch (providerType) {
     case "blockfrost":
       const bfKey = await inputOrEnv({
         message: "Enter the Blockfrost project ID",
-        env: "BLOCKFROST_KEY",
+        env: BLOCKFROST_VAR,
         validate: (s) => s.startsWith("preview") || s.startsWith("mainnet"),
       });
       const bfNetwork: "cardano-mainnet" | "cardano-preview" = bfKey.startsWith(
@@ -627,7 +642,7 @@ export async function getProvider(): Promise<Provider> {
     case "maestro":
       const mKey = await inputOrEnv({
         message: "Enter the Maestro API key",
-        env: "MAESTRO_KEY",
+        env: MAESTRO_VAR,
       });
       const mNetwork: "mainnet" | "preview" = await select({
         message: "Select the network",
@@ -684,7 +699,7 @@ export async function getWallet(provider: Provider): Promise<Wallet> {
   const address = Core.Address.fromBech32(
     await inputOrEnv({
       message: "Enter the address of the wallet",
-      env: "WALLET_ADDRESS",
+      env: WALLET_VAR,
     }),
   );
   const wallet = new ColdWallet(address, provider.network, provider);
@@ -993,14 +1008,22 @@ async function registerNewInstance(): Promise<{
   vendorConfig: VendorConfiguration;
   metadata: ITransactionMetadata<INewInstance>;
 }> {
-  const utxoChoice = await select({
-    message: "How do you want to declare the bootstrap UTxO?",
-    choices: [
-      { name: "Manual", value: "manual" },
-      { name: "Select from wallet", value: "select" },
-      { name: "Use a random one", value: "random" },
-    ],
-  });
+  let utxoChoice;
+
+  if (process.env[WALLET_VAR] !== undefined) {
+    console.log(`${WALLET_VAR} detected in env, assuming UTxO selection from wallet.`);
+    utxoChoice = "select";
+  } else {
+    utxoChoice = await select({
+      message: "How do you want to declare the bootstrap UTxO?",
+      choices: [
+        { name: "Manual", value: "manual" },
+        { name: "Select from wallet", value: "select" },
+        { name: "Use a random one", value: "random" },
+      ],
+    });
+  }
+
   let utxo = undefined;
   switch (utxoChoice) {
     case "manual": {
