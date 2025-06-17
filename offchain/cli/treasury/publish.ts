@@ -128,7 +128,19 @@ export async function publish(): Promise<void> {
         }
         await transactionDialog(
           blazeInstance.provider.network,
-          (await deployTransaction(blazeInstance, [treasuryScript], true))
+          (
+            await deployTransaction(
+              blazeInstance,
+              [treasuryScript],
+              await select({
+                message: "Register the script hash?",
+                choices: [
+                  { name: "Yes", value: true },
+                  { name: "No", value: false },
+                ],
+              }),
+            )
+          )
             .toCbor()
             .toString(),
           false,
@@ -142,7 +154,19 @@ export async function publish(): Promise<void> {
         }
         await transactionDialog(
           blazeInstance.provider.network,
-          (await deployTransaction(blazeInstance, [vendorScript], true))
+          (
+            await deployTransaction(
+              blazeInstance,
+              [vendorScript],
+              await select({
+                message: "Register the script hash?",
+                choices: [
+                  { name: "Yes", value: true },
+                  { name: "No", value: false },
+                ],
+              }),
+            )
+          )
             .toCbor()
             .toString(),
           false,

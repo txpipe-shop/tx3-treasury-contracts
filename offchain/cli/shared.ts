@@ -12,6 +12,7 @@ import {
   ColdWallet,
   Core,
   Maestro,
+  NetworkName,
   Wallet,
   type Provider,
 } from "@blaze-cardano/sdk";
@@ -35,6 +36,7 @@ import {
   type IAnchor,
   type ITransactionMetadata,
 } from "../src/metadata/shared";
+import { CustomProvider } from "./custom";
 import { fetch } from "bun";
 import { ETransactionEvent } from "src";
 
@@ -586,6 +588,7 @@ export async function getProvider(): Promise<Provider> {
     choices: [
       { name: "Blockfrost", value: "blockfrost" },
       { name: "Maestro", value: "maestro" },
+      { name: "Custom", value: "custom" },
     ],
   });
   switch (providerType) {
@@ -620,6 +623,41 @@ export async function getProvider(): Promise<Provider> {
         network: mNetwork,
         apiKey: mKey,
       });
+    case "custom":
+      const network = await select({
+        message: "Select which type of network this is",
+        choices: [
+          {
+            name: "Preview",
+            value: {
+              id: Core.NetworkId.Testnet,
+              name: "cardano-preview" as NetworkName,
+            },
+          },
+          {
+            name: "Preprod",
+            value: {
+              id: Core.NetworkId.Testnet,
+              name: "cardano-preprod" as NetworkName,
+            },
+          },
+          {
+            name: "Sanchonet",
+            value: {
+              id: Core.NetworkId.Testnet,
+              name: "cardano-sanchonet" as NetworkName,
+            },
+          },
+          {
+            name: "Mainnet",
+            value: {
+              id: Core.NetworkId.Mainnet,
+              name: "cardano-mainnet" as NetworkName,
+            },
+          },
+        ],
+      });
+      return new CustomProvider(network.id, network.name);
     default:
       throw new Error("Invalid provider type");
   }
