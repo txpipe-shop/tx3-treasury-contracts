@@ -5,12 +5,13 @@ import {
   AssetId,
   TransactionInput,
   DatumHash,
-  PlutusData,
   TransactionId,
   Transaction,
   Redeemers,
   PaymentAddress,
   TokenMap,
+  PlutusData,
+  Script,
 } from "@blaze-cardano/core";
 import { Provider } from "@blaze-cardano/query";
 import { Core } from "@blaze-cardano/sdk";
@@ -170,8 +171,13 @@ async function promptUTxO(
       });
       assets.set(AssetId(assetId), BigInt(amount));
     }
+    const datumBytes = await input({
+      message: "Does this UTxO have a datum? (empty for no datum)",
+    });
+    const refScript = await input({
+      message: "Does this UTxO have a reference script? (empty for no)",
+    });
     const txRefParts = txIn.split("#");
-    console.log(txRefParts);
     utxos.push(
       TransactionUnspentOutput.fromCore([
         {
@@ -181,6 +187,12 @@ async function promptUTxO(
         {
           address: PaymentAddress(address.toBech32()),
           value: { coins: BigInt(amount), assets },
+          datum: datumBytes
+            ? PlutusData.fromCbor(Core.HexBlob(datumBytes)).toCore()
+            : undefined,
+          scriptReference: refScript
+            ? Script.fromCbor(Core.HexBlob(refScript)).toCore()
+            : undefined,
         },
       ]),
     );
