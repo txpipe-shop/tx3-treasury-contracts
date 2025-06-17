@@ -491,9 +491,7 @@ export async function getPermissionList(
     case "obo": {
       const msigList: TPermissionMetadata[] = [];
       let addMore = true;
-      while (addMore) {
-        const msig = await getPermission("Next criteria");
-        msigList.push(msig as TPermissionMetadata);
+      do {
         addMore = await select({
           message: "Add more criteria?",
           choices: [
@@ -501,7 +499,11 @@ export async function getPermissionList(
             { name: "No", value: false },
           ],
         });
-      }
+        if (addMore) {
+          const msig = await getPermission("Next criteria");
+          msigList.push(msig as TPermissionMetadata);
+        }
+      } while (addMore);
       return msigList;
     }
     default:
