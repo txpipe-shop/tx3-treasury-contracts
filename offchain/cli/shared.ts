@@ -37,7 +37,7 @@ import {
   type ITransactionMetadata,
 } from "../src/metadata/shared";
 import { CustomProvider } from "./custom";
-import { fetch } from "bun";
+import fetch from "node-fetch";
 import { ETransactionEvent } from "src";
 
 async function getSignersFromList(
