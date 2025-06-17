@@ -200,6 +200,12 @@ export async function getDate(
 export async function getPermission(
   title: string,
   existing?: TPermissionName[],
+  opts?: { allowCancel: true },
+): Promise<TPermissionMetadata | TPermissionName | null>
+export async function getPermission(
+  title: string,
+  existing?: TPermissionName[],
+  opts?: { allowCancel: false } = { allowCancel: false },
 ): Promise<TPermissionMetadata | TPermissionName> {
   console.log(`\n${title}`);
   const msigType = await select({
@@ -213,10 +219,17 @@ export async function getPermission(
       { name: "Any", value: "any" },
       { name: "Before", value: "before" },
       { name: "After", value: "after" },
-    ],
+    ].concat(opts.allowCancel
+      ? [{ name: "Cancel", value: "cancel" }]
+      : []
+    ),
   });
 
   switch (msigType) {
+    case "cancel": {
+      return null;
+    }
+
     case "signature": {
       const label = await maybeInput({
         message: "Do you want to assign a human readable label to this key?",
@@ -500,8 +513,10 @@ export async function getPermissionList(
           ],
         });
         if (addMore) {
-          const msig = await getPermission("Next criteria");
-          msigList.push(msig as TPermissionMetadata);
+          const msig = await getPermission("Next criteria", undefined, { allowCancel: true });
+          if (msig !== null) {
+            msigList.push(msig as TPermissionMetadata);
+          }
         }
       } while (addMore);
       return msigList;
