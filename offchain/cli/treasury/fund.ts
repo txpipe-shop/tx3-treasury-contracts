@@ -22,11 +22,11 @@ import {
 } from "../shared";
 
 async function getMilestones(): Promise<{
-  schedules: { date: Date; amount: Value }[];
+  schedule: { date: Date; amount: Value }[];
   milestones: IFundMilestone[];
 }> {
   const milestones: IFundMilestone[] = [];
-  const schedules: { date: Date; amount: Value }[] = [];
+  const schedule: { date: Date; amount: Value }[] = [];
   let moreMilestones = true;
 
   while (moreMilestones) {
@@ -66,7 +66,7 @@ async function getMilestones(): Promise<{
       ),
     } as IFundMilestone;
 
-    schedules.push({ date, amount });
+    schedule.push({ date, amount });
     milestones.push(meta);
 
     moreMilestones = await select({
@@ -78,7 +78,7 @@ async function getMilestones(): Promise<{
     });
   }
 
-  return { schedules, milestones };
+  return { schedule, milestones };
 }
 
 async function getIdentifiers(): Promise<string[]> {
@@ -139,7 +139,7 @@ export async function fund(
     milestones: [],
   } as IFund;
 
-  const { schedules, milestones } = await getMilestones();
+  const { schedule, milestones } = await getMilestones();
 
   metadataBody.milestones = milestones;
 
@@ -165,19 +165,19 @@ export async function fund(
   const signers = await getSigners(fundPermissions, vendorPermissions);
 
   const tx = await (
-    await Treasury.fund(
-      {
+    await Treasury.fund({
+      configs: {
         treasury: treasuryConfig,
         vendor: vendorConfig,
       },
-      blazeInstance,
-      utxo,
+      blaze: blazeInstance,
+      input: utxo,
       vendor,
-      schedules,
+      schedule,
       signers,
-      txMetadata,
-    )
+      metadata: txMetadata,
+    })
   ).complete();
 
-  await transactionDialog(tx.toCbor(), false);
+  await transactionDialog(blazeInstance.provider.network, tx.toCbor(), false);
 }

@@ -114,7 +114,11 @@ export async function publish(): Promise<void> {
           .provideScript(oneshotScript.Script)
           .addRequiredSigner(Ed25519KeyHashHex(metadata.txAuthor))
           .complete();
-        await transactionDialog(tx.toCbor().toString(), false);
+        await transactionDialog(
+          blazeInstance.provider.network,
+          tx.toCbor().toString(),
+          false,
+        );
         break;
       case "treasury-publish":
         if (!blazeInstance) {
@@ -123,6 +127,7 @@ export async function publish(): Promise<void> {
           blazeInstance = await Blaze.from(provider, wallet);
         }
         await transactionDialog(
+          blazeInstance.provider.network,
           (
             await deployTransaction(
               blazeInstance,
@@ -148,6 +153,7 @@ export async function publish(): Promise<void> {
           blazeInstance = await Blaze.from(provider, wallet);
         }
         await transactionDialog(
+          blazeInstance.provider.network,
           (
             await deployTransaction(
               blazeInstance,

@@ -32,8 +32,13 @@ import {
   TPermissionName,
   toMultisig,
 } from "src/metadata/types/permission";
-import type { IAnchor, ITransactionMetadata } from "../src/metadata/shared";
+import {
+  type IAnchor,
+  type ITransactionMetadata,
+} from "../src/metadata/shared";
 import { CustomProvider } from "./custom";
+import { fetch } from "bun";
+import { ETransactionEvent } from "src";
 
 async function getSignersFromList(
   permissions: TPermissionMetadata[],
@@ -505,12 +510,13 @@ export async function getPermissionList(
 }
 
 export async function transactionDialog(
+  network: Core.NetworkId,
   txCbor: string,
   expanded: boolean,
 ): Promise<void> {
   const choices = [
     { name: "Copy tx cbor", value: "copy" },
-    { name: "Back", value: "back" },
+    { name: "Submit to API", value: "submit" },
   ];
   if (expanded) {
     console.log("Transaction cbor: ", txCbor);
@@ -518,30 +524,61 @@ export async function transactionDialog(
     console.log("Transaction cbor: ", `${txCbor.slice(0, 50)}...`);
     choices.push({ name: "Expand", value: "expand" });
   }
-  const choice = await select({
-    message: "Select an option",
-    choices: choices,
-  });
-  switch (choice) {
-    case "copy":
-      try {
-        clipboard.writeSync(txCbor);
-        await select({
-          message: "Transaction cbor copied to clipboard.",
-          choices: [{ name: "Press enter to continue.", value: "continue" }],
-        });
-      } catch {
-        console.log("Failed to copy to clipboard; expand the cbor instead");
-        await transactionDialog(txCbor, true);
+  choices.push({ name: "Back", value: "back" });
+  while (true) {
+    try {
+      const choice = await select({
+        message: "Select an option",
+        choices: choices,
+      });
+      switch (choice) {
+        case "copy":
+          try {
+            clipboard.writeSync(txCbor);
+            await select({
+              message: "Transaction cbor copied to clipboard.",
+              choices: [
+                { name: "Press enter to continue.", value: "continue" },
+              ],
+            });
+          } catch {
+            console.log("Failed to copy to clipboard; expand the cbor instead");
+            expanded = true;
+          }
+          break;
+        case "submit":
+          const url =
+            network === Core.NetworkId.Testnet
+              ? "https://api.treasury.preview.sundae.fi/graphql"
+              : "https://api.treasury.sundae.fi/graphql";
+          const query = `
+          mutation {
+            newTransaction(tx: {
+              label: "${await input({ message: "What label should the tx have in the UI?" })}",
+              cborHex: "${txCbor}"
+            }) {
+              ok
+            }
+          }
+        `;
+          const resp = await fetch(url, {
+            method: "POST",
+            body: JSON.stringify({ query }),
+          });
+          console.log(await resp.json());
+          break;
+        case "back":
+          return;
+        case "expand":
+          expanded = true;
+          break;
+        default:
+          throw new Error("Unreachable");
       }
-      break;
-    case "back":
-      return;
-    case "expand":
-      await transactionDialog(txCbor, true);
-      break;
-    default:
-      throw new Error("Unreachable");
+    } catch (err) {
+      console.error("Encountered some error: ", err);
+      continue;
+    }
   }
 }
 
@@ -768,7 +805,7 @@ export async function configToMetaData(
   },
 ): Promise<ITransactionMetadata<INewInstance>> {
   return await getTransactionMetadata(instance, {
-    event: "publish",
+    event: ETransactionEvent.PUBLISH,
     expiration: treasuryConfig.expiration,
     payoutUpperbound: treasuryConfig.payout_upperbound,
     vendorExpiration: vendorConfig.expiration,
