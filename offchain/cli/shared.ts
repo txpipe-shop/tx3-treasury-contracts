@@ -667,8 +667,9 @@ export async function getProvider(): Promise<Provider> {
 
 export async function getWallet(provider: Provider): Promise<Wallet> {
   const address = Core.Address.fromBech32(
-    await input({
+    await inputOrEnv({
       message: "Enter the address of the wallet",
+      env: "WALLET_ADDRESS",
     }),
   );
   const wallet = new ColdWallet(address, provider.network, provider);
