@@ -30,11 +30,16 @@ import {
 import { IOutput } from "src/metadata/types/initialize-reorganize";
 import { INewInstance } from "src/metadata/types/new-instance";
 import {
+  toMultisig,
   TPermissionMetadata,
   TPermissionName,
-  toMultisig,
 } from "src/metadata/types/permission";
-import { ICompiledScripts, IConfigs, loadConfigsAndScripts } from "src/shared";
+import {
+  constructScriptsFromBytes,
+  ICompiledScripts,
+  IConfigs,
+  loadConfigsAndScripts,
+} from "src/shared";
 import {
   type IAnchor,
   type ITransactionMetadata,
@@ -45,8 +50,20 @@ const BLOCKFROST_VAR = "BLOCKFROST_KEY";
 const MAESTRO_VAR = "MAESTRO_KEY";
 const WALLET_VAR = "WALLET_ADDRESS";
 
+export interface ICompiledScriptOnDisk<C> {
+  config: C;
+  script: string;
+  scriptRef?: TransactionUnspentOutput;
+  network: Core.NetworkId;
+}
+
+export interface ICompiledScriptsOnDisk {
+  treasuryScript: ICompiledScriptOnDisk<TreasuryConfiguration>;
+  vendorScript: ICompiledScriptOnDisk<VendorConfiguration>;
+}
+
 export interface IOnDiskInstance {
-  scripts?: ICompiledScripts;
+  scripts?: ICompiledScriptsOnDisk;
   metadata?: ITransactionMetadata<INewInstance>;
 }
 
@@ -978,7 +995,7 @@ export async function writeMetadataToFile(
 export async function metadataToScripts(
   blaze: Blaze<Provider, Wallet>,
   metadata: ITransactionMetadata<INewInstance>,
-): Promise<ICompiledScripts> {
+): Promise<ICompiledScriptsOnDisk> {
   const { treasuryConfig, vendorConfig } = metaDataToConfig(metadata);
   const { scripts } = loadConfigsAndScripts(blaze, {
     configs: {
@@ -986,7 +1003,20 @@ export async function metadataToScripts(
       vendor: vendorConfig,
     },
   });
-  return scripts;
+  return {
+    treasuryScript: {
+      config: scripts.treasuryScript.config,
+      script: scripts.treasuryScript.script.Script.asPlutusV3()!.toCbor(),
+      network: blaze.provider.network,
+      scriptRef: scripts.treasuryScript.scriptRef,
+    },
+    vendorScript: {
+      config: scripts.vendorScript.config,
+      script: scripts.vendorScript.script.Script.asPlutusV3()!.toCbor(),
+      network: blaze.provider.network,
+      scriptRef: scripts.vendorScript.scriptRef,
+    },
+  };
 }
 
 export async function registerMetadata<P extends Provider, W extends Wallet>(
@@ -1021,7 +1051,7 @@ export async function getConfigs<P extends Provider, W extends Wallet>(
 
   switch (choice) {
     case "register": {
-      return await registerNewInstance();
+      return await registerNewInstance(blaze);
     }
     case "select": {
       const instanceMap = await readMetadataFromFile();
@@ -1036,7 +1066,7 @@ export async function getConfigs<P extends Provider, W extends Wallet>(
         console.log(
           "No saved instances found. Please register a new instance.",
         );
-        return await registerNewInstance();
+        return await registerNewInstance(blaze);
       }
       const selectedKey = await select({
         message: "Select a saved instance",
@@ -1045,6 +1075,25 @@ export async function getConfigs<P extends Provider, W extends Wallet>(
       const instance = instanceMap.get(selectedKey);
       if (!instance) {
         throw new Error(`Metadata for ${selectedKey} not found`);
+      }
+      if (instance.scripts) {
+        const scripts = constructScriptsFromBytes(
+          instance.scripts.treasuryScript.network,
+          instance.scripts.treasuryScript.config,
+          instance.scripts.treasuryScript.script,
+          instance.scripts.vendorScript.config,
+          instance.scripts.vendorScript.script,
+          instance.scripts.treasuryScript.scriptRef,
+          instance.scripts.vendorScript.scriptRef,
+        );
+        const { configs } = loadConfigsAndScripts(blaze, {
+          scripts,
+        });
+        return {
+          configs,
+          scripts,
+          metadata: instance.metadata,
+        };
       }
       if (instance.metadata) {
         const { treasuryConfig, vendorConfig } = metaDataToConfig(
@@ -1058,15 +1107,6 @@ export async function getConfigs<P extends Provider, W extends Wallet>(
           metadata: instance.metadata,
         };
       }
-      if (instance.scripts) {
-        const { configs } = loadConfigsAndScripts(blaze, {
-          scripts: instance.scripts,
-        });
-        return {
-          configs,
-          scripts: instance.scripts,
-        };
-      }
       throw new Error(
         `Metadata for ${selectedKey} does not contain any scripts or metadata`,
       );
@@ -1076,12 +1116,13 @@ export async function getConfigs<P extends Provider, W extends Wallet>(
   }
 }
 
-async function registerNewInstance(): Promise<{
+async function registerNewInstance<P extends Provider, W extends Wallet>(
+  blazeInstance: Blaze<P, W>,
+): Promise<{
   configs: IConfigs;
   scripts: ICompiledScripts;
   metadata: ITransactionMetadata<INewInstance>;
 }> {
-  const blazeInstance = await getBlazeInstance();
   let utxoChoice;
   if (process.env[WALLET_VAR] !== undefined) {
     console.log(
