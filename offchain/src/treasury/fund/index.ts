@@ -86,8 +86,6 @@ export async function fund<P extends Provider, W extends Wallet>({
     Number(configs.treasury.expiration),
     new Date().valueOf() + maxHorizon * 60 * 60 * 1000,
   );
-  console.log(maxHorizon);
-  console.log(upperBoundUnix);
   const upperBoundSlot = blaze.provider.unixToSlot(upperBoundUnix) - 30;
   let tx = blaze
     .newTransaction()
