@@ -17,30 +17,38 @@ import {
 } from "@blaze-cardano/sdk";
 import * as Tx from "@blaze-cardano/tx";
 
-import {
-  TreasuryConfiguration,
-  TreasurySpendRedeemer,
-  VendorConfiguration,
-} from "../../generated-types/contracts.js";
+import { TreasurySpendRedeemer } from "../../generated-types/contracts.js";
 import {
   coreValueToContractsValue,
-  loadTreasuryScript,
+  loadConfigsAndScripts,
+  TConfigsOrScripts,
 } from "../../shared/index.js";
 
-export async function disburse<P extends Provider, W extends Wallet>(
-  configs: { treasury: TreasuryConfiguration; vendor: VendorConfiguration },
-  blaze: Blaze<P, W>,
-  input: TransactionUnspentOutput,
-  recipient: Address,
-  amount: Value,
-  datum: Datum | undefined,
-  signers: Ed25519KeyHashHex[],
-  after: boolean = false,
-  trace?: boolean,
-): Promise<TxBuilder> {
+export interface IDisburseArgs<P extends Provider, W extends Wallet> {
+  configsOrScripts: TConfigsOrScripts;
+  blaze: Blaze<P, W>;
+  input: TransactionUnspentOutput;
+  recipient: Address;
+  amount: Value;
+  datum?: Datum;
+  signers: Ed25519KeyHashHex[];
+  after?: boolean;
+}
+
+export async function disburse<P extends Provider, W extends Wallet>({
+  configsOrScripts,
+  blaze,
+  input,
+  recipient,
+  amount,
+  datum = undefined,
+  signers,
+  after = false,
+}: IDisburseArgs<P, W>): Promise<TxBuilder> {
   console.log("Disburse transaction started");
+  const { configs, scripts } = loadConfigsAndScripts(blaze, configsOrScripts);
   const { script: treasuryScript, scriptAddress: treasuryScriptAddress } =
-    loadTreasuryScript(blaze.provider.network, configs.treasury, trace);
+    scripts.treasuryScript;
   const registryInput = await blaze.provider.getUnspentOutputByNFT(
     AssetId(configs.treasury.registry_token + toHex(Buffer.from("REGISTRY"))),
   );

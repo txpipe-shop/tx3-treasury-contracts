@@ -319,10 +319,12 @@ describe("MLabs Audit Findings", () => {
       );
       await emulator.as(Funder, async (blaze) => {
         const tx = await fund({
-          configs: {
-            treasury: configs.treasuryScript.config,
-            vendor: configs.vendorScript.config,
-            trace: true,
+          configsOrScripts: {
+            configs: {
+              treasury: configs.treasuryScript.config,
+              vendor: configs.vendorScript.config,
+              trace: true,
+            },
           },
           blaze,
           input: treasuryInput,
@@ -359,10 +361,12 @@ describe("MLabs Audit Findings", () => {
       );
       await emulator.as(Funder, async (blaze) => {
         const tx = await fund({
-          configs: {
-            treasury: configs.treasuryScript.config,
-            vendor: configs.vendorScript.config,
-            trace: true,
+          configsOrScripts: {
+            configs: {
+              treasury: configs.treasuryScript.config,
+              vendor: configs.vendorScript.config,
+              trace: true,
+            },
           },
           blaze,
           input: treasuryInput,
@@ -409,21 +413,23 @@ describe("MLabs Audit Findings", () => {
       );
 
       await emulator.as(Modifier, async (blaze) => {
-        const tx = await modify(
-          {
-            treasury: configs.treasuryScript.config,
-            vendor: configs.vendorScript.config,
+        const tx = await modify({
+          configsOrScripts: {
+            configs: {
+              treasury: configs.treasuryScript.config,
+              vendor: configs.vendorScript.config,
+              trace: true,
+            },
           },
           blaze,
-          new Date(Number(blaze.provider.slotToUnix(Core.Slot(0)))),
-          vendorInput,
-          largeVendorDatum,
-          [
+          now: new Date(Number(blaze.provider.slotToUnix(Core.Slot(0)))),
+          input: vendorInput,
+          new_vendor: largeVendorDatum,
+          signers: [
             Core.Ed25519KeyHashHex(await modify_key(emulator)),
             Core.Ed25519KeyHashHex(await vendor_key(emulator)),
           ],
-          true,
-        );
+        });
         emulator.expectScriptFailure(tx, /Trace expect payout_count <= 24/);
       });
     });
@@ -457,21 +463,23 @@ describe("MLabs Audit Findings", () => {
       );
 
       await emulator.as(Modifier, async (blaze) => {
-        const tx = await modify(
-          {
-            treasury: configs.treasuryScript.config,
-            vendor: configs.vendorScript.config,
+        const tx = await modify({
+          configsOrScripts: {
+            configs: {
+              treasury: configs.treasuryScript.config,
+              vendor: configs.vendorScript.config,
+              trace: true,
+            },
           },
           blaze,
-          new Date(Number(blaze.provider.slotToUnix(Core.Slot(0)))),
-          vendorInput,
-          largeVendorDatum,
-          [
+          now: new Date(Number(blaze.provider.slotToUnix(Core.Slot(0)))),
+          input: vendorInput,
+          new_vendor: largeVendorDatum,
+          signers: [
             Core.Ed25519KeyHashHex(await modify_key(emulator)),
             Core.Ed25519KeyHashHex(await vendor_key(emulator)),
           ],
-          true,
-        );
+        });
         emulator.expectScriptFailure(
           tx,
           /Trace expect 4 >= \( value |> assets.flatten |> list.length \)/,
@@ -672,10 +680,12 @@ describe("MLabs Audit Findings", () => {
       await emulator.as(Funder, async (blaze) => {
         emulator.expectScriptFailure(
           await fund({
-            configs: {
-              treasury: configs.treasuryScript.config,
-              vendor: configs.vendorScript.config,
-              trace: true,
+            configsOrScripts: {
+              configs: {
+                treasury: configs.treasuryScript.config,
+                vendor: configs.vendorScript.config,
+                trace: true,
+              },
             },
             blaze,
             input: treasuryInput,
@@ -716,10 +726,12 @@ describe("MLabs Audit Findings", () => {
       await emulator.as(Funder, async (blaze) => {
         emulator.expectScriptFailure(
           await fund({
-            configs: {
-              treasury: configs.treasuryScript.config,
-              vendor: configs.vendorScript.config,
-              trace: true,
+            configsOrScripts: {
+              configs: {
+                treasury: configs.treasuryScript.config,
+                vendor: configs.vendorScript.config,
+                trace: true,
+              },
             },
             blaze,
             input: treasuryInput,
@@ -787,21 +799,23 @@ describe("MLabs Audit Findings", () => {
       );
       await emulator.as(Funder, async (blaze) => {
         await emulator.expectScriptFailure(
-          await modify(
-            {
-              treasury: configs.treasuryScript.config,
-              vendor: configs.vendorScript.config,
+          await modify({
+            configsOrScripts: {
+              configs: {
+                treasury: configs.treasuryScript.config,
+                vendor: configs.vendorScript.config,
+                trace: true,
+              },
             },
             blaze,
-            new Date(Number(blaze.provider.slotToUnix(Core.Slot(0)))),
-            vendorInput,
-            invalidVendorDatum,
-            [
+            now: new Date(Number(blaze.provider.slotToUnix(Core.Slot(0)))),
+            input: vendorInput,
+            new_vendor: invalidVendorDatum,
+            signers: [
               Ed25519KeyHashHex(await fund_key(emulator)),
               Ed25519KeyHashHex(await vendor_key(emulator)),
             ],
-            true,
-          ),
+          }),
           /Trace expect\s*satisfied\(v.vendor,/,
         );
       });
@@ -847,21 +861,23 @@ describe("MLabs Audit Findings", () => {
       };
       await emulator.as(Funder, async (blaze) => {
         emulator.expectScriptFailure(
-          await modify(
-            {
-              treasury: configs.treasuryScript.config,
-              vendor: configs.vendorScript.config,
+          await modify({
+            configsOrScripts: {
+              configs: {
+                treasury: configs.treasuryScript.config,
+                vendor: configs.vendorScript.config,
+                trace: true,
+              },
             },
             blaze,
-            new Date(Number(blaze.provider.slotToUnix(Core.Slot(0)))),
-            vendorInput,
-            newVendorDatum,
-            [
+            now: new Date(Number(blaze.provider.slotToUnix(Core.Slot(0)))),
+            input: vendorInput,
+            new_vendor: newVendorDatum,
+            signers: [
               Ed25519KeyHashHex(await fund_key(emulator)),
               Ed25519KeyHashHex(await vendor_key(emulator)),
             ],
-            true,
-          ),
+          }),
           // Note: becauae of the awkwardness of getting payout_upperbound into the vendor script
           // we accept the use of config.expiration here; this is envisioned to be a short time
           // after the payout upper bound, so technically the committee and the vendor could

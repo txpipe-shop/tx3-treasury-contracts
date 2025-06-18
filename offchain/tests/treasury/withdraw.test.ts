@@ -9,11 +9,12 @@ import { Emulator } from "@blaze-cardano/emulator";
 import { Core, makeValue } from "@blaze-cardano/sdk";
 import { beforeEach, describe, test } from "bun:test";
 import type { TreasuryConfiguration } from "../../src/generated-types/contracts";
-import { loadTreasuryScript } from "../../src/shared";
+import { IConfigs, loadTreasuryScript } from "../../src/shared";
 import { withdraw } from "../../src/treasury/withdraw";
 import {
   registryToken,
   sampleTreasuryConfig,
+  sampleVendorConfig,
   setupEmulator,
 } from "../utilities";
 
@@ -25,11 +26,17 @@ describe("When withdrawing", () => {
   let scriptAddress: Address;
   let treasuryScript: Script;
   let config: TreasuryConfiguration;
+  let configs: IConfigs;
   let registryInput: Core.TransactionUnspentOutput;
   let refInput: Core.TransactionUnspentOutput;
   beforeEach(async () => {
     emulator = await setupEmulator();
     config = await sampleTreasuryConfig(emulator);
+    configs = {
+      treasury: config,
+      vendor: await sampleVendorConfig(emulator),
+      trace: true,
+    };
     const treasury = loadTreasuryScript(Core.NetworkId.Testnet, config, true);
     rewardAccount = treasury.rewardAccount!;
     scriptAddress = treasury.scriptAddress;
@@ -52,7 +59,11 @@ describe("When withdrawing", () => {
       await emulator.as("Anyone", async (blaze) => {
         await emulator.expectValidTransaction(
           blaze,
-          await withdraw(config, [amount], blaze, undefined, undefined, true),
+          await withdraw({
+            configsOrScripts: { configs },
+            amounts: [amount],
+            blaze,
+          }),
         );
       });
     });

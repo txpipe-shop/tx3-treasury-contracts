@@ -14,33 +14,36 @@ import {
 } from "@blaze-cardano/sdk";
 
 import {
-  TreasuryConfiguration,
-  VendorConfiguration,
   VendorDatum,
   VendorSpendRedeemer,
 } from "../../generated-types/contracts.js";
 import {
   contractsValueToCoreValue,
-  loadTreasuryScript,
-  loadVendorScript,
+  loadConfigsAndScripts,
+  TConfigsOrScripts,
 } from "../../shared/index.js";
 
-export async function modify<P extends Provider, W extends Wallet>(
-  configs: { treasury: TreasuryConfiguration; vendor: VendorConfiguration },
-  blaze: Blaze<P, W>,
-  now: Date,
-  input: TransactionUnspentOutput,
-  new_vendor: VendorDatum,
-  signers: Ed25519KeyHashHex[],
-  trace?: boolean,
-): Promise<TxBuilder> {
-  const { scriptAddress: treasuryScriptAddress } = loadTreasuryScript(
-    blaze.provider.network,
-    configs.treasury,
-    trace,
-  );
+export interface IModifyArgs<P extends Provider, W extends Wallet> {
+  configsOrScripts: TConfigsOrScripts;
+  blaze: Blaze<P, W>;
+  now: Date;
+  input: TransactionUnspentOutput;
+  new_vendor: VendorDatum;
+  signers: Ed25519KeyHashHex[];
+}
+
+export async function modify<P extends Provider, W extends Wallet>({
+  configsOrScripts,
+  blaze,
+  now,
+  input,
+  new_vendor,
+  signers,
+}: IModifyArgs<P, W>): Promise<TxBuilder> {
+  const { configs, scripts } = loadConfigsAndScripts(blaze, configsOrScripts);
+  const { scriptAddress: treasuryScriptAddress } = scripts.treasuryScript;
   const { scriptAddress: vendorScriptAddress, script: vendorScript } =
-    loadVendorScript(blaze.provider.network, configs.vendor, trace);
+    scripts.vendorScript;
   const registryInput = await blaze.provider.getUnspentOutputByNFT(
     AssetId(configs.vendor.registry_token + toHex(Buffer.from("REGISTRY"))),
   );
@@ -84,24 +87,24 @@ export async function modify<P extends Provider, W extends Wallet>(
   return tx;
 }
 
-export async function cancel<P extends Provider, W extends Wallet>(
-  configs: { treasury: TreasuryConfiguration; vendor: VendorConfiguration },
-  blaze: Blaze<P, W>,
-  now: Date,
-  input: TransactionUnspentOutput,
-  signers: Ed25519KeyHashHex[],
-  trace?: boolean,
-): Promise<TxBuilder> {
-  const { scriptAddress: treasuryScriptAddress } = loadTreasuryScript(
-    blaze.provider.network,
-    configs.treasury,
-    trace,
-  );
-  const { script: vendorScript } = loadVendorScript(
-    blaze.provider.network,
-    configs.vendor,
-    trace,
-  );
+export interface ICancelArgs<P extends Provider, W extends Wallet> {
+  configsOrScripts: TConfigsOrScripts;
+  blaze: Blaze<P, W>;
+  now: Date;
+  input: TransactionUnspentOutput;
+  signers: Ed25519KeyHashHex[];
+}
+
+export async function cancel<P extends Provider, W extends Wallet>({
+  configsOrScripts,
+  blaze,
+  now,
+  input,
+  signers,
+}: ICancelArgs<P, W>): Promise<TxBuilder> {
+  const { configs, scripts } = loadConfigsAndScripts(blaze, configsOrScripts);
+  const { scriptAddress: treasuryScriptAddress } = scripts.treasuryScript;
+  const { script: vendorScript } = scripts.vendorScript;
   const registryInput = await blaze.provider.getUnspentOutputByNFT(
     AssetId(configs.vendor.registry_token + toHex(Buffer.from("REGISTRY"))),
   );

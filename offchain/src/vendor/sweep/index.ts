@@ -9,31 +9,33 @@ import {
 } from "@blaze-cardano/sdk";
 
 import {
-  TreasuryConfiguration,
-  VendorConfiguration,
   VendorDatum,
   VendorSpendRedeemer,
 } from "../../generated-types/contracts.js";
 import {
   contractsValueToCoreValue,
-  loadTreasuryScript,
-  loadVendorScript,
+  loadConfigsAndScripts,
+  TConfigsOrScripts,
 } from "../../shared/index.js";
 
-export async function sweep<P extends Provider, W extends Wallet>(
-  configs: { treasury: TreasuryConfiguration; vendor: VendorConfiguration },
-  now: Date,
-  inputs: TransactionUnspentOutput[],
-  blaze: Blaze<P, W>,
-  trace?: boolean,
-): Promise<TxBuilder> {
-  const { scriptAddress: treasuryScriptAddress } = loadTreasuryScript(
-    blaze.provider.network,
-    configs.treasury,
-    trace,
-  );
+export interface ISweepArgs<P extends Provider, W extends Wallet> {
+  configsOrScripts: TConfigsOrScripts;
+  now: Date;
+  inputs: TransactionUnspentOutput[];
+  blaze: Blaze<P, W>;
+}
+
+export async function sweep<P extends Provider, W extends Wallet>({
+  configsOrScripts,
+  now,
+  inputs,
+  blaze,
+}: ISweepArgs<P, W>): Promise<TxBuilder> {
+  const { configs, scripts } = loadConfigsAndScripts(blaze, configsOrScripts);
+
+  const { scriptAddress: treasuryScriptAddress } = scripts.treasuryScript;
   const { scriptAddress: vendorScriptAddress, script: vendorScript } =
-    loadVendorScript(blaze.provider.network, configs.vendor, trace);
+    scripts.vendorScript;
   const registryInput = await blaze.provider.getUnspentOutputByNFT(
     AssetId(configs.treasury.registry_token + toHex(Buffer.from("REGISTRY"))),
   );

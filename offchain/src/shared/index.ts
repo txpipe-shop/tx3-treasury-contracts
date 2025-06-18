@@ -6,7 +6,14 @@ import {
   Value,
   type CredentialCore,
 } from "@blaze-cardano/core";
-import { cborToScript, Core, makeValue } from "@blaze-cardano/sdk";
+import {
+  Blaze,
+  cborToScript,
+  Core,
+  makeValue,
+  Provider,
+  Wallet,
+} from "@blaze-cardano/sdk";
 import { type Cardano } from "@cardano-sdk/core";
 
 import {
@@ -23,6 +30,54 @@ export interface ICompiledScript<T, C> {
   rewardAccount?: RewardAccount;
   scriptAddress: Address;
   scriptRef?: TransactionUnspentOutput;
+}
+
+export interface IConfigs {
+  treasury: TreasuryConfiguration;
+  vendor: VendorConfiguration;
+  trace?: boolean;
+}
+
+export interface IConfigsWithScripts {
+  configs: IConfigs;
+  scripts?: ICompiledScripts;
+}
+
+export interface IScriptsWithConfigs {
+  configs?: IConfigs;
+  scripts: ICompiledScripts;
+}
+
+export type TConfigsOrScripts = IConfigsWithScripts | IScriptsWithConfigs;
+
+export function loadConfigsAndScripts<P extends Provider, W extends Wallet>(
+  blaze: Blaze<P, W>,
+  configsOrScripts: TConfigsOrScripts,
+): {
+  configs: IConfigs;
+  scripts: ICompiledScripts;
+} {
+  if (configsOrScripts.configs && !configsOrScripts.scripts) {
+    configsOrScripts.scripts = loadScripts(
+      blaze.provider.network,
+      configsOrScripts.configs.treasury,
+      configsOrScripts.configs.vendor,
+      configsOrScripts.configs.trace,
+    );
+  } else if (configsOrScripts.scripts && !configsOrScripts.configs) {
+    configsOrScripts.configs = {
+      treasury: configsOrScripts.scripts.treasuryScript.config,
+      vendor: configsOrScripts.scripts.vendorScript.config,
+    };
+  }
+  if (!configsOrScripts.configs || !configsOrScripts.scripts) {
+    throw new Error("Couldn't load scripts");
+  }
+
+  return {
+    configs: configsOrScripts.configs,
+    scripts: configsOrScripts.scripts,
+  };
 }
 
 export function loadTreasuryScript(

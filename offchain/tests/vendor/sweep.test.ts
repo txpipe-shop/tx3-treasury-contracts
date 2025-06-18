@@ -15,6 +15,7 @@ import {
   coreValueToContractsValue,
   loadTreasuryScript,
   loadVendorScript,
+  TConfigsOrScripts,
 } from "../../src/shared";
 import { sweep } from "../../src/vendor/sweep";
 import {
@@ -30,7 +31,11 @@ describe("", () => {
   const thirtSixHours = 36n * 60n * 60n * 1000n;
 
   let emulator: Emulator;
-  let configs: { treasury: TreasuryConfiguration; vendor: VendorConfiguration };
+  let configs: {
+    treasury: TreasuryConfiguration;
+    vendor: VendorConfiguration;
+    trace?: boolean;
+  };
   let now: Date;
   let scriptInput: Core.TransactionUnspentOutput;
   let firstDatum: VendorDatum;
@@ -48,6 +53,7 @@ describe("", () => {
   let rewardAccount: RewardAccount;
   let vendorScript: VendorVendorSpend;
   let vendorScriptAddress: Address;
+  let configsOrScripts: TConfigsOrScripts;
   beforeEach(async () => {
     emulator = await setupEmulator();
     const treasuryConfig = await sampleTreasuryConfig(emulator);
@@ -62,7 +68,8 @@ describe("", () => {
       vendorConfig,
       true,
     );
-    configs = { treasury: treasuryConfig, vendor: vendorConfig };
+    configs = { treasury: treasuryConfig, vendor: vendorConfig, trace: true };
+    configsOrScripts = { configs };
     now = new Date(Number(configs.vendor.expiration + 1000n));
     rewardAccount = treasuryScriptManifest.rewardAccount!;
     vendorScript = vendorScriptManifest.script;
@@ -239,13 +246,12 @@ describe("", () => {
       test("cannot sweep", async () => {
         await emulator.as("Anyone", async (blaze) => {
           await emulator.expectScriptFailure(
-            await sweep(
-              configs,
-              new Date(Number(emulator.slotToUnix(Slot(0)))),
-              [scriptInput],
+            await sweep({
+              configsOrScripts,
+              now: new Date(Number(emulator.slotToUnix(Slot(0)))),
+              inputs: [scriptInput],
               blaze,
-              true,
-            ),
+            }),
             /Trace expect is_entirely_after\(validity_range, config.expiration\)/,
           );
         });
@@ -265,7 +271,12 @@ describe("", () => {
           await emulator.as("Anyone", async (blaze) => {
             await emulator.expectValidTransaction(
               blaze,
-              await sweep(configs, now, [scriptInput], blaze, true),
+              await sweep({
+                configsOrScripts,
+                now,
+                inputs: [scriptInput],
+                blaze,
+              }),
             );
           });
         });
@@ -273,7 +284,12 @@ describe("", () => {
           await emulator.as("Anyone", async (blaze) => {
             await emulator.expectValidTransaction(
               blaze,
-              await sweep(configs, now, [fourthScriptInput], blaze, true),
+              await sweep({
+                configsOrScripts,
+                now,
+                inputs: [fourthScriptInput],
+                blaze,
+              }),
             );
           });
         });
@@ -281,7 +297,12 @@ describe("", () => {
           await emulator.as("Anyone", async (blaze) => {
             await emulator.expectValidTransaction(
               blaze,
-              await sweep(configs, now, [fifthScriptInput], blaze, true),
+              await sweep({
+                configsOrScripts,
+                now,
+                inputs: [fifthScriptInput],
+                blaze,
+              }),
             );
           });
         });

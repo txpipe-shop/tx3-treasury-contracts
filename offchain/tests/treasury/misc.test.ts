@@ -11,13 +11,13 @@ import { Core, makeValue } from "@blaze-cardano/sdk";
 import { type Cardano } from "@cardano-sdk/core";
 import { beforeEach, describe, test } from "bun:test";
 
-import { type TreasuryConfiguration } from "../../src/generated-types/contracts";
-import { loadTreasuryScript } from "../../src/shared";
+import { IConfigs, loadTreasuryScript } from "../../src/shared";
 import { reorganize } from "../../src/treasury/reorganize";
 import {
   reorganize_key,
   Reorganizer,
   sampleTreasuryConfig,
+  sampleVendorConfig,
   setupEmulator,
 } from "../utilities";
 
@@ -28,14 +28,22 @@ describe("", () => {
   let credential: Cardano.Credential;
   let scriptInputNoDatum: Core.TransactionUnspentOutput;
   let scriptInputRandomDatum: Core.TransactionUnspentOutput;
-  let config: TreasuryConfiguration;
+  let configs: IConfigs;
   let refInput: Core.TransactionUnspentOutput;
   // let treasuryScript: TreasuryTreasuryWithdraw;
   let scriptAddress: Address;
   beforeEach(async () => {
     emulator = await setupEmulator();
-    config = await sampleTreasuryConfig(emulator);
-    const treasury = loadTreasuryScript(Core.NetworkId.Testnet, config, true);
+    configs = {
+      treasury: await sampleTreasuryConfig(emulator),
+      vendor: await sampleVendorConfig(emulator),
+      trace: true,
+    };
+    const treasury = loadTreasuryScript(
+      Core.NetworkId.Testnet,
+      configs.treasury,
+      true,
+    );
     credential = treasury.credential;
     // treasuryScript = treasury.script;
     scriptAddress = treasury.scriptAddress;
@@ -68,14 +76,16 @@ describe("", () => {
       await emulator.as(Reorganizer, async (blaze) => {
         await emulator.expectValidTransaction(
           blaze,
-          await reorganize(
-            config,
+          await reorganize({
+            configsOrScripts: { configs },
             blaze,
-            [scriptInputNoDatum],
-            [makeValue(100_000_000_000n), makeValue(400_000_000_000n)],
-            [Ed25519KeyHashHex(await reorganize_key(emulator))],
-            true,
-          ),
+            inputs: [scriptInputNoDatum],
+            outputAmounts: [
+              makeValue(100_000_000_000n),
+              makeValue(400_000_000_000n),
+            ],
+            signers: [Ed25519KeyHashHex(await reorganize_key(emulator))],
+          }),
         );
       });
     });
@@ -83,14 +93,16 @@ describe("", () => {
       await emulator.as(Reorganizer, async (blaze) => {
         await emulator.expectValidTransaction(
           blaze,
-          await reorganize(
-            config,
+          await reorganize({
+            configsOrScripts: { configs },
             blaze,
-            [scriptInputRandomDatum],
-            [makeValue(100_000_000_000n), makeValue(400_000_000_000n)],
-            [Ed25519KeyHashHex(await reorganize_key(emulator))],
-            true,
-          ),
+            inputs: [scriptInputRandomDatum],
+            outputAmounts: [
+              makeValue(100_000_000_000n),
+              makeValue(400_000_000_000n),
+            ],
+            signers: [Ed25519KeyHashHex(await reorganize_key(emulator))],
+          }),
         );
       });
     });
@@ -99,7 +111,9 @@ describe("", () => {
   describe("anyone", async () => {
     test("can deregister after the expiration", async () => {
       emulator.as("Anyone", async (blaze) => {
-        const future = blaze.provider.unixToSlot(config.expiration * 2n);
+        const future = blaze.provider.unixToSlot(
+          configs.treasury.expiration * 2n,
+        );
         emulator.stepForwardToSlot(future);
         emulator.expectValidTransaction(
           blaze,

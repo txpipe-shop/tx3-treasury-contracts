@@ -11,7 +11,6 @@ import { Core, makeValue } from "@blaze-cardano/sdk";
 import { beforeEach, describe, test } from "bun:test";
 import {
   MultisigScript,
-  VendorConfiguration,
   VendorDatum,
   VendorSpendRedeemer,
   VendorVendorSpend,
@@ -20,6 +19,7 @@ import {
   coreValueToContractsValue,
   loadTreasuryScript,
   loadVendorScript,
+  TConfigsOrScripts,
 } from "../../src/shared";
 import { withdraw } from "../../src/vendor/withdraw";
 import {
@@ -35,7 +35,6 @@ describe("When withdrawing from the vendor script", () => {
   const amount = 340_000_000_000_000n;
 
   let emulator: Emulator;
-  let config: VendorConfiguration;
   let scriptInput: Core.TransactionUnspentOutput;
   let firstDatum: VendorDatum;
   let secondScriptInput: Core.TransactionUnspentOutput;
@@ -53,6 +52,7 @@ describe("When withdrawing from the vendor script", () => {
   let rewardAccount: RewardAccount;
   let vendorScript: VendorVendorSpend;
   let vendorScriptAddress: Address;
+  let configsOrScripts: TConfigsOrScripts;
   beforeEach(async () => {
     emulator = await setupEmulator();
     const treasuryConfig = await sampleTreasuryConfig(emulator);
@@ -67,7 +67,9 @@ describe("When withdrawing from the vendor script", () => {
       vendorConfig,
       true,
     );
-    config = vendorConfig;
+    configsOrScripts = {
+      configs: { treasury: treasuryConfig, vendor: vendorConfig, trace: true },
+    };
     rewardAccount = treasuryScriptManifest.rewardAccount!;
     vendorScript = vendorScriptManifest.script;
     vendorScriptAddress = vendorScriptManifest.scriptAddress;
@@ -236,16 +238,14 @@ describe("When withdrawing from the vendor script", () => {
       await emulator.as(Vendor, async (blaze, vendorAddress) => {
         await emulator.expectValidTransaction(
           blaze,
-          await withdraw(
-            config,
+          await withdraw({
+            configsOrScripts,
             blaze,
-            new Date(Number(emulator.slotToUnix(Slot(2)))),
-            [scriptInput],
-            vendorAddress,
-            [vendorSigner],
-            undefined,
-            true,
-          ),
+            now: new Date(Number(emulator.slotToUnix(Slot(2)))),
+            inputs: [scriptInput],
+            destination: vendorAddress,
+            signers: [vendorSigner],
+          }),
         );
       });
     });
@@ -254,16 +254,14 @@ describe("When withdrawing from the vendor script", () => {
       await emulator.as(Vendor, async (blaze, vendorAddress) => {
         await emulator.expectValidTransaction(
           blaze,
-          await withdraw(
-            config,
+          await withdraw({
+            configsOrScripts,
             blaze,
-            new Date(Number(emulator.slotToUnix(Slot(101)))),
-            [secondScriptInput],
-            vendorAddress,
-            [vendorSigner],
-            undefined,
-            true,
-          ),
+            now: new Date(Number(emulator.slotToUnix(Slot(101)))),
+            inputs: [secondScriptInput],
+            destination: vendorAddress,
+            signers: [vendorSigner],
+          }),
         );
       });
     });
@@ -272,16 +270,14 @@ describe("When withdrawing from the vendor script", () => {
       await emulator.as(Vendor, async (blaze, vendorAddress) => {
         await emulator.expectValidTransaction(
           blaze,
-          await withdraw(
-            config,
+          await withdraw({
+            configsOrScripts,
             blaze,
-            new Date(Number(emulator.slotToUnix(Slot(101)))),
-            [fifthScriptInput],
-            vendorAddress,
-            [vendorSigner],
-            undefined,
-            true,
-          ),
+            now: new Date(Number(emulator.slotToUnix(Slot(101)))),
+            inputs: [fifthScriptInput],
+            destination: vendorAddress,
+            signers: [vendorSigner],
+          }),
         );
       });
     });
@@ -290,16 +286,14 @@ describe("When withdrawing from the vendor script", () => {
       await emulator.as(Vendor, async (blaze, vendorAddress) => {
         await emulator.expectValidTransaction(
           blaze,
-          await withdraw(
-            config,
+          await withdraw({
+            configsOrScripts,
             blaze,
-            new Date(Number(emulator.slotToUnix(Slot(3)))),
-            [thirdScriptInput],
-            vendorAddress,
-            [vendorSigner],
-            undefined,
-            true,
-          ),
+            now: new Date(Number(emulator.slotToUnix(Slot(3)))),
+            inputs: [thirdScriptInput],
+            destination: vendorAddress,
+            signers: [vendorSigner],
+          }),
         );
       });
     });
@@ -308,16 +302,14 @@ describe("When withdrawing from the vendor script", () => {
       await emulator.as(Vendor, async (blaze, vendorAddress) => {
         await emulator.expectValidTransaction(
           blaze,
-          await withdraw(
-            config,
+          await withdraw({
+            configsOrScripts,
             blaze,
-            new Date(Number(emulator.slotToUnix(Slot(101)))),
-            [thirdScriptInput],
-            vendorAddress,
-            [vendorSigner],
-            undefined,
-            true,
-          ),
+            now: new Date(Number(emulator.slotToUnix(Slot(101)))),
+            inputs: [thirdScriptInput],
+            destination: vendorAddress,
+            signers: [vendorSigner],
+          }),
         );
       });
     });
@@ -326,16 +318,14 @@ describe("When withdrawing from the vendor script", () => {
       await emulator.as(Vendor, async (blaze, vendorAddress) => {
         await emulator.expectValidTransaction(
           blaze,
-          await withdraw(
-            config,
+          await withdraw({
+            configsOrScripts,
             blaze,
-            new Date(Number(emulator.slotToUnix(Slot(11)))),
-            [fourthScriptInput],
-            vendorAddress,
-            [vendorSigner],
-            undefined,
-            true,
-          ),
+            now: new Date(Number(emulator.slotToUnix(Slot(11)))),
+            inputs: [fourthScriptInput],
+            destination: vendorAddress,
+            signers: [vendorSigner],
+          }),
         );
       });
     });
@@ -345,16 +335,14 @@ describe("When withdrawing from the vendor script", () => {
           blaze,
           // NOTE: this behavior is important so the vendor can attach metadata.
           // For example, this can be used to publish proof of accomplishment, invoices, etc.
-          await withdraw(
-            config,
+          await withdraw({
+            configsOrScripts,
             blaze,
-            new Date(Number(emulator.slotToUnix(Slot(0)))),
-            [scriptInput],
-            vendorAddress,
-            [vendorSigner],
-            undefined,
-            true,
-          ),
+            now: new Date(Number(emulator.slotToUnix(Slot(0)))),
+            inputs: [scriptInput],
+            destination: vendorAddress,
+            signers: [vendorSigner],
+          }),
         );
       });
     });
@@ -648,16 +636,16 @@ describe("When withdrawing from the vendor script", () => {
       emulator.stepForwardToSlot(2n);
       await emulator.as("MaliciousUser", async (blaze, signer) => {
         await emulator.expectScriptFailure(
-          await withdraw(
-            config,
+          await withdraw({
+            configsOrScripts,
             blaze,
-            new Date(Number(emulator.slotToUnix(Slot(2)))),
-            [scriptInput],
-            signer,
-            [Ed25519KeyHashHex(signer.asBase()!.getPaymentCredential().hash)],
-            undefined,
-            true,
-          ),
+            now: new Date(Number(emulator.slotToUnix(Slot(2)))),
+            inputs: [scriptInput],
+            destination: signer,
+            signers: [
+              Ed25519KeyHashHex(signer.asBase()!.getPaymentCredential().hash),
+            ],
+          }),
           /Trace satisfied\(input_vendor_datum.vendor, extra_signatories, validity_range, withdrawals\)/,
         );
       });

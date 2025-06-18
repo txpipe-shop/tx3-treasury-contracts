@@ -12,13 +12,13 @@ import { Core, makeValue } from "@blaze-cardano/sdk";
 import { beforeEach, describe, test } from "bun:test";
 import {
   MultisigScript,
-  VendorConfiguration,
   VendorDatum,
 } from "../../src/generated-types/contracts";
 import {
   coreValueToContractsValue,
   loadTreasuryScript,
   loadVendorScript,
+  TConfigsOrScripts,
 } from "../../src/shared";
 import { adjudicate } from "../../src/vendor/adjudicate";
 import {
@@ -36,7 +36,6 @@ describe("", () => {
   const amount = 340_000_000_000_000n;
 
   let emulator: Emulator;
-  let config: VendorConfiguration;
   let scriptInput: Core.TransactionUnspentOutput;
   let firstDatum: VendorDatum;
   let secondScriptInput: Core.TransactionUnspentOutput;
@@ -52,11 +51,21 @@ describe("", () => {
   let resumeSigner: Ed25519KeyHashHex;
   let rewardAccount: RewardAccount;
   let vendorScriptAddress: Address;
+  let configsOrScripts: TConfigsOrScripts;
 
   beforeEach(async () => {
     emulator = await setupEmulator();
     const treasuryConfig = await sampleTreasuryConfig(emulator);
     const vendorConfig = await sampleVendorConfig(emulator);
+
+    configsOrScripts = {
+      configs: {
+        treasury: treasuryConfig,
+        vendor: vendorConfig,
+        trace: true,
+      },
+    };
+
     const treasuryScriptManifest = loadTreasuryScript(
       Core.NetworkId.Testnet,
       treasuryConfig,
@@ -67,7 +76,6 @@ describe("", () => {
       vendorConfig,
       true,
     );
-    config = vendorConfig;
     rewardAccount = treasuryScriptManifest.rewardAccount!;
     vendorScriptAddress = vendorScriptManifest.scriptAddress;
 
@@ -227,16 +235,14 @@ describe("", () => {
         await emulator.as(Pauser, async (blaze) => {
           await emulator.expectValidTransaction(
             blaze,
-            await adjudicate(
-              config,
+            await adjudicate({
+              configsOrScripts,
               blaze,
-              new Date(Number(emulator.slotToUnix(Slot(0)))),
-              scriptInput,
-              ["Paused"],
-              [pauseSigner],
-              undefined,
-              true,
-            ),
+              now: new Date(Number(emulator.slotToUnix(Slot(0)))),
+              input: scriptInput,
+              statuses: ["Paused"],
+              signers: [pauseSigner],
+            }),
           );
         });
       });
@@ -244,16 +250,14 @@ describe("", () => {
         await emulator.as(Pauser, async (blaze) => {
           await emulator.expectValidTransaction(
             blaze,
-            await adjudicate(
-              config,
+            await adjudicate({
+              configsOrScripts,
               blaze,
-              new Date(Number(emulator.slotToUnix(Slot(0)))),
-              thirdScriptInput,
-              ["Paused", "Paused", "Paused"],
-              [pauseSigner],
-              undefined,
-              true,
-            ),
+              now: new Date(Number(emulator.slotToUnix(Slot(0)))),
+              input: thirdScriptInput,
+              statuses: ["Paused", "Paused", "Paused"],
+              signers: [pauseSigner],
+            }),
           );
         });
       });
@@ -261,16 +265,14 @@ describe("", () => {
         await emulator.as(Pauser, async (blaze) => {
           await emulator.expectValidTransaction(
             blaze,
-            await adjudicate(
-              config,
+            await adjudicate({
+              configsOrScripts,
               blaze,
-              new Date(Number(emulator.slotToUnix(Slot(0)))),
-              thirdScriptInput,
-              ["Paused", "Active", "Paused"],
-              [pauseSigner],
-              undefined,
-              true,
-            ),
+              now: new Date(Number(emulator.slotToUnix(Slot(0)))),
+              input: thirdScriptInput,
+              statuses: ["Paused", "Active", "Paused"],
+              signers: [pauseSigner],
+            }),
           );
         });
       });
@@ -279,16 +281,14 @@ describe("", () => {
           emulator.stepForwardToSlot(Slot(2));
           await emulator.expectValidTransaction(
             blaze,
-            await adjudicate(
-              config,
+            await adjudicate({
+              configsOrScripts,
               blaze,
-              new Date(Number(emulator.slotToUnix(Slot(2)))),
-              thirdScriptInput,
-              ["Active", "Paused", "Paused"],
-              [pauseSigner],
-              undefined,
-              true,
-            ),
+              now: new Date(Number(emulator.slotToUnix(Slot(2)))),
+              input: thirdScriptInput,
+              statuses: ["Active", "Paused", "Paused"],
+              signers: [pauseSigner],
+            }),
           );
         });
       });
@@ -298,16 +298,14 @@ describe("", () => {
         await emulator.as(Pauser, async (blaze) => {
           emulator.stepForwardToSlot(Slot(2));
           await emulator.expectScriptFailure(
-            await adjudicate(
-              config,
+            await adjudicate({
+              configsOrScripts,
               blaze,
-              new Date(Number(emulator.slotToUnix(Slot(2)))),
-              thirdScriptInput,
-              ["Paused", "Active", "Active"],
-              [pauseSigner],
-              undefined,
-              true,
-            ),
+              now: new Date(Number(emulator.slotToUnix(Slot(2)))),
+              input: thirdScriptInput,
+              statuses: ["Paused", "Active", "Active"],
+              signers: [pauseSigner],
+            }),
             /if is_entirely_after\(validity_range, ip.maturation\) && ip.status == Active {/,
           );
         });
@@ -318,32 +316,28 @@ describe("", () => {
         await emulator.as(Resumer, async (blaze) => {
           await emulator.expectValidTransaction(
             blaze,
-            await adjudicate(
-              config,
+            await adjudicate({
+              configsOrScripts,
               blaze,
-              new Date(Number(emulator.slotToUnix(Slot(0)))),
-              fourthScriptInput,
-              ["Active", "Active", "Active"],
-              [resumeSigner],
-              undefined,
-              true,
-            ),
+              now: new Date(Number(emulator.slotToUnix(Slot(0)))),
+              input: fourthScriptInput,
+              statuses: ["Active", "Active", "Active"],
+              signers: [resumeSigner],
+            }),
           );
         });
       });
       test("multiple payouts", async () => {
         let txId: TransactionId;
         await emulator.as(Pauser, async (blaze) => {
-          const tx = await adjudicate(
-            config,
+          const tx = await adjudicate({
+            configsOrScripts,
             blaze,
-            new Date(Number(emulator.slotToUnix(Slot(0)))),
-            fourthScriptInput,
-            ["Paused", "Paused", "Paused"],
-            [pauseSigner],
-            undefined,
-            true,
-          );
+            now: new Date(Number(emulator.slotToUnix(Slot(0)))),
+            input: fourthScriptInput,
+            statuses: ["Paused", "Paused", "Paused"],
+            signers: [pauseSigner],
+          });
           const completeTx = await tx.complete();
           const signedTx = await blaze.signTransaction(completeTx);
           txId = signedTx.getId();
@@ -361,16 +355,14 @@ describe("", () => {
           )[0];
           await emulator.expectValidTransaction(
             blaze,
-            await adjudicate(
-              config,
+            await adjudicate({
+              configsOrScripts,
               blaze,
-              new Date(Number(emulator.slotToUnix(Slot(1)))),
-              newScriptInput,
-              ["Paused", "Active", "Active"],
-              [resumeSigner],
-              undefined,
-              true,
-            ),
+              now: new Date(Number(emulator.slotToUnix(Slot(1)))),
+              input: newScriptInput,
+              statuses: ["Paused", "Active", "Active"],
+              signers: [resumeSigner],
+            }),
           );
         });
       });
@@ -379,16 +371,14 @@ describe("", () => {
           emulator.stepForwardToSlot(10);
           await emulator.expectValidTransaction(
             blaze,
-            await adjudicate(
-              config,
+            await adjudicate({
+              configsOrScripts,
               blaze,
-              new Date(Number(emulator.slotToUnix(Slot(10)))),
-              fourthScriptInput,
-              ["Active", "Active", "Active"],
-              [resumeSigner],
-              undefined,
-              true,
-            ),
+              now: new Date(Number(emulator.slotToUnix(Slot(10)))),
+              input: fourthScriptInput,
+              statuses: ["Active", "Active", "Active"],
+              signers: [resumeSigner],
+            }),
           );
         });
       });
@@ -396,16 +386,14 @@ describe("", () => {
     describe("can pause and resume", () => {
       test("in the same transaction", async () => {
         const tx = await emulator.as(Resumer, async (blaze) => {
-          return adjudicate(
-            config,
+          return adjudicate({
+            configsOrScripts,
             blaze,
-            new Date(Number(emulator.slotToUnix(Slot(0)))),
-            fourthScriptInput,
-            ["Active", "Active", "Paused"],
-            [resumeSigner, pauseSigner],
-            undefined,
-            true,
-          );
+            now: new Date(Number(emulator.slotToUnix(Slot(0)))),
+            input: fourthScriptInput,
+            statuses: ["Active", "Active", "Paused"],
+            signers: [resumeSigner, pauseSigner],
+          });
         });
         await emulator.expectValidMultisignedTransaction([Resumer, Pauser], tx);
       });
@@ -414,16 +402,14 @@ describe("", () => {
     test("must either pause or resume", async () => {
       await emulator.as(Pauser, async (blaze) => {
         await emulator.expectScriptFailure(
-          await adjudicate(
-            config,
+          await adjudicate({
+            configsOrScripts,
             blaze,
-            new Date(Number(emulator.slotToUnix(Slot(0)))),
-            fourthScriptInput,
-            ["Active", "Paused", "Active"],
-            [pauseSigner],
-            undefined,
-            true,
-          ),
+            now: new Date(Number(emulator.slotToUnix(Slot(0)))),
+            input: fourthScriptInput,
+            statuses: ["Active", "Paused", "Active"],
+            signers: [pauseSigner],
+          }),
           /Trace or \{\n\s*pause_permission_needed\?,\s*resume_permission_needed\?,\s*}/,
         );
       });
@@ -435,16 +421,16 @@ describe("", () => {
       test("pause payouts", async () => {
         await emulator.as("MaliciousUser", async (blaze, signer) => {
           await emulator.expectScriptFailure(
-            await adjudicate(
-              config,
+            await adjudicate({
+              configsOrScripts,
               blaze,
-              new Date(Number(emulator.slotToUnix(Slot(0)))),
-              fourthScriptInput,
-              ["Active", "Paused", "Paused"],
-              [Ed25519KeyHashHex(signer.asBase()!.getPaymentCredential().hash)],
-              undefined,
-              true,
-            ),
+              now: new Date(Number(emulator.slotToUnix(Slot(0)))),
+              input: fourthScriptInput,
+              statuses: ["Active", "Paused", "Paused"],
+              signers: [
+                Ed25519KeyHashHex(signer.asBase()!.getPaymentCredential().hash),
+              ],
+            }),
             /Trace satisfied\(config.permissions.pause, extra_signatories, validity_range, withdrawals\)/,
           );
         });
@@ -452,16 +438,16 @@ describe("", () => {
       test("resume payouts", async () => {
         await emulator.as("MaliciousUser", async (blaze, signer) => {
           await emulator.expectScriptFailure(
-            await adjudicate(
-              config,
+            await adjudicate({
+              configsOrScripts,
               blaze,
-              new Date(Number(emulator.slotToUnix(Slot(0)))),
-              fourthScriptInput,
-              ["Active", "Active", "Active"],
-              [Ed25519KeyHashHex(signer.asBase()!.getPaymentCredential().hash)],
-              undefined,
-              true,
-            ),
+              now: new Date(Number(emulator.slotToUnix(Slot(0)))),
+              input: fourthScriptInput,
+              statuses: ["Active", "Active", "Active"],
+              signers: [
+                Ed25519KeyHashHex(signer.asBase()!.getPaymentCredential().hash),
+              ],
+            }),
             /Trace satisfied\(config.permissions.resume, extra_signatories, validity_range, withdrawals\)/,
           );
         });

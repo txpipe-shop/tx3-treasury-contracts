@@ -18,6 +18,8 @@ import {
 } from "@blaze-cardano/sdk";
 import { checkbox, input, select } from "@inquirer/prompts";
 import clipboard from "clipboardy";
+import fetch from "node-fetch";
+import { ETransactionEvent } from "src";
 import {
   OneshotOneshotMint,
   TreasuryConfiguration,
@@ -32,17 +34,21 @@ import {
   TPermissionName,
   toMultisig,
 } from "src/metadata/types/permission";
+import { ICompiledScripts, IConfigs, loadConfigsAndScripts } from "src/shared";
 import {
   type IAnchor,
   type ITransactionMetadata,
 } from "../src/metadata/shared";
 import { CustomProvider } from "./custom";
-import fetch from "node-fetch";
-import { ETransactionEvent } from "src";
 
 const BLOCKFROST_VAR = "BLOCKFROST_KEY";
 const MAESTRO_VAR = "MAESTRO_KEY";
 const WALLET_VAR = "WALLET_ADDRESS";
+
+export interface IOnDiskInstance {
+  scripts?: ICompiledScripts;
+  metadata?: ITransactionMetadata<INewInstance>;
+}
 
 async function getSignersFromList(
   permissions: TPermissionMetadata[],
@@ -204,13 +210,8 @@ export async function getDate(
 export async function getPermission(
   title: string,
   existing?: TPermissionName[],
-  opts?: { allowCancel: true },
-): Promise<TPermissionMetadata | TPermissionName | null>
-export async function getPermission(
-  title: string,
-  existing?: TPermissionName[],
-  opts?: { allowCancel: false } = { allowCancel: false },
-): Promise<TPermissionMetadata | TPermissionName> {
+  opts: { allowCancel: boolean } = { allowCancel: false },
+): Promise<TPermissionMetadata | TPermissionName | null> {
   console.log(`\n${title}`);
   const msigType = await select({
     message: "Select the multisig type",
@@ -223,10 +224,7 @@ export async function getPermission(
       { name: "Any", value: "any" },
       { name: "Before", value: "before" },
       { name: "After", value: "after" },
-    ].concat(opts.allowCancel
-      ? [{ name: "Cancel", value: "cancel" }]
-      : []
-    ),
+    ].concat(opts.allowCancel ? [{ name: "Cancel", value: "cancel" }] : []),
   });
 
   switch (msigType) {
@@ -517,7 +515,9 @@ export async function getPermissionList(
           ],
         });
         if (addMore) {
-          const msig = await getPermission("Next criteria", undefined, { allowCancel: true });
+          const msig = await getPermission("Next criteria", undefined, {
+            allowCancel: true,
+          });
           if (msig !== null) {
             msigList.push(msig as TPermissionMetadata);
           }
@@ -607,7 +607,9 @@ export async function getProvider(): Promise<Provider> {
   let providerType;
 
   if (process.env[BLOCKFROST_VAR] !== undefined) {
-    console.log(`${BLOCKFROST_VAR} detected in env, assuming Blockfrost provider.`);
+    console.log(
+      `${BLOCKFROST_VAR} detected in env, assuming Blockfrost provider.`,
+    );
     providerType = "blockfrost";
   } else if (process.env[MAESTRO_VAR] !== undefined) {
     console.log(`${MAESTRO_VAR} detected in env, assuming Maestro provider.`);
@@ -707,7 +709,7 @@ export async function getWallet(provider: Provider): Promise<Wallet> {
 }
 
 export async function getPermissions(): Promise<
-  Record<TPermissionName, TPermissionMetadata | TPermissionName>
+  Record<TPermissionName, TPermissionMetadata | TPermissionName | null>
 > {
   return {
     reorganize: await getPermission(
@@ -742,7 +744,10 @@ export async function getPermissions(): Promise<
 
 export async function getTreasuryConfig(
   registry_token_policy: string | undefined,
-  permissions: Record<TPermissionName, TPermissionMetadata | TPermissionName>,
+  permissions: Record<
+    TPermissionName,
+    TPermissionMetadata | TPermissionName | null
+  >,
 ): Promise<TreasuryConfiguration> {
   if (!registry_token_policy) {
     registry_token_policy = await input({
@@ -776,7 +781,10 @@ export async function getTreasuryConfig(
 export async function getVendorConfig(
   registry_token_policy: string | undefined,
   payout_upperbound: Date,
-  permissions: Record<TPermissionName, TPermissionMetadata | TPermissionName>,
+  permissions: Record<
+    TPermissionName,
+    TPermissionMetadata | TPermissionName | null
+  >,
 ): Promise<VendorConfiguration> {
   if (!registry_token_policy) {
     registry_token_policy = await input({
@@ -831,7 +839,10 @@ export async function configToMetaData(
   instance: string,
   treasuryConfig: TreasuryConfiguration,
   vendorConfig: VendorConfiguration,
-  permissions: Record<TPermissionName, TPermissionMetadata | TPermissionName>,
+  permissions: Record<
+    TPermissionName,
+    TPermissionMetadata | TPermissionName | null
+  >,
   seed_utxo: {
     transaction_id: string;
     output_index: bigint;
@@ -906,7 +917,7 @@ export function metaDataToConfig(
 const fileName = "metadata.json";
 
 export async function readMetadataFromFile(): Promise<
-  Map<string, ITransactionMetadata<INewInstance>>
+  Map<string, IOnDiskInstance>
 > {
   const fs = await import("fs/promises");
   const path = await import("path");
@@ -917,12 +928,30 @@ export async function readMetadataFromFile(): Promise<
 
   if (data.trim() === "") {
     console.log("No metadata found, creating a new file.");
-    return new Map<string, ITransactionMetadata<INewInstance>>();
+    return new Map<string, IOnDiskInstance>();
   }
   const obj = JSON.parse(data);
-  const metadata = new Map<string, ITransactionMetadata<INewInstance>>();
+  const metadata = new Map<string, IOnDiskInstance>();
+  let scriptsConstructed = false;
   for (const k of Object.keys(obj)) {
+    if (!("scripts" in obj[k])) {
+      if (!("metadata" in obj[k])) {
+        throw new Error(
+          `Invalid metadata format for key ${k}: missing scripts or metadata`,
+        );
+      }
+      // If scripts are not present, we assume the metadata is valid
+      obj[k].scripts = await metadataToScripts(
+        await getBlazeInstance(),
+        obj[k].metadata as ITransactionMetadata<INewInstance>,
+      );
+      scriptsConstructed = true;
+    }
     metadata.set(k, obj[k]);
+  }
+  if (scriptsConstructed) {
+    console.log("Scripts were constructed from metadata.");
+    await writeMetadataToFile(metadata);
   }
   return metadata;
 }
@@ -932,7 +961,7 @@ export function bigIntReplacer(_key: string, value: any): any {
 }
 
 export async function writeMetadataToFile(
-  metadata: Map<string, ITransactionMetadata<INewInstance>>,
+  metadata: Map<string, IOnDiskInstance>,
 ): Promise<void> {
   const fs = await import("fs/promises");
   const path = await import("path");
@@ -946,19 +975,41 @@ export async function writeMetadataToFile(
   );
 }
 
-export async function registerMetadata(
-  instance: string,
+export async function metadataToScripts(
+  blaze: Blaze<Provider, Wallet>,
+  metadata: ITransactionMetadata<INewInstance>,
+): Promise<ICompiledScripts> {
+  const { treasuryConfig, vendorConfig } = metaDataToConfig(metadata);
+  const { scripts } = loadConfigsAndScripts(blaze, {
+    configs: {
+      treasury: treasuryConfig,
+      vendor: vendorConfig,
+    },
+  });
+  return scripts;
+}
+
+export async function registerMetadata<P extends Provider, W extends Wallet>(
+  blaze: Blaze<P, W>,
+  identifier: string,
   metadata: ITransactionMetadata<INewInstance>,
 ): Promise<void> {
+  const scripts = await metadataToScripts(blaze, metadata);
+  const instance: IOnDiskInstance = {
+    scripts,
+    metadata,
+  };
   const existingMetadata = await readMetadataFromFile();
-  existingMetadata.set(instance, metadata);
+  existingMetadata.set(identifier, instance);
   await writeMetadataToFile(existingMetadata);
 }
 
-export async function getConfigs(): Promise<{
-  treasuryConfig: TreasuryConfiguration;
-  vendorConfig: VendorConfiguration;
-  metadata: ITransactionMetadata<INewInstance>;
+export async function getConfigs<P extends Provider, W extends Wallet>(
+  blaze: Blaze<P, W>,
+): Promise<{
+  configs: IConfigs;
+  scripts: ICompiledScripts;
+  metadata?: ITransactionMetadata<INewInstance>;
 }> {
   const choice = await select({
     message: "Select saved configuration or register a new one",
@@ -973,30 +1024,52 @@ export async function getConfigs(): Promise<{
       return await registerNewInstance();
     }
     case "select": {
-      const metadataMap = await readMetadataFromFile();
+      const instanceMap = await readMetadataFromFile();
 
-      const metadataChoices = Array.from(metadataMap.entries()).map(
+      const instanceChoices = Array.from(instanceMap.entries()).map(
         ([key, value]) => ({
-          name: value.body.label || key,
+          name: value.metadata?.body.label || key,
           value: key,
         }),
       );
-      if (metadataChoices.length === 0) {
+      if (instanceChoices.length === 0) {
         console.log(
-          "No saved configurations found. Please register a new instance.",
+          "No saved instances found. Please register a new instance.",
         );
         return await registerNewInstance();
       }
       const selectedKey = await select({
-        message: "Select a saved configuration",
-        choices: metadataChoices,
+        message: "Select a saved instance",
+        choices: instanceChoices,
       });
-      const metadata = metadataMap.get(selectedKey);
-      if (!metadata) {
+      const instance = instanceMap.get(selectedKey);
+      if (!instance) {
         throw new Error(`Metadata for ${selectedKey} not found`);
       }
-      const { treasuryConfig, vendorConfig } = metaDataToConfig(metadata);
-      return { treasuryConfig, vendorConfig, metadata };
+      if (instance.metadata) {
+        const { treasuryConfig, vendorConfig } = metaDataToConfig(
+          instance.metadata,
+        );
+        const configs = { treasury: treasuryConfig, vendor: vendorConfig };
+        const { scripts } = loadConfigsAndScripts(blaze, { configs });
+        return {
+          configs,
+          scripts,
+          metadata: instance.metadata,
+        };
+      }
+      if (instance.scripts) {
+        const { configs } = loadConfigsAndScripts(blaze, {
+          scripts: instance.scripts,
+        });
+        return {
+          configs,
+          scripts: instance.scripts,
+        };
+      }
+      throw new Error(
+        `Metadata for ${selectedKey} does not contain any scripts or metadata`,
+      );
     }
     default:
       throw new Error("Unreachable");
@@ -1004,14 +1077,16 @@ export async function getConfigs(): Promise<{
 }
 
 async function registerNewInstance(): Promise<{
-  treasuryConfig: TreasuryConfiguration;
-  vendorConfig: VendorConfiguration;
+  configs: IConfigs;
+  scripts: ICompiledScripts;
   metadata: ITransactionMetadata<INewInstance>;
 }> {
+  const blazeInstance = await getBlazeInstance();
   let utxoChoice;
-
   if (process.env[WALLET_VAR] !== undefined) {
-    console.log(`${WALLET_VAR} detected in env, assuming UTxO selection from wallet.`);
+    console.log(
+      `${WALLET_VAR} detected in env, assuming UTxO selection from wallet.`,
+    );
     utxoChoice = "select";
   } else {
     utxoChoice = await select({
@@ -1040,7 +1115,6 @@ async function registerNewInstance(): Promise<{
       break;
     }
     default: {
-      const blazeInstance = await getBlazeInstance();
       const utxos = await blazeInstance.provider.getUnspentOutputs(
         await blazeInstance.wallet.getChangeAddress(),
       );
@@ -1092,10 +1166,21 @@ async function registerNewInstance(): Promise<{
     permissions,
     bootstrapUtxo,
   );
-  await registerMetadata(treasuryConfig.registry_token, metadata);
+  await registerMetadata(
+    blazeInstance,
+    treasuryConfig.registry_token,
+    metadata,
+  );
+  const configs = {
+    treasury: treasuryConfig,
+    vendor: vendorConfig,
+  };
+  const { scripts } = loadConfigsAndScripts(blazeInstance, {
+    configs,
+  });
   return {
-    treasuryConfig,
-    vendorConfig,
+    configs,
+    scripts,
     metadata,
   };
 }
@@ -1193,13 +1278,22 @@ export async function selectUtxos(
 }
 
 export function getActualPermission(
-  permission: TPermissionMetadata | TPermissionName,
-  permissions: Record<TPermissionName, TPermissionMetadata | TPermissionName>,
+  permission: TPermissionMetadata | TPermissionName | null,
+  permissions: Record<
+    TPermissionName,
+    TPermissionMetadata | TPermissionName | null
+  >,
 ): TPermissionMetadata {
+  if (permission === null) {
+    throw new Error("This action is disabled");
+  }
   if (typeof permission === "string") {
     const actual = permissions[permission];
     if (typeof actual === "string") {
       throw new Error(`No metadata found for permission ${permission}`);
+    }
+    if (actual === null) {
+      throw new Error(`Permission ${permission} is not allowed`);
     }
     return actual;
   }

@@ -67,9 +67,16 @@ export type TPermissionMetadata =
   | IAfterPermissionMetadata;
 
 export function toMultisig(
-  metadata: TPermissionMetadata | string,
-  others?: Record<TPermissionName, TPermissionMetadata | string>,
+  metadata: TPermissionMetadata | string | null,
+  others?: Record<TPermissionName, TPermissionMetadata | string | null>,
 ): MultisigScript {
+  if (metadata === null) {
+    return {
+      AnyOf: {
+        scripts: [],
+      },
+    };
+  }
   if (typeof metadata === "string" || metadata instanceof String) {
     if (!others || !(metadata.toString() in others)) {
       throw new Error("Unrecognized permission name, or cycle detected");

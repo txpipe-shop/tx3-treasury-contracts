@@ -12,11 +12,12 @@ import {
   TreasuryConfiguration,
   TreasurySpendRedeemer,
 } from "../../src/generated-types/contracts";
-import { loadTreasuryScript } from "../../src/shared";
+import { IConfigs, loadTreasuryScript } from "../../src/shared";
 import { sweep } from "../../src/treasury/sweep";
 import {
   registryToken,
   sampleTreasuryConfig,
+  sampleVendorConfig,
   setupEmulator,
 } from "../utilities";
 
@@ -25,6 +26,7 @@ describe("When sweeping", () => {
 
   let emulator: Emulator;
   let config: TreasuryConfiguration;
+  let configs: IConfigs;
   let treasuryScript: Script;
   let scriptAddress: Address;
   let scriptInput: Core.TransactionUnspentOutput;
@@ -35,6 +37,11 @@ describe("When sweeping", () => {
   beforeEach(async () => {
     emulator = await setupEmulator();
     config = await sampleTreasuryConfig(emulator);
+    configs = {
+      treasury: config,
+      vendor: await sampleVendorConfig(emulator),
+      trace: true,
+    };
     const treasury = loadTreasuryScript(Core.NetworkId.Testnet, config, true);
     treasuryScript = treasury.script.Script;
     scriptAddress = treasury.scriptAddress;
@@ -90,7 +97,11 @@ describe("When sweeping", () => {
         await emulator.as("Anyone", async (blaze) => {
           await emulator.expectValidTransaction(
             blaze,
-            await sweep(config, scriptInput, blaze, undefined, true),
+            await sweep({
+              configsOrScripts: { configs },
+              input: scriptInput,
+              blaze,
+            }),
           );
         });
       });
@@ -99,13 +110,12 @@ describe("When sweeping", () => {
         await emulator.as("Anyone", async (blaze) => {
           await emulator.expectValidTransaction(
             blaze,
-            await sweep(
-              config,
-              scriptInput,
+            await sweep({
+              configsOrScripts: { configs },
+              input: scriptInput,
               blaze,
-              500_000_000_000n - 5_000_000n,
-              true,
-            ),
+              amount: 500_000_000_000n - 5_000_000n,
+            }),
           );
         });
       });
