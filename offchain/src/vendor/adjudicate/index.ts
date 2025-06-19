@@ -15,7 +15,6 @@ import {
 
 import {
   PayoutStatus,
-  VendorConfiguration,
   VendorDatum,
   VendorSpendRedeemer,
 } from "../../generated-types/contracts.js";
@@ -24,22 +23,35 @@ import {
   type ITransactionMetadata,
 } from "../../metadata/shared.js";
 import type { IPause, IResume } from "../../metadata/types/adjudicate.js";
-import { loadVendorScript } from "../../shared/index.js";
+import {
+  loadConfigsAndScripts,
+  TConfigsOrScripts,
+} from "../../shared/index.js";
 
-export async function adjudicate<P extends Provider, W extends Wallet>(
-  config: VendorConfiguration,
-  blaze: Blaze<P, W>,
-  now: Date,
-  input: TransactionUnspentOutput,
-  statuses: PayoutStatus[],
-  signers: Ed25519KeyHashHex[],
-  metadata?: ITransactionMetadata<IPause | IResume>,
-  trace?: boolean,
-): Promise<TxBuilder> {
+export interface IAdjudicateArgs<P extends Provider, W extends Wallet> {
+  configsOrScripts: TConfigsOrScripts;
+  blaze: Blaze<P, W>;
+  now: Date;
+  input: TransactionUnspentOutput;
+  statuses: PayoutStatus[];
+  signers: Ed25519KeyHashHex[];
+  metadata?: ITransactionMetadata<IPause | IResume>;
+}
+
+export async function adjudicate<P extends Provider, W extends Wallet>({
+  configsOrScripts,
+  blaze,
+  now,
+  input,
+  statuses,
+  signers,
+  metadata,
+}: IAdjudicateArgs<P, W>): Promise<TxBuilder> {
+  const { configs, scripts } = loadConfigsAndScripts(blaze, configsOrScripts);
   const { scriptAddress: vendorScriptAddress, script: vendorScript } =
-    loadVendorScript(blaze.provider.network, config, trace);
+    scripts.vendorScript;
   const registryInput = await blaze.provider.getUnspentOutputByNFT(
-    AssetId(config.registry_token + toHex(Buffer.from("REGISTRY"))),
+    AssetId(configs.vendor.registry_token + toHex(Buffer.from("REGISTRY"))),
   );
   const refInput = await blaze.provider.resolveScriptRef(
     vendorScript.Script.hash(),

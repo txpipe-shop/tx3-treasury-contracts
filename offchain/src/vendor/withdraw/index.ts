@@ -16,7 +16,6 @@ import {
 } from "@blaze-cardano/sdk";
 
 import {
-  VendorConfiguration,
   VendorDatum,
   VendorSpendRedeemer,
 } from "../../generated-types/contracts.js";
@@ -24,26 +23,33 @@ import { ITransactionMetadata, toTxMetadata } from "../../metadata/shared.js";
 import { IWithdraw } from "../../metadata/types/withdraw.js";
 import {
   contractsValueToCoreValue,
-  loadVendorScript,
+  loadConfigsAndScripts,
+  TConfigsOrScripts,
 } from "../../shared/index.js";
 
-export async function withdraw<P extends Provider, W extends Wallet>(
-  config: VendorConfiguration,
-  blaze: Blaze<P, W>,
-  now: Date,
-  inputs: TransactionUnspentOutput[],
-  destination: Address,
-  signers: Ed25519KeyHashHex[],
-  metadata?: ITransactionMetadata<IWithdraw>,
-  trace?: boolean,
-): Promise<TxBuilder> {
-  const { script, scriptAddress } = loadVendorScript(
-    blaze.provider.network,
-    config,
-    trace,
-  );
+export interface IWithdrawArgs<P extends Provider, W extends Wallet> {
+  configsOrScripts: TConfigsOrScripts;
+  blaze: Blaze<P, W>;
+  now: Date;
+  inputs: TransactionUnspentOutput[];
+  destination: Address;
+  signers: Ed25519KeyHashHex[];
+  metadata?: ITransactionMetadata<IWithdraw>;
+}
+
+export async function withdraw<P extends Provider, W extends Wallet>({
+  configsOrScripts,
+  blaze,
+  now,
+  inputs,
+  destination,
+  signers,
+  metadata,
+}: IWithdrawArgs<P, W>): Promise<TxBuilder> {
+  const { configs, scripts } = loadConfigsAndScripts(blaze, configsOrScripts);
+  const { script, scriptAddress } = scripts.vendorScript;
   const registryInput = await blaze.provider.getUnspentOutputByNFT(
-    AssetId(config.registry_token + toHex(Buffer.from("REGISTRY"))),
+    AssetId(configs.vendor.registry_token + toHex(Buffer.from("REGISTRY"))),
   );
 
   const refInput = await blaze.provider.resolveScriptRef(script.Script.hash());

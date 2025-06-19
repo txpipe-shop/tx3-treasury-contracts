@@ -3,7 +3,11 @@ import { Value } from "@blaze-cardano/core";
 import { Blaze, makeValue, Provider, Wallet } from "@blaze-cardano/sdk";
 import { input, select } from "@inquirer/prompts";
 import { IFund, IFundMilestone } from "src/metadata/types/fund";
-import { toMultisig, TPermissionMetadata } from "src/metadata/types/permission";
+import {
+  toMultisig,
+  toPermission,
+  TPermissionMetadata,
+} from "src/metadata/types/permission";
 import { Treasury } from "../../src";
 import { loadTreasuryScript } from "../../src/shared";
 import {
@@ -101,7 +105,7 @@ export async function fund(
   if (!blazeInstance) {
     blazeInstance = await getBlazeInstance();
   }
-  const { treasuryConfig, vendorConfig, metadata } = await getConfigs();
+  const { configs, scripts, metadata } = await getConfigs(blazeInstance);
   const vendorPermissions: TPermissionMetadata = (await getPermission(
     "Which multisig should be able to use the funds?",
   )) as TPermissionMetadata;
@@ -144,13 +148,13 @@ export async function fund(
   metadataBody.milestones = milestones;
 
   const txMetadata = await getTransactionMetadata(
-    treasuryConfig.registry_token,
+    configs.treasury.registry_token,
     metadataBody,
   );
 
   const { scriptAddress: treasuryScriptAddress, ...rest } = loadTreasuryScript(
     blazeInstance.provider.network,
-    treasuryConfig,
+    configs.treasury,
   );
 
   const utxos = await blazeInstance.provider.getUnspentOutputs(
@@ -158,17 +162,20 @@ export async function fund(
   );
   const utxo = await selectUtxo(utxos);
 
-  const fundPermissions = getActualPermission(
-    metadata.body.permissions.fund,
-    metadata.body.permissions,
-  );
+  const fundPermissions = metadata
+    ? getActualPermission(
+        metadata.body.permissions.fund,
+        metadata.body.permissions,
+      )
+    : toPermission(configs.treasury.permissions.fund);
+
   const signers = await getSigners(fundPermissions, vendorPermissions);
 
   const tx = await (
     await Treasury.fund({
-      configs: {
-        treasury: treasuryConfig,
-        vendor: vendorConfig,
+      configsOrScripts: {
+        configs,
+        scripts,
       },
       blaze: blazeInstance,
       input: utxo,

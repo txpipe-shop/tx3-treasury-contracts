@@ -11,14 +11,13 @@ import {
   selectUtxo,
   transactionDialog,
 } from "cli/shared";
-import { Vendor } from "src";
+import { toPermission, Vendor } from "src";
 import { VendorDatum } from "src/generated-types/contracts";
 import {
   IAdjudicatedMilestone,
   IPause,
   IResume,
 } from "src/metadata/types/adjudicate";
-import { loadVendorScript } from "src/shared";
 
 async function adjudicate(
   pause: boolean,
@@ -33,12 +32,9 @@ async function adjudicate(
   const oldStatus = pause ? "Active" : "Paused";
   const newStatus = pause ? "Paused" : "Active";
 
-  const { vendorConfig, metadata } = await getConfigs();
+  const { configs, scripts, metadata } = await getConfigs(blazeInstance);
 
-  const { scriptAddress: vendorScriptAddress } = loadVendorScript(
-    blazeInstance.provider.network,
-    vendorConfig,
-  );
+  const { scriptAddress: vendorScriptAddress } = scripts.vendorScript;
 
   const utxos =
     await blazeInstance.provider.getUnspentOutputs(vendorScriptAddress);
@@ -98,33 +94,38 @@ async function adjudicate(
     milestones,
   } as IPause | IResume;
 
+  //TODO: Make this non ugly
   const signers = await getSigners(
     pause
-      ? getActualPermission(
-          metadata.body.permissions.pause,
-          metadata.body.permissions,
-        )
-      : getActualPermission(
-          metadata.body.permissions.resume,
-          metadata.body.permissions,
-        ),
+      ? metadata
+        ? getActualPermission(
+            metadata.body.permissions.pause,
+            metadata.body.permissions,
+          )
+        : toPermission(configs.vendor.permissions.pause)
+      : metadata
+        ? getActualPermission(
+            metadata.body.permissions.resume,
+            metadata.body.permissions,
+          )
+        : toPermission(configs.vendor.permissions.resume),
   );
 
   const txMetadata = await getTransactionMetadata(
-    metadata.instance,
+    configs.treasury.registry_token,
     metadataBody,
   );
 
   const tx = await (
-    await Vendor.adjudicate(
-      vendorConfig,
-      blazeInstance,
-      new Date(now),
-      utxo,
+    await Vendor.adjudicate({
+      configsOrScripts: { configs, scripts },
+      blaze: blazeInstance,
+      now: new Date(now),
+      input: utxo,
       statuses,
       signers,
-      txMetadata,
-    )
+      metadata: txMetadata,
+    })
   ).complete();
 
   await transactionDialog(blazeInstance.provider.network, tx.toCbor(), false);

@@ -13,13 +13,14 @@ import {
   type TreasuryConfiguration,
   type TreasuryTreasuryWithdraw,
 } from "../../src/generated-types/contracts";
-import { loadTreasuryScript } from "../../src/shared";
+import { IConfigs, loadTreasuryScript } from "../../src/shared";
 import { reorganize } from "../../src/treasury/reorganize";
 import {
   registryToken,
   reorganize_key,
   Reorganizer,
   sampleTreasuryConfig,
+  sampleVendorConfig,
   setupEmulator,
 } from "../utilities";
 
@@ -28,6 +29,7 @@ describe("When reorganizing", () => {
 
   let emulator: Emulator;
   let config: TreasuryConfiguration;
+  let configs: IConfigs;
   let scriptInput: Core.TransactionUnspentOutput;
   let secondScriptInput: Core.TransactionUnspentOutput;
   let thirdScriptInput: Core.TransactionUnspentOutput;
@@ -40,6 +42,11 @@ describe("When reorganizing", () => {
     emulator = await setupEmulator();
     config = await sampleTreasuryConfig(emulator);
     const treasury = loadTreasuryScript(Core.NetworkId.Testnet, config, true);
+    configs = {
+      treasury: config,
+      vendor: await sampleVendorConfig(emulator),
+      trace: true,
+    };
     rewardAccount = treasury.rewardAccount!;
     treasuryScript = treasury.script;
     scriptAddress = treasury.scriptAddress;
@@ -88,14 +95,16 @@ describe("When reorganizing", () => {
       await emulator.as(Reorganizer, async (blaze) => {
         await emulator.expectValidTransaction(
           blaze,
-          await reorganize(
-            config,
+          await reorganize({
+            configsOrScripts: { configs },
             blaze,
-            [scriptInput],
-            [makeValue(100_000_000_000n), makeValue(400_000_000_000n)],
-            [Ed25519KeyHashHex(await reorganize_key(emulator))],
-            true,
-          ),
+            inputs: [scriptInput],
+            outputAmounts: [
+              makeValue(100_000_000_000n),
+              makeValue(400_000_000_000n),
+            ],
+            signers: [Ed25519KeyHashHex(await reorganize_key(emulator))],
+          }),
         );
       });
     });
@@ -104,14 +113,13 @@ describe("When reorganizing", () => {
       await emulator.as(Reorganizer, async (blaze) => {
         await emulator.expectValidTransaction(
           blaze,
-          await reorganize(
-            config,
+          await reorganize({
+            configsOrScripts: { configs },
             blaze,
-            [scriptInput, secondScriptInput],
-            [makeValue(600_000_000_000n)],
-            [Ed25519KeyHashHex(await reorganize_key(emulator))],
-            true,
-          ),
+            inputs: [scriptInput, secondScriptInput],
+            outputAmounts: [makeValue(600_000_000_000n)],
+            signers: [Ed25519KeyHashHex(await reorganize_key(emulator))],
+          }),
         );
       });
     });
@@ -120,18 +128,17 @@ describe("When reorganizing", () => {
       await emulator.as(Reorganizer, async (blaze) => {
         await emulator.expectValidTransaction(
           blaze,
-          await reorganize(
-            config,
+          await reorganize({
+            configsOrScripts: { configs },
             blaze,
-            [scriptInput, secondScriptInput],
-            [
+            inputs: [scriptInput, secondScriptInput],
+            outputAmounts: [
               makeValue(200_000_000_000n),
               makeValue(200_000_000_000n),
               makeValue(200_000_000_000n),
             ],
-            [Ed25519KeyHashHex(await reorganize_key(emulator))],
-            true,
-          ),
+            signers: [Ed25519KeyHashHex(await reorganize_key(emulator))],
+          }),
         );
       });
     });
@@ -140,14 +147,13 @@ describe("When reorganizing", () => {
       await emulator.as(Reorganizer, async (blaze) => {
         await emulator.expectValidTransaction(
           blaze,
-          await reorganize(
-            config,
+          await reorganize({
+            configsOrScripts: { configs },
             blaze,
-            [scriptInput, thirdScriptInput],
-            [makeValue(500_000_500_000n, ["a".repeat(56), 1n])],
-            [Ed25519KeyHashHex(await reorganize_key(emulator))],
-            true,
-          ),
+            inputs: [scriptInput, thirdScriptInput],
+            outputAmounts: [makeValue(500_000_500_000n, ["a".repeat(56), 1n])],
+            signers: [Ed25519KeyHashHex(await reorganize_key(emulator))],
+          }),
         );
       });
     });
@@ -156,14 +162,13 @@ describe("When reorganizing", () => {
       await emulator.as(Reorganizer, async (blaze) => {
         await emulator.expectValidTransaction(
           blaze,
-          await reorganize(
-            config,
+          await reorganize({
+            configsOrScripts: { configs },
             blaze,
-            [thirdScriptInput],
-            [makeValue(2_000_000n, ["a".repeat(56), 1n])],
-            [Ed25519KeyHashHex(await reorganize_key(emulator))],
-            true,
-          ),
+            inputs: [thirdScriptInput],
+            outputAmounts: [makeValue(2_000_000n, ["a".repeat(56), 1n])],
+            signers: [Ed25519KeyHashHex(await reorganize_key(emulator))],
+          }),
         );
       });
     });
@@ -338,14 +343,18 @@ describe("When reorganizing", () => {
     test("cannot reorganize UTxOs", async () => {
       await emulator.as("MaliciousUser", async (blaze, address) => {
         await emulator.expectScriptFailure(
-          await reorganize(
-            config,
+          await reorganize({
+            configsOrScripts: { configs },
             blaze,
-            [scriptInput],
-            [makeValue(100_000_000_000n), makeValue(400_000_000_000n)],
-            [Ed25519KeyHashHex(address.asBase()!.getPaymentCredential().hash)],
-            true,
-          ),
+            inputs: [scriptInput],
+            outputAmounts: [
+              makeValue(100_000_000_000n),
+              makeValue(400_000_000_000n),
+            ],
+            signers: [
+              Ed25519KeyHashHex(address.asBase()!.getPaymentCredential().hash),
+            ],
+          }),
           /Trace satisfied\(config.permissions.reorganize/,
         );
       });

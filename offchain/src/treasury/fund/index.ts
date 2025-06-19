@@ -20,26 +20,19 @@ import * as Tx from "@blaze-cardano/tx";
 
 import {
   MultisigScript,
-  TreasuryConfiguration,
   TreasurySpendRedeemer,
-  VendorConfiguration,
   VendorDatum,
 } from "../../generated-types/contracts.js";
 import { ITransactionMetadata, toTxMetadata } from "../../metadata/shared.js";
 import { IFund } from "../../metadata/types/fund.js";
 import {
   coreValueToContractsValue,
-  ICompiledScripts,
-  loadScripts,
+  loadConfigsAndScripts,
+  TConfigsOrScripts,
 } from "../../shared/index.js";
 
 export interface IFundArgs<P extends Provider, W extends Wallet> {
-  configs?: {
-    treasury: TreasuryConfiguration;
-    vendor: VendorConfiguration;
-    trace?: boolean;
-  };
-  scripts?: ICompiledScripts;
+  configsOrScripts: TConfigsOrScripts;
   blaze: Blaze<P, W>;
   input: TransactionUnspentOutput;
   vendor: MultisigScript;
@@ -50,33 +43,14 @@ export interface IFundArgs<P extends Provider, W extends Wallet> {
 
 export async function fund<P extends Provider, W extends Wallet>({
   blaze,
-  configs,
-  scripts,
+  configsOrScripts,
   input,
   schedule,
   signers,
   metadata,
   vendor,
 }: IFundArgs<P, W>): Promise<TxBuilder> {
-  if (!configs && !scripts) {
-    throw new Error("Either configs or scripts must be provided");
-  }
-  if (configs) {
-    scripts = loadScripts(
-      blaze.provider.network,
-      configs.treasury,
-      configs.vendor,
-      configs.trace,
-    );
-  } else if (scripts) {
-    configs = {
-      treasury: scripts.treasuryScript.config,
-      vendor: scripts.vendorScript.config,
-    };
-  }
-  if (!configs || !scripts) {
-    throw new Error("Couldn't load scripts");
-  }
+  const { configs, scripts } = loadConfigsAndScripts(blaze, configsOrScripts);
   const registryInput = await blaze.provider.getUnspentOutputByNFT(
     AssetId(configs.treasury.registry_token + toHex(Buffer.from("REGISTRY"))),
   );
@@ -86,6 +60,7 @@ export async function fund<P extends Provider, W extends Wallet>({
     Number(configs.treasury.expiration),
     new Date().valueOf() + maxHorizon * 60 * 60 * 1000,
   );
+
   const upperBoundSlot = blaze.provider.unixToSlot(upperBoundUnix) - 30;
   let tx = blaze
     .newTransaction()

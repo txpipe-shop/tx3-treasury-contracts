@@ -35,7 +35,11 @@ describe("When disbursing", () => {
   const amount = 340_000_000_000_000n;
 
   let emulator: Emulator;
-  let configs: { treasury: TreasuryConfiguration; vendor: VendorConfiguration };
+  let configs: {
+    treasury: TreasuryConfiguration;
+    vendor: VendorConfiguration;
+    trace?: boolean;
+  };
   let scriptInput: Core.TransactionUnspentOutput;
   let secondScriptInput: Core.TransactionUnspentOutput;
   let thirdScriptInput: Core.TransactionUnspentOutput;
@@ -55,7 +59,7 @@ describe("When disbursing", () => {
       true,
     );
     // const vendorScript = loadVendorScript(Core.NetworkId.Testnet, vendorConfig);
-    configs = { treasury: treasuryConfig, vendor: vendorConfig };
+    configs = { treasury: treasuryConfig, vendor: vendorConfig, trace: true };
     rewardAccount = treasury.rewardAccount!;
     treasuryScript = treasury.script;
     treasuryScriptAddress = treasury.scriptAddress;
@@ -123,17 +127,14 @@ describe("When disbursing", () => {
           const vendor = await emulator.register("Vendor");
           await emulator.expectValidTransaction(
             blaze,
-            await disburse(
-              configs,
+            await disburse({
+              configsOrScripts: { configs },
               blaze,
-              scriptInput,
-              vendor,
-              makeValue(10_000_000n),
-              undefined,
-              [Ed25519KeyHashHex(await disburse_key(emulator))],
-              undefined,
-              true,
-            ),
+              input: scriptInput,
+              recipient: vendor,
+              amount: makeValue(10_000_000n),
+              signers: [Ed25519KeyHashHex(await disburse_key(emulator))],
+            }),
           );
         });
       });
@@ -142,17 +143,14 @@ describe("When disbursing", () => {
           const vendor = await emulator.register("Vendor");
           await emulator.expectValidTransaction(
             blaze,
-            await disburse(
-              configs,
+            await disburse({
+              configsOrScripts: { configs },
               blaze,
-              scriptInput,
-              vendor,
-              makeValue(500_000_000_000n),
-              undefined,
-              [Ed25519KeyHashHex(await disburse_key(emulator))],
-              undefined,
-              true,
-            ),
+              input: scriptInput,
+              recipient: vendor,
+              amount: makeValue(500_000_000_000n),
+              signers: [Ed25519KeyHashHex(await disburse_key(emulator))],
+            }),
           );
         });
       });
@@ -161,17 +159,14 @@ describe("When disbursing", () => {
           const vendor = await emulator.register("Vendor");
           await emulator.expectValidTransaction(
             blaze,
-            await disburse(
-              configs,
+            await disburse({
+              configsOrScripts: { configs },
               blaze,
-              fourthScriptInput,
-              vendor,
-              makeValue(2_000_000n, ["b".repeat(56), 50n]),
-              undefined,
-              [Ed25519KeyHashHex(await disburse_key(emulator))],
-              undefined,
-              true,
-            ),
+              input: fourthScriptInput,
+              recipient: vendor,
+              amount: makeValue(2_000_000n, ["b".repeat(56), 50n]),
+              signers: [Ed25519KeyHashHex(await disburse_key(emulator))],
+            }),
           );
         });
       });
@@ -180,17 +175,14 @@ describe("When disbursing", () => {
           const vendor = await emulator.register("Vendor");
           await emulator.expectValidTransaction(
             blaze,
-            await disburse(
-              configs,
+            await disburse({
+              configsOrScripts: { configs },
               blaze,
-              fourthScriptInput,
-              vendor,
-              makeValue(0n, ["b".repeat(56), 50n]),
-              undefined,
-              [Ed25519KeyHashHex(await disburse_key(emulator))],
-              undefined,
-              true,
-            ),
+              input: fourthScriptInput,
+              recipient: vendor,
+              amount: makeValue(0n, ["b".repeat(56), 50n]),
+              signers: [Ed25519KeyHashHex(await disburse_key(emulator))],
+            }),
           );
         });
       });
@@ -276,17 +268,15 @@ describe("When disbursing", () => {
           const vendor = await emulator.register("Vendor");
           await emulator.expectValidTransaction(
             blaze,
-            await disburse(
-              configs,
+            await disburse({
+              configsOrScripts: { configs },
               blaze,
-              fourthScriptInput,
-              vendor,
-              makeValue(0n, ["b".repeat(56), 50n]),
-              undefined,
-              [Ed25519KeyHashHex(await disburse_key(emulator))],
-              true,
-              true,
-            ),
+              input: fourthScriptInput,
+              recipient: vendor,
+              amount: makeValue(0n, ["b".repeat(56), 50n]),
+              signers: [Ed25519KeyHashHex(await disburse_key(emulator))],
+              after: true,
+            }),
           );
         });
       });

@@ -19,7 +19,6 @@ import {
   IMilestone,
   IWithdraw,
 } from "src/metadata/types/withdraw";
-import { loadVendorScript } from "src/shared";
 
 async function getEvidence(): Promise<IAnchorWithLabel[]> {
   const evidence: IAnchorWithLabel[] = [];
@@ -83,12 +82,9 @@ export async function withdraw(
   if (!blazeInstance) {
     blazeInstance = await getBlazeInstance();
   }
-  const { vendorConfig, metadata } = await getConfigs();
+  const { configs, scripts } = await getConfigs(blazeInstance);
 
-  const { scriptAddress } = loadVendorScript(
-    blazeInstance.provider.network,
-    vendorConfig,
-  );
+  const { scriptAddress } = scripts.vendorScript;
 
   const utxos = await blazeInstance.provider.getUnspentOutputs(scriptAddress);
 
@@ -142,21 +138,21 @@ export async function withdraw(
   } as IWithdraw;
 
   const txMetadata = await getTransactionMetadata(
-    metadata.instance,
+    configs.vendor.registry_token,
     metadataBody,
   );
 
   const tx = await (
-    await Vendor.withdraw(
-      vendorConfig,
-      blazeInstance,
-      new Date(now),
+    await Vendor.withdraw({
+      configsOrScripts: { configs, scripts },
+      blaze: blazeInstance,
+      now: new Date(now),
       inputs,
       destination,
       signers,
-      txMetadata,
-    )
+      metadata: txMetadata,
+    })
   ).complete();
 
-  await transactionDialog(tx.toCbor(), false);
+  await transactionDialog(blazeInstance.provider.network, tx.toCbor(), false);
 }

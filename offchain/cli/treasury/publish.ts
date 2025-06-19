@@ -9,43 +9,63 @@ import {
   TransactionOutput,
 } from "@blaze-cardano/core";
 import { serialize, Void } from "@blaze-cardano/data";
-import { Blaze, Core } from "@blaze-cardano/sdk";
-import { select } from "@inquirer/prompts";
+import { Core } from "@blaze-cardano/sdk";
+import { input, select } from "@inquirer/prompts";
 import {
   OneshotOneshotMint,
   ScriptHashRegistry,
-  TreasuryTreasurySpend,
-  VendorVendorSpend,
 } from "src/generated-types/contracts";
 import { toTxMetadata } from "../../src/metadata/shared";
 import { contractsValueToCoreValue } from "../../src/shared";
 import {
   deployTransaction,
+  getBlazeInstance,
   getConfigs,
-  getProvider,
-  getWallet,
   transactionDialog,
 } from "../shared";
 export async function publish(): Promise<void> {
-  const { treasuryConfig, vendorConfig, metadata } = await getConfigs();
-  const oneshotScript = new OneshotOneshotMint(metadata.body.seed_utxo);
+  const blazeInstance = await getBlazeInstance();
+  const { scripts, metadata } = await getConfigs(blazeInstance);
+  let seed_utxo = metadata?.body.seed_utxo;
+  if (!seed_utxo) {
+    const utxo = await input({
+      message:
+        "Enter the transaction output (txId#idx) that was used to bootstrap the instance: ",
+      validate: function (value) {
+        return (
+          /[0-9A-Fa-f]{64}#[0-9]+/.test(value) ||
+          "Should be in the format txId#idx"
+        );
+      },
+    });
+    const [txId, outputIndex] = utxo.split("#");
+    seed_utxo = {
+      transaction_id: txId,
+      output_index: BigInt(outputIndex),
+    };
+  }
+  const oneshotScript = new OneshotOneshotMint(seed_utxo);
 
   const registry_token = oneshotScript.Script;
   console.log(`Registry token policy ID: ${registry_token.hash()}`);
 
-  const treasuryScript = new TreasuryTreasurySpend(treasuryConfig).Script;
-  console.log(`Treasury script policy ID: ${treasuryScript.hash()}`);
+  console.log(
+    `Treasury script policy ID: ${scripts.treasuryScript.script.Script.hash()}`,
+  );
 
-  const vendorScript = new VendorVendorSpend(vendorConfig).Script;
-  console.log(`Vendor script policy ID: ${vendorScript.hash()}`);
-
-  let blazeInstance;
+  console.log(
+    `Vendor script policy ID: ${scripts.vendorScript.script.Script.hash()}`,
+  );
 
   while (true) {
     const choice = await select({
       message: "What would you like to do next?",
       choices: [
-        { name: "Create registry transaction", value: "registry" },
+        {
+          name: "Create registry transaction",
+          value: "registry",
+          disabled: !metadata,
+        },
         {
           name: "Create publish treasury script reference transaction",
           value: "treasury-publish",
@@ -63,19 +83,14 @@ export async function publish(): Promise<void> {
         console.log("Creating transaction to publish the script registry...");
         const registryDatum: ScriptHashRegistry = {
           treasury: {
-            Script: [treasuryScript.hash()],
+            Script: [scripts.treasuryScript.script.Script.hash()],
           },
           vendor: {
-            Script: [vendorScript.hash()],
+            Script: [scripts.vendorScript.script.Script.hash()],
           },
         };
         const policyId = oneshotScript.Script.hash();
         const assetName = Core.toHex(Buffer.from("REGISTRY"));
-        if (!blazeInstance) {
-          const provider = await getProvider();
-          const wallet = await getWallet(provider);
-          blazeInstance = await Blaze.from(provider, wallet);
-        }
         const oneshotAddress = new Core.Address({
           type: Core.AddressType.EnterpriseScript,
           networkId: blazeInstance.provider.network,
@@ -94,13 +109,13 @@ export async function publish(): Promise<void> {
         const bootstrapUtxoObj =
           await blazeInstance.provider.resolveUnspentOutputs([
             new TransactionInput(
-              TransactionId(metadata.body.seed_utxo.transaction_id),
-              metadata.body.seed_utxo.output_index,
+              TransactionId(seed_utxo.transaction_id),
+              seed_utxo.output_index,
             ),
           ]);
 
         const auxData = new AuxiliaryData();
-        auxData.setMetadata(toTxMetadata(metadata));
+        auxData.setMetadata(toTxMetadata(metadata!));
         const tx = await blazeInstance
           .newTransaction()
           .addInput(bootstrapUtxoObj[0])
@@ -112,7 +127,7 @@ export async function publish(): Promise<void> {
           )
           .setAuxiliaryData(auxData)
           .provideScript(oneshotScript.Script)
-          .addRequiredSigner(Ed25519KeyHashHex(metadata.txAuthor))
+          .addRequiredSigner(Ed25519KeyHashHex(metadata!.txAuthor))
           .complete();
         await transactionDialog(
           blazeInstance.provider.network,
@@ -121,17 +136,12 @@ export async function publish(): Promise<void> {
         );
         break;
       case "treasury-publish":
-        if (!blazeInstance) {
-          const provider = await getProvider();
-          const wallet = await getWallet(provider);
-          blazeInstance = await Blaze.from(provider, wallet);
-        }
         await transactionDialog(
           blazeInstance.provider.network,
           (
             await deployTransaction(
               blazeInstance,
-              [treasuryScript],
+              [scripts.treasuryScript.script.Script],
               await select({
                 message: "Register the script hash?",
                 choices: [
@@ -147,17 +157,12 @@ export async function publish(): Promise<void> {
         );
         break;
       case "vendor-publish":
-        if (!blazeInstance) {
-          const provider = await getProvider();
-          const wallet = await getWallet(provider);
-          blazeInstance = await Blaze.from(provider, wallet);
-        }
         await transactionDialog(
           blazeInstance.provider.network,
           (
             await deployTransaction(
               blazeInstance,
-              [vendorScript],
+              [scripts.vendorScript.script.Script],
               await select({
                 message: "Register the script hash?",
                 choices: [

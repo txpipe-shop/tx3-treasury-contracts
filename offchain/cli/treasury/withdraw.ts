@@ -1,7 +1,7 @@
 import { Blaze, Provider, Wallet } from "@blaze-cardano/sdk";
 import { input } from "@inquirer/prompts";
-import { IInitialize } from "src/metadata/types/initialize-reorganize";
 import { ETransactionEvent, Treasury } from "src";
+import { IInitialize } from "src/metadata/types/initialize-reorganize";
 import {
   getBlazeInstance,
   getConfigs,
@@ -18,7 +18,7 @@ export async function withdraw(
   if (!blazeInstance) {
     blazeInstance = await getBlazeInstance();
   }
-  const { treasuryConfig } = await getConfigs();
+  const { configs, scripts } = await getConfigs(blazeInstance);
 
   const { amounts, outputs } = await getOutputs();
 
@@ -40,17 +40,17 @@ export async function withdraw(
       ? BigInt(parseInt(withdrawAmountOpt))
       : undefined;
   const txMetadata = await getTransactionMetadata(
-    treasuryConfig.registry_token,
+    configs.treasury.registry_token,
     body,
   );
 
-  const tx = await Treasury.withdraw(
-    treasuryConfig,
+  const tx = await Treasury.withdraw({
+    configsOrScripts: { configs, scripts },
     amounts,
-    blazeInstance,
-    txMetadata,
+    blaze: blazeInstance,
+    metadata: txMetadata,
     withdrawAmount,
-  );
+  });
   const finalTx = await tx.complete();
   await transactionDialog(
     blazeInstance.provider.network,

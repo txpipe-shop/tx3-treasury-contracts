@@ -145,7 +145,7 @@ describe("When funding", () => {
       test("can fund a new project", async () => {
         const tx = await emulator.as(Funder, async (blaze) => {
           return fund({
-            configs,
+            configsOrScripts: { configs },
             blaze,
             input: scriptInput,
             vendor,
@@ -166,7 +166,7 @@ describe("When funding", () => {
       test("can fund a new project without change", async () => {
         const tx = await emulator.as(Funder, async (blaze) => {
           return fund({
-            configs,
+            configsOrScripts: { configs },
             blaze,
             input: scriptInput,
             vendor,
@@ -187,7 +187,7 @@ describe("When funding", () => {
       test("can fund a new project with multiple payouts", async () => {
         const tx = await emulator.as(Funder, async (blaze) => {
           return fund({
-            configs,
+            configsOrScripts: { configs },
             blaze,
             input: scriptInput,
             vendor,
@@ -212,7 +212,7 @@ describe("When funding", () => {
       test("can fund a new project with native tokens", async () => {
         const tx = await emulator.as(Funder, async (blaze) => {
           return fund({
-            configs,
+            configsOrScripts: { configs },
             blaze,
             input: fourthScriptInput,
             vendor,
@@ -244,8 +244,7 @@ describe("When funding", () => {
             vendorScript.Script,
           );
           return fund({
-            configs,
-            scripts,
+            configsOrScripts: { configs, scripts },
             blaze,
             input: fourthScriptInput,
             vendor,
@@ -287,8 +286,7 @@ describe("When funding", () => {
             ]),
           );
           return fund({
-            configs,
-            scripts,
+            configsOrScripts: { configs, scripts },
             blaze,
             input: fourthScriptInput,
             vendor,
@@ -310,7 +308,7 @@ describe("When funding", () => {
       test("can fund a new project with *only* native tokens", async () => {
         const tx = await emulator.as(Funder, async (blaze) => {
           return fund({
-            configs,
+            configsOrScripts: { configs },
             blaze,
             input: fourthScriptInput,
             vendor,
@@ -331,7 +329,7 @@ describe("When funding", () => {
       test("can fund a new project with minUtXO problems", async () => {
         const tx = await emulator.as(Funder, async (blaze) => {
           return fund({
-            configs,
+            configsOrScripts: { configs },
             blaze,
             input: fourthScriptInput,
             vendor,
@@ -700,7 +698,7 @@ describe("When funding", () => {
       await emulator.as("MaliciousUser", async (blaze, address) => {
         await emulator.expectScriptFailure(
           await fund({
-            configs,
+            configsOrScripts: { configs },
             blaze,
             input: scriptInput,
             vendor,
