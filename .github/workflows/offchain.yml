@@ -64,8 +64,23 @@ jobs:
       - name: Configure npm authentication
         run: npm config set //registry.npmjs.org/:_authToken ${{ secrets.NPM_TOKEN }}
 
-      # Create Release
+      - id: check
+        name: Check published version
+        uses: EndBug/version-check@v2
+        with:
+          file-name: ./offchain/package.json
+          file-url: https://unpkg.com/@sundaeswap/treasury-funds@0.0.11/package.json
+          static-checking: localIsNew
+
+      # Create Release, if the version has changed
       - name: Publish
+        if: steps.check.outputs.changed == 'true'
         run: |
           cd offchain
           npm publish
+
+      # Or log, if we don't
+      - name: Log Unchanged
+        if: steps.check.outputs.changed == 'false'
+        run: |
+          echo "Skipping publish because version is unchanged"
