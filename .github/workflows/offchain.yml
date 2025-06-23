@@ -69,7 +69,7 @@ jobs:
         uses: EndBug/version-check@v2
         with:
           file-name: ./offchain/package.json
-          file-url: https://unpkg.com/@sundaeswap/treasury-funds@0.0.11/package.json
+          file-url: https://unpkg.com/@sundaeswap/treasury-funds@latest/package.json
           static-checking: localIsNew
 
       # Create Release, if the version has changed
