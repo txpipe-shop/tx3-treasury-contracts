@@ -64,6 +64,7 @@ mv tmp plutus.json
 LEDGER_POLICY_ID="$(aiken blueprint policy -v oneshot 2> /dev/null)"
 LEDGER_SCRIPT_HASH="$(aiken blueprint policy -v treasury 2> /dev/null)"
 
+mv plutus.json plutus.ledger.json
 cp plutus.base.json plutus.json
 
 # CONSENSUS
@@ -80,6 +81,7 @@ mv tmp plutus.json
 CONSENSUS_POLICY_ID="$(aiken blueprint policy -v oneshot 2> /dev/null)"
 CONSENSUS_SCRIPT_HASH="$(aiken blueprint policy -v treasury 2> /dev/null)"
 
+mv plutus.json plutus.consensus.json
 cp plutus.base.json plutus.json
 
 # MERCENARIES
@@ -96,6 +98,7 @@ mv tmp plutus.json
 MERCENARIES_POLICY_ID="$(aiken blueprint policy -v oneshot 2> /dev/null)"
 MERCENARIES_SCRIPT_HASH="$(aiken blueprint policy -v treasury 2> /dev/null)"
 
+mv plutus.json plutus.mercenaries.json
 cp plutus.base.json plutus.json
 
 # MARKETING
@@ -112,6 +115,7 @@ mv tmp plutus.json
 MARKETING_POLICY_ID="$(aiken blueprint policy -v oneshot 2> /dev/null)"
 MARKETING_SCRIPT_HASH="$(aiken blueprint policy -v treasury 2> /dev/null)"
 
+mv plutus.json plutus.marketing.json
 cp plutus.base.json plutus.json
 
 # CONTINGENCY
@@ -128,6 +132,7 @@ mv tmp plutus.json
 CONTINGENCY_POLICY_ID="$(aiken blueprint policy -v oneshot 2> /dev/null)"
 CONTINGENCY_SCRIPT_HASH="$(aiken blueprint policy -v treasury 2> /dev/null)"
 
+mv plutus.json plutus.contingency.json
 cp plutus.base.json plutus.json
 rm plutus.base.json
 
