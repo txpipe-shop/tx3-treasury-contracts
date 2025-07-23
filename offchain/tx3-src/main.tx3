@@ -1,0 +1,35 @@
+party Person;
+party TreasuryScript;
+party VendorScript;
+
+tx treasuryWithdraw(
+  am: Int,
+  registryUtxo: UtxoRef,
+) {
+  reference registry {
+    ref: registryUtxo,
+  }
+
+  input current {
+    from: Person,
+    min_amount: Ada(5000000),
+  }
+
+  output {
+    to: TreasuryScript,
+    amount: Ada(am),
+  }
+
+  output {
+    to: Person,
+    amount: current - fees,
+  }
+
+  cardano::withdrawal {
+    from: TreasuryScript,
+    amount: am,
+    redeemer: (),
+  }
+
+}
+
