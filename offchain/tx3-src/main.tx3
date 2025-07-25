@@ -2,6 +2,38 @@ party Person;
 party TreasuryScript;
 party VendorScript;
 
+type Status {
+    Active,
+    Paused,
+}
+
+type Payout {
+  maturation: Int,
+  value: Map<Bytes, Map<Bytes, Int>>,
+  status: Status,
+}
+
+type MultisigScript {
+  key_hash: Bytes,
+}
+
+type VendorDatum {
+  vendor: MultisigScript,
+  payouts: List<Payout>,
+}
+
+type FundRedeemer {
+  Reorganize,
+  SweepTreasury,
+  Fund {
+    amount: Map<Bytes, Map<Bytes, Int>>,
+  },
+  Disburse {
+    amount: Map<Bytes, Map<Bytes, Int>>,
+  },
+}
+
+
 tx treasuryWithdraw(
   am: Int,
   registryUtxo: UtxoRef,
@@ -30,6 +62,71 @@ tx treasuryWithdraw(
     amount: am,
     redeemer: (),
   }
-
 }
 
+tx treasuryFund(
+  vendorKeyHash: Bytes,
+  registryRef: UtxoRef,
+  treasuryRef: UtxoRef,
+  collateralInput: UtxoRef,
+  am: Int,
+  until: Int,
+) {
+  reference registry {
+    ref: registryRef,
+  }
+
+  reference treasuryRef {
+    ref: treasuryRef,
+  }
+
+  input current {
+    from: TreasuryScript,
+    min_amount: Ada(am) + Ada(2000000),
+    redeemer: FundRedeemer::Fund {
+      amount: {"":{"": am,},},
+    },
+  }
+
+  input owner {
+    from: Person,
+    min_amount: Ada(5000000),
+  }
+
+  output {
+    to: VendorScript,
+    amount: Ada(am),
+    datum: VendorDatum {
+      vendor: MultisigScript {
+        key_hash: vendorKeyHash,
+      },
+      payouts: [ Payout {
+        maturation: 1760065200000,
+        value: {"":{"": am,},},
+        status: Status::Active {},
+      }],
+    },
+  }
+
+  output {
+    to: TreasuryScript,
+    amount: current - Ada(am),
+  }
+
+  output {
+    to: Person,
+    amount: owner - fees,
+  }
+
+  collateral {
+    ref: collateralInput,
+  }
+
+  signers {
+    Person,
+  }
+
+  validity {
+    until_slot: until,
+  }
+}
