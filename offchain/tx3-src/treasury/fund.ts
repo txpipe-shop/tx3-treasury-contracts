@@ -10,6 +10,7 @@ export const treasuryFund = async (
   blaze: Blaze<Provider, Wallet>,
   user: string,
   vendorKeyHash: string,
+  maturation: number = Date.now() + 1000 * 60 * 60 * 24 * 30, // Default maturation set to 30 days
   amount: number = 1000000, // Default amount set to 1 ADA
 ) => {
   const { configs, scripts } = await getConfigs(blaze);
@@ -56,6 +57,7 @@ export const treasuryFund = async (
     registryref: { type: "String", value: UtxoToRef(registryInput) },
     person: { type: "String", value: Address.fromBech32(user).toBytes() },
     am: { type: "Int", value: BigInt(amount) },
+    mat: { type: "Int", value: BigInt(maturation) },
     until: {
       type: "Int",
       value: toPreviewBlockSlot(Date.now() + 1000 * 60 * 60), // 1 hour from now

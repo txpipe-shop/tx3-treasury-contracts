@@ -33,7 +33,7 @@ type FundRedeemer {
   },
 }
 
-
+// Yet to try
 tx treasuryWithdraw(
   am: Int,
   registryUtxo: UtxoRef,
@@ -44,7 +44,7 @@ tx treasuryWithdraw(
 
   input current {
     from: Person,
-    min_amount: Ada(5000000),
+    min_amount: min_utxo(person) + fees,
   }
 
   output {
@@ -52,7 +52,7 @@ tx treasuryWithdraw(
     amount: Ada(am),
   }
 
-  output {
+  output person {
     to: Person,
     amount: current - fees,
   }
@@ -70,6 +70,7 @@ tx treasuryFund(
   treasuryRef: UtxoRef,
   collateralInput: UtxoRef,
   am: Int,
+  mat: Int,
   until: Int,
 ) {
   reference registry {
@@ -82,7 +83,7 @@ tx treasuryFund(
 
   input current {
     from: TreasuryScript,
-    min_amount: Ada(am) + Ada(2000000),
+    min_amount: Ada(am) + min_utxo(treasury),
     redeemer: FundRedeemer::Fund {
       amount: {"":{"": am,},},
     },
@@ -90,7 +91,7 @@ tx treasuryFund(
 
   input owner {
     from: Person,
-    min_amount: Ada(5000000),
+    min_amount: min_utxo(person) + fees,
   }
 
   output {
@@ -101,19 +102,135 @@ tx treasuryFund(
         key_hash: vendorKeyHash,
       },
       payouts: [ Payout {
-        maturation: 1760065200000,
+        maturation: mat,
         value: {"":{"": am,},},
         status: Status::Active {},
       }],
     },
   }
 
-  output {
+  output treasury {
     to: TreasuryScript,
     amount: current - Ada(am),
   }
 
+  output person {
+    to: Person,
+    amount: owner - fees,
+  }
+
+  collateral {
+    ref: collateralInput,
+  }
+
+  signers {
+    Person,
+  }
+
+  validity {
+    until_slot: until,
+  }
+}
+
+// Simple example, only fragmenting into 2 outputs
+tx treasuryFragment(
+  registryRef: UtxoRef,
+  treasuryRef: UtxoRef,
+  treasuryInput: UtxoRef,
+  am1: Int,
+  am2: Int,
+  collateralInput: UtxoRef,
+  until: Int,
+) {
+  reference registry {
+    ref: registryRef,
+  }
+
+  reference treasuryRef {
+    ref: treasuryRef,
+  }
+
+  input current {
+    from: TreasuryScript,
+    ref: treasuryInput,
+    min_amount: Ada(am1 + am2),
+    redeemer: FundRedeemer::Reorganize {},
+  }
+
+  input owner {
+    from: Person,
+    min_amount: min_utxo(person) + fees,
+  }
+
+  output treasury1 {
+    to: TreasuryScript,
+    amount: Ada(am1),
+  }
+
+  output treasury2 {
+    to: TreasuryScript,
+    amount: Ada(am2),
+  }
+
+  output person {
+    to: Person,
+    amount: owner - fees,
+  }
+
+  collateral {
+    ref: collateralInput,
+  }
+
+  signers {
+    Person,
+  }
+
+  validity {
+    until_slot: until,
+  }
+}
+
+
+// Simple example, only merging 2 outputs
+tx treasuryMerge(
+  registryRef: UtxoRef,
+  treasuryRef: UtxoRef,
+  treasuryInput1: UtxoRef,
+  treasuryInput2: UtxoRef,
+  collateralInput: UtxoRef,
+  until: Int,
+) {
+  reference registry {
+    ref: registryRef,
+  }
+
+  reference treasuryRef {
+    ref: treasuryRef,
+  }
+
+  input current1 {
+    from: TreasuryScript,
+    ref: treasuryInput1,
+    redeemer: FundRedeemer::Reorganize {},
+  }
+
+  input current2 {
+    from: TreasuryScript,
+    ref: treasuryInput2,
+    redeemer: FundRedeemer::Reorganize {},
+  }
+
+  input owner {
+    from: Person,
+    min_amount: min_utxo(person) + fees,
+  }
+
   output {
+    to: TreasuryScript,
+    amount: current1 + current2,
+  }
+
+  output person {
     to: Person,
     amount: owner - fees,
   }
