@@ -1,18 +1,17 @@
 import { Address, AssetId, toHex } from "@blaze-cardano/core";
 import { Blaze, Provider, Wallet } from "@blaze-cardano/sdk";
-import { loadTreasuryScript, loadVendorScript } from "src/shared";
+import { loadTreasuryScript } from "src/shared";
 import { protocol } from "tx3-src/gen/typescript/protocol";
 import { toPreviewBlockSlot } from "tx3-src/utils/numbers";
 import { getConfigs } from "tx3-src/utils/shared";
 import { getCollateralUtxo, UtxoToRef } from "tx3-src/utils/utxo";
 
-export const treasuryFund = async (
+export const treasuryDisburse = async (
   blaze: Blaze<Provider, Wallet>,
   user: string,
-  vendorKeyHash: string,
   treasuryScriptRef: string | undefined,
-  maturation: number = Date.now() + 1000 * 60 * 60 * 24 * 30, // Default maturation set to 30 days
-  amount: number = 5000000, // Default amount set to 5 ADA
+  outputAddress: string,
+  amount: number = 1000000, // Default amount set to 1 ADA
 ) => {
   const { configs, scripts } = await getConfigs(blaze);
   const utxos = await blaze.provider.getUnspentOutputs(
@@ -22,10 +21,6 @@ export const treasuryFund = async (
   const { scriptAddress: treasuryScriptAddress } = loadTreasuryScript(
     blaze.provider.network,
     configs.treasury,
-  );
-  const { scriptAddress: vendorScriptAddress } = loadVendorScript(
-    blaze.provider.network,
-    configs.vendor,
   );
   const collateralUtxo = await getCollateralUtxo(utxos);
 
@@ -50,29 +45,21 @@ export const treasuryFund = async (
     }
   }
 
-  const { tx } = await protocol.treasuryFundTx({
+  const { tx } = await protocol.treasuryDisburseTx({
     treasuryscript: {
       type: "String",
       value: `0x${treasuryScriptAddress.toBytes()}`,
     },
-    vendorscript: {
-      type: "String",
-      value: `0x${vendorScriptAddress.toBytes()}`,
-    },
-    vendorkeyhash: {
-      type: "Bytes",
-      value: Buffer.from(vendorKeyHash, "hex"),
-    },
-    collateralinput: { type: "String", value: UtxoToRef(collateralUtxo) },
-    registryref: { type: "String", value: UtxoToRef(registryInput) },
     person: { type: "String", value: Address.fromBech32(user).toBytes() },
+    registryref: { type: "String", value: UtxoToRef(registryInput) },
+    treasuryref: { type: "String", value: scriptRef },
+    collateralinput: { type: "String", value: UtxoToRef(collateralUtxo) },
+    outputaddress: { type: "String", value: outputAddress },
     am: { type: "Int", value: BigInt(amount) },
-    mat: { type: "Int", value: BigInt(maturation) },
     until: {
       type: "Int",
       value: toPreviewBlockSlot(Date.now() + 1000 * 60 * 60), // 1 hour from now
     },
-    treasuryref: { type: "String", value: scriptRef },
   });
   return tx;
 };

@@ -1,4 +1,10 @@
-import { Address, AssetId, toHex } from "@blaze-cardano/core";
+import {
+  Address,
+  AssetId,
+  toHex,
+  TransactionId,
+  TransactionInput,
+} from "@blaze-cardano/core";
 import { Blaze, Provider, Wallet } from "@blaze-cardano/sdk";
 import { loadTreasuryScript } from "src/shared";
 import { protocol } from "tx3-src/gen/typescript/protocol";
@@ -58,6 +64,20 @@ export const treasuryReorganize = async (
   if (reorganizeParams.hasOwnProperty("utxoToReorganize")) {
     const { utxoToReorganize, amount1, amount2 } =
       reorganizeParams as IFragment;
+
+    const [treasuryInput] = await blaze.provider.resolveUnspentOutputs([
+      TransactionInput.fromCore({
+        txId: TransactionId(utxoToReorganize.split("#")[0]),
+        index: parseInt(utxoToReorganize.split("#")[1]),
+      }),
+    ]);
+    const values = treasuryInput.toCore()[1].value;
+
+    if (values.coins !== BigInt(amount1 + amount2))
+      throw new Error(
+        `The total amount in the UTXO (${values.coins}) does not match the sum of amounts (${amount1 + amount2}).`,
+      );
+
     const { tx } = await protocol.treasuryFragmentTx({
       registryref: { type: "String", value: UtxoToRef(registryInput) },
       treasuryref: { type: "String", value: scriptRef },

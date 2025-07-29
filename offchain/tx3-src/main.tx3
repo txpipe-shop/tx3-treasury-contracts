@@ -22,7 +22,7 @@ type VendorDatum {
   payouts: List<Payout>,
 }
 
-type FundRedeemer {
+type TreasuryRedeemer {
   Reorganize,
   SweepTreasury,
   Fund {
@@ -84,8 +84,8 @@ tx treasuryFund(
   input current {
     from: TreasuryScript,
     min_amount: Ada(am) + min_utxo(treasury),
-    redeemer: FundRedeemer::Fund {
-      amount: {"":{"": am,},},
+    redeemer: TreasuryRedeemer::Fund {
+      amount: { "": { "": am,},},
     },
   }
 
@@ -103,7 +103,7 @@ tx treasuryFund(
       },
       payouts: [ Payout {
         maturation: mat,
-        value: {"":{"": am,},},
+        value: { "": { "": am,},},
         status: Status::Active {},
       }],
     },
@@ -154,7 +154,7 @@ tx treasuryFragment(
     from: TreasuryScript,
     ref: treasuryInput,
     min_amount: Ada(am1 + am2),
-    redeemer: FundRedeemer::Reorganize {},
+    redeemer: TreasuryRedeemer::Reorganize {},
   }
 
   input owner {
@@ -211,13 +211,13 @@ tx treasuryMerge(
   input current1 {
     from: TreasuryScript,
     ref: treasuryInput1,
-    redeemer: FundRedeemer::Reorganize {},
+    redeemer: TreasuryRedeemer::Reorganize {},
   }
 
   input current2 {
     from: TreasuryScript,
     ref: treasuryInput2,
-    redeemer: FundRedeemer::Reorganize {},
+    redeemer: TreasuryRedeemer::Reorganize {},
   }
 
   input owner {
@@ -228,6 +228,63 @@ tx treasuryMerge(
   output {
     to: TreasuryScript,
     amount: current1 + current2,
+  }
+
+  output person {
+    to: Person,
+    amount: owner - fees,
+  }
+
+  collateral {
+    ref: collateralInput,
+  }
+
+  signers {
+    Person,
+  }
+
+  validity {
+    until_slot: until,
+  }
+}
+
+tx treasuryDisburse(
+  registryRef: UtxoRef,
+  treasuryRef: UtxoRef,
+  collateralInput: UtxoRef,
+  outputAddress: Bytes,
+  am: Int,
+  until: Int,
+) {
+  reference registry {
+    ref: registryRef,
+  }
+
+  reference treasuryRef {
+    ref: treasuryRef,
+  }
+
+  input current {
+    from: TreasuryScript,
+    min_amount: Ada(am) + min_utxo(treasury),
+    redeemer: TreasuryRedeemer::Disburse {
+      amount: { "": { "": am, },},
+    },
+  }
+
+  input owner {
+    from: Person,
+    min_amount: min_utxo(person) + fees,
+  }
+
+  output {
+    to: outputAddress,
+    amount: Ada(am),
+  }
+
+  output treasury {
+    to: TreasuryScript,
+    amount: current - Ada(am),
   }
 
   output person {

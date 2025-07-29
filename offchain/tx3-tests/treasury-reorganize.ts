@@ -13,9 +13,9 @@ const tx1 = await treasuryReorganize(
   // Fragment example
   {
     utxoToReorganize:
-      "6cbcc809e971c3974a2f82860353fc93b2a41c6cb76ab6816a0993cd1c7c94fc",
-    amount1: 50000000,
-    amount2: 50000000,
+      "165147a6f60f11e7f65f59b018b4d0b50e5ed06d5bc0561394f26889292e2b2b#0",
+    amount1: 250,
+    amount2: 750,
   },
   scriptRef,
 );
