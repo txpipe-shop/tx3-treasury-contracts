@@ -1,16 +1,12 @@
 party Person;
+party Vendor;
 party TreasuryScript;
 party VendorScript;
-
-type Status {
-    Active,
-    Paused,
-}
 
 type Payout {
   maturation: Int,
   value: Map<Bytes, Map<Bytes, Int>>,
-  status: Status,
+  paused: Bool,
 }
 
 type MultisigScript {
@@ -31,6 +27,16 @@ type TreasuryRedeemer {
   Disburse {
     amount: Map<Bytes, Map<Bytes, Int>>,
   },
+}
+
+type VendorRedeemer {
+  Withdraw,
+  Adjudicate {
+    statuses: List<Bool>,
+  },
+  Modify,
+  SweepVendor,
+  Malformed,
 }
 
 // Yet to try
@@ -104,7 +110,7 @@ tx treasuryFund(
       payouts: [ Payout {
         maturation: mat,
         value: { "": { "": am,},},
-        status: Status::Active {},
+        paused: false,
       }],
     },
   }
@@ -302,5 +308,57 @@ tx treasuryDisburse(
 
   validity {
     until_slot: until,
+  }
+}
+
+
+tx vendorWithdraw(
+  registryRef: UtxoRef,
+  vendorRef: UtxoRef,
+  vendorUtxo: UtxoRef,
+  collateralInput: UtxoRef,
+  since: Int,
+) {
+  reference registry {
+    ref: registryRef,
+  }
+
+  reference vendorRef {
+    ref: vendorRef,
+  }
+
+  input current {
+    from: VendorScript,
+    ref: vendorUtxo,
+    redeemer: VendorRedeemer::Withdraw {},
+    datum_is: VendorDatum,
+  }
+
+  input owner {
+    from: Person,
+    min_amount: min_utxo(person) + fees,
+  }
+
+  output vendor {
+    to: Vendor,
+    amount: current,
+  }
+
+  output person {
+    to: Person,
+    amount: owner - fees,
+  }
+
+
+  collateral {
+    ref: collateralInput,
+  }
+
+  signers {
+    Vendor,
+  }
+
+  validity {
+    since_slot: since,
   }
 }

@@ -6,14 +6,23 @@ import { toPreviewBlockSlot } from "tx3-src/utils/numbers";
 import { getConfigs } from "tx3-src/utils/shared";
 import { getCollateralUtxo, UtxoToRef } from "tx3-src/utils/utxo";
 
-export const treasuryFund = async (
-  blaze: Blaze<Provider, Wallet>,
-  user: string,
-  vendorKeyHash: string,
-  treasuryScriptRef: string | undefined,
-  maturation: number = Date.now() + 1000 * 60 * 60 * 24 * 30, // Default maturation set to 30 days
-  amount: number = 5000000, // Default amount set to 5 ADA
-) => {
+interface ITreasuryFund {
+  blaze: Blaze<Provider, Wallet>;
+  user: string;
+  vendorKeyHash: string;
+  treasuryScriptRef?: string;
+  maturation?: number; // Default maturation set to 30 days
+  amount?: number; // Default amount set to 5 ADA
+}
+
+export const treasuryFund = async ({
+  blaze,
+  user,
+  vendorKeyHash,
+  treasuryScriptRef,
+  maturation = Date.now() + 1000 * 60 * 60 * 24 * 30, // Default maturation set to 30 days
+  amount = 5000000, // Default amount set to 5 ADA
+}: ITreasuryFund) => {
   const { configs, scripts } = await getConfigs(blaze);
   const utxos = await blaze.provider.getUnspentOutputs(
     Address.fromBech32(user),

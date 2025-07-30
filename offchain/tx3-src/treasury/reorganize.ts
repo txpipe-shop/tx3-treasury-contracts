@@ -23,12 +23,19 @@ interface IMerge {
   utxoToReorganize2: string;
 }
 
-export const treasuryReorganize = async (
-  blaze: Blaze<Provider, Wallet>,
-  user: string,
-  reorganizeParams: IFragment | IMerge,
-  treasuryScriptRef: string | undefined,
-) => {
+interface ITreasuryReorganize {
+  blaze: Blaze<Provider, Wallet>;
+  user: string;
+  reorganizeParams: IFragment | IMerge;
+  treasuryScriptRef?: string;
+}
+
+export const treasuryReorganize = async ({
+  blaze,
+  user,
+  reorganizeParams,
+  treasuryScriptRef,
+}: ITreasuryReorganize) => {
   const { configs, scripts } = await getConfigs(blaze);
   const utxos = await blaze.provider.getUnspentOutputs(
     Address.fromBech32(user),
