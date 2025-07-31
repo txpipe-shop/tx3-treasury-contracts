@@ -39,6 +39,8 @@ type VendorRedeemer {
   Malformed,
 }
 
+// TREASURY OPERATIONS
+
 // Yet to try
 tx treasuryWithdraw(
   am: Int,
@@ -312,6 +314,54 @@ tx treasuryDisburse(
 }
 
 
+// This operation considers that only adas are in the treasury
+tx treasurySweep(
+  registryRef: UtxoRef,
+  treasuryRef: UtxoRef,
+  treasuryInput: UtxoRef,
+  collateralInput: UtxoRef,
+  sweepAmount: Int,
+  since: Int,
+) {
+  reference registry {
+    ref: registryRef,
+  }
+
+  reference treasury {
+    ref: treasuryRef,
+  }
+
+  input current {
+    from: TreasuryScript,
+    ref: treasuryInput,
+    redeemer: TreasuryRedeemer::SweepTreasury {},
+  }
+
+  input owner {
+    from: Person,
+    min_amount: min_utxo(person) + fees,
+  }
+
+  output person {
+    to: Person,
+    amount: owner - fees,
+  }
+
+  cardano::treasury_donation {
+    coin: sweepAmount,
+  }
+
+  collateral {
+    ref: collateralInput,
+  }
+
+  validity {
+    since_slot: since,
+  }
+}
+
+// VENDOR OPERATIONS
+
 tx vendorWithdraw(
   registryRef: UtxoRef,
   vendorRef: UtxoRef,
@@ -362,3 +412,4 @@ tx vendorWithdraw(
     since_slot: since,
   }
 }
+
