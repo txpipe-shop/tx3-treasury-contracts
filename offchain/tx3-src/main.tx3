@@ -104,6 +104,7 @@ tx treasuryFund(
 
   output {
     to: VendorScript,
+    // If AnyAsset works to represent ADA we could generalize every operation
     amount: Ada(am),
     datum: VendorDatum {
       vendor: MultisigScript {
@@ -348,6 +349,7 @@ tx treasurySweep(
   }
 
   cardano::treasury_donation {
+    // Ideally this shouldnt be a parameter, but obtained resolving the input
     coin: sweepAmount,
   }
 
@@ -412,4 +414,75 @@ tx vendorWithdraw(
     since_slot: since,
   }
 }
+
+
+tx vendorAdjudicate(
+  registryRef: UtxoRef,
+  vendorRef: UtxoRef,
+  vendorUtxo: UtxoRef,
+  collateralInput: UtxoRef,
+  since: Int,
+  until: Int,
+  pausedInput: Bool,
+  maturationDatum: Int,
+  amountDatum: Int,
+) {
+  reference registry {
+    ref: registryRef,
+  }
+
+  reference vendorRef {
+    ref: vendorRef,
+  }
+
+  input current {
+    from: VendorScript,
+    ref: vendorUtxo,
+    redeemer: VendorRedeemer::Adjudicate {
+      statuses: [ pausedInput, ],
+    },
+    datum_is: VendorDatum,
+  }
+
+  input owner {
+    from: Person,
+    min_amount: min_utxo(person) + fees,
+  }
+
+  output {
+    to: VendorScript,
+    amount: current,
+    datum: VendorDatum {
+      vendor: current.vendor,
+      payouts: [ Payout {
+        // If we can access the datum, we could use something like
+        // current.payouts.0.maturation and current.payouts.0.value
+        maturation: maturationDatum,
+        value: { "": { "": amountDatum, },},
+        paused: pausedInput,
+      }],
+    },
+  }
+
+  output person {
+    to: Person,
+    amount: owner - fees,
+  }
+
+
+  collateral {
+    ref: collateralInput,
+  }
+
+  signers {
+    Person,
+  }
+
+
+  validity {
+    since_slot: since,
+    until_slot: until,
+  }
+}
+
 

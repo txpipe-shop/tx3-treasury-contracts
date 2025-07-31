@@ -11,8 +11,8 @@ interface ITreasuryFund {
   user: string;
   vendorKeyHash: string;
   treasuryScriptRef?: string;
-  maturation?: number; // Default maturation set to 30 days
-  amount?: number; // Default amount set to 5 ADA
+  maturation?: number;
+  amount?: number;
 }
 
 export const treasuryFund = async ({

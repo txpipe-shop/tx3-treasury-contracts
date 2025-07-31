@@ -135,6 +135,26 @@ export const VENDOR_WITHDRAW_IR = {
     version: "v1alpha8",
 };
 
+export type VendorAdjudicateParams = {
+    amountdatum: ArgValue;
+    collateralinput: ArgValue;
+    maturationdatum: ArgValue;
+    pausedinput: ArgValue;
+    person: ArgValue;
+    registryref: ArgValue;
+    since: ArgValue;
+    until: ArgValue;
+    vendorref: ArgValue;
+    vendorscript: ArgValue;
+    vendorutxo: ArgValue;
+}
+
+export const VENDOR_ADJUDICATE_IR = {
+    bytecode: "0e03020e010b7265676973747279726566070e010976656e646f7272656607020763757272656e740e020763757272656e740e010c76656e646f7273637269707405000e010a76656e646f727574786f07000004010101010e010b706175736564696e70757403056f776e65720e02056f776e65720e0106706572736f6e050f01100106020e0300000000020e010c76656e646f72736372697074050400020f0511020e020763757272656e740e010c76656e646f7273637269707405000e010a76656e646f727574786f0700000001010400030e010f6d617475726174696f6e646174756d0202010800020108000e010b616d6f756e74646174756d020e010b706175736564696e7075740311010e020763757272656e740e010c76656e646f7273637269707405000e010a76656e646f727574786f0700000e0106706572736f6e05000f0211010e02056f776e65720e0106706572736f6e050f01100106020e030000000e03010e010573696e6365020e0105756e74696c02000000010e020a636f6c6c61746572616c00000e010f636f6c6c61746572616c696e70757407000101010e0106706572736f6e0500",
+    encoding: "hex",
+    version: "v1alpha8",
+};
+
 export class Client {
     readonly #client: TRPClient;
 
@@ -181,6 +201,12 @@ export class Client {
     async vendorWithdrawTx(args: VendorWithdrawParams): Promise<ResolveResponse> {
         return await this.#client.resolve({
             tir: VENDOR_WITHDRAW_IR,
+            args,
+        });
+    }
+    async vendorAdjudicateTx(args: VendorAdjudicateParams): Promise<ResolveResponse> {
+        return await this.#client.resolve({
+            tir: VENDOR_ADJUDICATE_IR,
             args,
         });
     }
