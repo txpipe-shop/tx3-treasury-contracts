@@ -533,3 +533,45 @@ tx vendorSweep(
     until_slot: until,
   }
 }
+
+tx vendorMalformed(
+  registryRef: UtxoRef,
+  vendorRef: UtxoRef,
+  vendorUtxo: UtxoRef,
+  collateralInput: UtxoRef,
+) {
+  reference registry {
+    ref: registryRef,
+  }
+
+  reference vendorRef {
+    ref: vendorRef,
+  }
+
+  input current {
+    from: VendorScript,
+    ref: vendorUtxo,
+    redeemer: VendorRedeemer::Malformed {},
+    datum_is: VendorDatum,
+  }
+
+  input owner {
+    from: Person,
+    min_amount: min_utxo(person) + fees,
+  }
+
+  output {
+    to: TreasuryScript,
+    amount: current,
+  }
+
+  output person {
+    to: Person,
+    amount: owner - fees,
+  }
+
+
+  collateral {
+    ref: collateralInput,
+  }
+}
