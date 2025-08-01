@@ -485,4 +485,51 @@ tx vendorAdjudicate(
   }
 }
 
+tx vendorSweep(
+  registryRef: UtxoRef,
+  vendorRef: UtxoRef,
+  vendorUtxo: UtxoRef,
+  collateralInput: UtxoRef,
+  since: Int,
+  until: Int,
+) {
+  reference registry {
+    ref: registryRef,
+  }
 
+  reference vendorRef {
+    ref: vendorRef,
+  }
+
+  input current {
+    from: VendorScript,
+    ref: vendorUtxo,
+    redeemer: VendorRedeemer::SweepVendor {},
+    datum_is: VendorDatum,
+  }
+
+  input owner {
+    from: Person,
+    min_amount: min_utxo(person) + fees,
+  }
+
+  output {
+    to: TreasuryScript,
+    amount: current,
+  }
+
+  output person {
+    to: Person,
+    amount: owner - fees,
+  }
+
+
+  collateral {
+    ref: collateralInput,
+  }
+
+  validity {
+    since_slot: since,
+    until_slot: until,
+  }
+}

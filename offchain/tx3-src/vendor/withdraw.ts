@@ -11,7 +11,7 @@ interface IVendorWithdraw {
   vendor: string;
   user: string;
   vendorUtxo: string;
-  treasuryScriptRef?: string;
+  vendorScriptRef?: string;
 }
 
 export const vendorWithdraw = async ({
@@ -19,7 +19,7 @@ export const vendorWithdraw = async ({
   vendor,
   user,
   vendorUtxo,
-  treasuryScriptRef,
+  vendorScriptRef,
 }: IVendorWithdraw) => {
   const { configs, scripts } = await getConfigs(blaze);
   const utxos = await blaze.provider.getUnspentOutputs(
@@ -36,7 +36,7 @@ export const vendorWithdraw = async ({
     AssetId(configs.treasury.registry_token + toHex(Buffer.from("REGISTRY"))),
   );
 
-  let scriptRef = treasuryScriptRef;
+  let scriptRef = vendorScriptRef;
 
   if (!scriptRef) {
     try {

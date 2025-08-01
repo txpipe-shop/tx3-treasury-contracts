@@ -7,12 +7,12 @@ const user =
 const vendorKeyHash =
   "0f5b22e57feeb5b4fd1d501b007a427c56a76884d4978fafef979d9c";
 const treasuryScriptRef =
-  "a742d235148475f8ea60251d47026492ee6ca0219192de42c2dc62d899ecb2ff#0";
+  "2e606ae3d01d0d00f78cfc12df86d8943eb59676b32d49dee9cc3399ce28b17d#0";
 const tx = await treasuryFund({
   blaze,
   user,
   vendorKeyHash,
   treasuryScriptRef,
-  maturation: Date.now() + 1000 * 60 * 5,
+  amount: 2000000,
 });
 console.log("Treasury fund tx: ", tx);

@@ -1,38 +1,29 @@
-import {
-  Address,
-  AssetId,
-  PlutusData,
-  toHex,
-  TransactionId,
-  TransactionInput,
-} from "@blaze-cardano/core";
-import { parse } from "@blaze-cardano/data";
+import { Address, AssetId, toHex } from "@blaze-cardano/core";
 import { Blaze, Provider, Wallet } from "@blaze-cardano/sdk";
-import { loadVendorScript } from "src/shared";
+import { loadTreasuryScript, loadVendorScript } from "src/shared";
 import { protocol } from "tx3-src/gen/typescript/protocol";
 import { toPreviewBlockSlot } from "tx3-src/utils/numbers";
 import { getConfigs } from "tx3-src/utils/shared";
 import { getCollateralUtxo, UtxoToRef } from "tx3-src/utils/utxo";
-import { VendorDatum } from "../../src/generated-types/contracts.js";
 
-interface IVendorAdjudicate {
+interface IVendorSweep {
   blaze: Blaze<Provider, Wallet>;
   vendor: string;
   user: string;
   vendorUtxo: string;
   vendorScriptRef?: string;
-  paused?: boolean;
 }
 
-export const vendorAdjudicate = async ({
+export const vendorSweep = async ({
   blaze,
   vendor,
   user,
   vendorUtxo,
   vendorScriptRef,
-  paused = false,
-}: IVendorAdjudicate) => {
+}: IVendorSweep) => {
   const { configs, scripts } = await getConfigs(blaze);
+  if (configs.vendor.expiration > Date.now())
+    throw new Error("Vendor script has not expired yet.");
   const utxos = await blaze.provider.getUnspentOutputs(
     Address.fromBech32(vendor),
   );
@@ -40,6 +31,11 @@ export const vendorAdjudicate = async ({
   const { scriptAddress: vendorScriptAddress } = loadVendorScript(
     blaze.provider.network,
     configs.vendor,
+  );
+
+  const { scriptAddress: treasuryScriptAddress } = loadTreasuryScript(
+    blaze.provider.network,
+    configs.treasury,
   );
   const collateralUtxo = await getCollateralUtxo(utxos);
 
@@ -64,25 +60,14 @@ export const vendorAdjudicate = async ({
     }
   }
 
-  const [treasuryInput] = await blaze.provider.resolveUnspentOutputs([
-    TransactionInput.fromCore({
-      txId: TransactionId(vendorUtxo.split("#")[0]),
-      index: parseInt(vendorUtxo.split("#")[1]),
-    }),
-  ]);
-  const datum = treasuryInput.toCore()[1].datum;
-
-  const maturationDatum = BigInt(
-    parse(VendorDatum, PlutusData.fromCore(datum!)).payouts[0].maturation,
-  );
-  const amountDatum = BigInt(
-    parse(VendorDatum, PlutusData.fromCore(datum!)).payouts[0].value[""][""],
-  );
-
-  const { tx } = await protocol.vendorAdjudicateTx({
+  const { tx } = await protocol.vendorSweepTx({
     vendorscript: {
       type: "String",
       value: `0x${vendorScriptAddress.toBytes()}`,
+    },
+    treasuryscript: {
+      type: "String",
+      value: `0x${treasuryScriptAddress.toBytes()}`,
     },
     person: {
       type: "String",
@@ -92,17 +77,14 @@ export const vendorAdjudicate = async ({
     vendorref: { type: "String", value: scriptRef },
     vendorutxo: { type: "String", value: vendorUtxo },
     collateralinput: { type: "String", value: UtxoToRef(collateralUtxo) },
+    until: {
+      type: "Int",
+      value: toPreviewBlockSlot(Date.now() + 1000 * 60 * 60), // 1 hour from now
+    },
     since: {
       type: "Int",
       value: toPreviewBlockSlot(Date.now() - 1000 * 60),
     },
-    until: {
-      type: "Int",
-      value: toPreviewBlockSlot(Date.now() + 1000 * 60 * 60),
-    },
-    pausedinput: { type: "Bool", value: paused },
-    maturationdatum: { type: "Int", value: maturationDatum },
-    amountdatum: { type: "Int", value: amountDatum },
   });
   return tx;
 };

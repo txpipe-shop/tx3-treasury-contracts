@@ -13,6 +13,6 @@ const tx = await vendorWithdraw({
   vendor,
   user: vendor,
   vendorUtxo,
-  treasuryScriptRef: scriptRef,
+  vendorScriptRef: scriptRef,
 });
 console.log("Vendor withdraw tx: ", tx);
