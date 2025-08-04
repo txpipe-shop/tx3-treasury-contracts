@@ -485,6 +485,84 @@ tx vendorAdjudicate(
   }
 }
 
+// This operation only returns to the treasury a certain amount from the vendor utxo
+tx vendorModify(
+  registryRef: UtxoRef,
+  vendorRef: UtxoRef,
+  vendorUtxo: UtxoRef,
+  am: Int,
+  // These parameters could be erased if
+  // access to datum information of list type is possible
+  pausedDatum: Bool,
+  maturationDatum: Int,
+  remainingAmount: Int,
+  collateralInput: UtxoRef,
+  since: Int,
+  until: Int,
+) {
+  reference registry {
+    ref: registryRef,
+  }
+
+  reference vendorRef {
+    ref: vendorRef,
+  }
+
+  input current {
+    from: VendorScript,
+    ref: vendorUtxo,
+    min_amount: Ada(am),
+    redeemer: VendorRedeemer::Modify {},
+    datum_is: VendorDatum,
+  }
+
+  input owner {
+    from: Person,
+    min_amount: min_utxo(person) + fees,
+  }
+
+  output {
+    to: VendorScript,
+    amount: current - Ada(am),
+    datum: VendorDatum {
+      vendor: current.vendor,
+      payouts: [ Payout {
+        maturation: maturationDatum,
+        // Remaining amount = current - Ada(am)
+        value: { "": { "": remainingAmount, },},
+        paused: pausedDatum,
+      }],
+    },
+  }
+
+
+  output {
+    to: TreasuryScript,
+    amount: Ada(am),
+  }
+
+
+  output person {
+    to: Person,
+    amount: owner - fees,
+  }
+
+
+  collateral {
+    ref: collateralInput,
+  }
+
+  signers {
+    Vendor,
+    // We should be able to add Person as a signer
+  }
+
+  validity {
+    since_slot: since,
+    until_slot: until,
+  }
+}
+
 tx vendorSweep(
   registryRef: UtxoRef,
   vendorRef: UtxoRef,
