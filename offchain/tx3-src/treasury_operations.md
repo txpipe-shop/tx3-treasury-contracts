@@ -1,0 +1,242 @@
+# Treasury operations
+## Withdraw
+This operation withdraws funds from the Treasury Reserve a certain amount of ADA. The operation couldn’t be executed since the script didn't have any funds in its staking account. Adding funds would require to stake to a pool (which the contract cannot do) or create a governance proposal and have it approved.
+```js
+TreasuryWithdrawParams = {
+ am: BigInt;			    // amount to withdraw
+ person: String;			// the party that pays the fees
+ registryutxo: String;		// utxo ref
+ treasuryscript: String;	// raw address of the treasury script
+};
+```
+
+Example:
+
+    > CBOR: Since the operation couldn’t be executed there were no CBORs
+## Fund project
+This operation moves funds from a treasury utxo and creates a vendor utxo with one payout, with only ADA involved.
+```js
+TreasuryFundParams = {
+ am: BigInt;			// amount to fund
+ collateralinput: String;
+ mat: BigInt;			// maturation of the payout
+ person: String;		// the treasury admin and vendor
+ policyinput: Bytes;
+ Registryref: String;
+ tokenname: Bytes;
+ treasuryref: String;
+ treasuryscript: String;
+ until: BigInt;
+ vendorkeyhash: Bytes;
+ vendorscript: String;
+};
+```
+Limitations:
+- Since in our configuration the treasury admin and the vendor are the same person, if we include 2 parties in the tx3 signers field the final tx will have a duplicate entry in the extra signatories field and it would fail.
+- Only one payout can be specified, because the tx cannot take lists as arguments.
+- Same with the values (therefore we only use ADAs since
+- AnyAsset cannot represent ADAs)
+
+Example:
+
+    > CBOR: 84a900d9010282825820767e6bead8787f010daccd99e159bee8d65f27577b889903f6bcdf12aea497d1008258209d41cf20814050e759b2e49f5567bb207c764fa2eecaf61850e0ae9379141076020183a300583930ec5e71524ba66885f9188aa68e15548e6ef8080d28082cc006385c28ec5e71524ba66885f9188aa68e15548e6ef8080d28082cc006385c28011a002dc6c0028201d818583dd87982d87981581c0f5b22e57feeb5b4fd1d501b007a427c56a76884d4978fafef979d9c81d879831b00000199cc0f9f80a140a1401a002dc6c0d87980a2005839305adab84ea3599040306c30065dbefa1a67976bddf5ebeb17e755472e5adab84ea3599040306c30065dbefa1a67976bddf5ebeb17e755472e011a006acfc0a2005839000f5b22e57feeb5b4fd1d501b007a427c56a76884d4978fafef979d9cc7f72242dd9ff8069e7123e67bebaaaff3c75ebb108c5aba7aa0580c011a00374237021a00150909031a052cbb120b5820c1cae51f731e16c76a3d89c73a574f8e3a9cc5e0ebc217099d175f633bfbdd660dd90102818258202ea2a17af76f599edcfadda7ae02a75f62919721f0a5be34a31e1da453816ce4000ed9010281581c0f5b22e57feeb5b4fd1d501b007a427c56a76884d4978fafef979d9c0f0012d90102828258205b1e68c62df7e5f22865c66a0a2ab64b75ce1a943c3d192da302b82d4076827900825820a742d235148475f8ea60251d47026492ee6ca0219192de42c2dc62d899ecb2ff00a200d90102818258200a0b0bddc14de4b88bd3e9cc7d29886ce1bb637b81dbcc3a87d6992822dd1eab5840bf521c0267dc8e12dd6da15fc723a78492bfc9934f90048bf366efe17c111486fafa15a9f98b59277deb5ca6b1265a981d8d4efbd002d1aadbb79e53cc690f0f0581840000d87b81a140a1401a002dc6c0821a001e84801a77359400f5f6
+    > TXHASH: 906ae45cdcbe3f472935348491ec7b41e968a320b124fad6709d93ed39e47545
+
+## Reorganize
+There are two tx3 transactions that represent this operation: treasury fragment and treasury merge. The treasury fragment divides a treasury utxo into two new utxos, each with a specific amount that must sum up to the original amount. The treasury merge is the inverse operation, combining two treasury utxos into one.
+
+```js
+TreasuryFragmentParams = {
+ am1: BigInt;
+ am2: BigIny;
+ collateralinput: String;
+ person: String;		// the treasury admin
+ registryref: String;
+ treasuryinput: String;
+ treasuryref: String;
+ treasuryscript: String;
+ until: BigInt;
+};
+
+TreasuryMergeParams = {
+ collateralinput: String;
+ person: String;		// the treasury admin
+ registryref: String;
+ treasuryinput1: String;
+ treasuryinput2: String;
+ treasuryref: String;
+ treasuryscript: String;
+ until: BigInt;
+};
+```
+Limitations:
+- Since the tx template cannot be modified in amount of inputs and/or outputs, it was necessary to create two separate tx3 transactions.
+- For the same reason, the amounts of utxos to fragment/merge had to be fixed (in this case, two).
+
+Examples:
+
+    > CBOR (FRAGMET): 84a900d90102828258206cbcc809e971c3974a2f82860353fc93b2a41c6cb76ab6816a0993cd1c7c94fc008258206cbcc809e971c3974a2f82860353fc93b2a41c6cb76ab6816a0993cd1c7c94fc020183a2005839305adab84ea3599040306c30065dbefa1a67976bddf5ebeb17e755472e5adab84ea3599040306c30065dbefa1a67976bddf5ebeb17e755472e011a02faf080a2005839305adab84ea3599040306c30065dbefa1a67976bddf5ebeb17e755472e5adab84ea3599040306c30065dbefa1a67976bddf5ebeb17e755472e011a02faf080a2005839000f5b22e57feeb5b4fd1d501b007a427c56a76884d4978fafef979d9cc7f72242dd9ff8069e7123e67bebaaaff3c75ebb108c5aba7aa0580c011a003745d3021a0015056d031a0530b0230b5820a6874c0f1a0d374af007af2def2bcf1e0fbb9c1274e0587eb9b54c83ef83a0040dd90102818258202ea2a17af76f599edcfadda7ae02a75f62919721f0a5be34a31e1da453816ce4000ed9010281581c0f5b22e57feeb5b4fd1d501b007a427c56a76884d4978fafef979d9c0f0012d90102828258205b1e68c62df7e5f22865c66a0a2ab64b75ce1a943c3d192da302b82d4076827900825820a742d235148475f8ea60251d47026492ee6ca0219192de42c2dc62d899ecb2ff00a200d90102818258200a0b0bddc14de4b88bd3e9cc7d29886ce1bb637b81dbcc3a87d6992822dd1eab5840a98dfbd8b4505561f95acb6dafaebfeed2e1b4977a708305cc9744a926a9924a74e7291c0ed1f171182c387841bcbcfcae1ba2cd2527f01fd6904124127609010581840000d87980821a001e84801a77359400f5f6
+    > TX HASH: c2668a9b18e77f620a9d82d550cdca03fd498bbfa0f8902cd9b288a6e76376cb
+
+    > CBOR (MERGE): 84a900d9010283825820c2668a9b18e77f620a9d82d550cdca03fd498bbfa0f8902cd9b288a6e76376cb00825820c2668a9b18e77f620a9d82d550cdca03fd498bbfa0f8902cd9b288a6e76376cb018258206cbcc809e971c3974a2f82860353fc93b2a41c6cb76ab6816a0993cd1c7c94fc010182a2005839305adab84ea3599040306c30065dbefa1a67976bddf5ebeb17e755472e5adab84ea3599040306c30065dbefa1a67976bddf5ebeb17e755472e011a05f5e100a2005839000f5b22e57feeb5b4fd1d501b007a427c56a76884d4978fafef979d9cc7f72242dd9ff8069e7123e67bebaaaff3c75ebb108c5aba7aa0580c011ab26756ec021a00151829031a0530b6700b5820ab79a475b92d32e24e347e6a8a918a6afe9932dfab8149d44be0632ce298d3080dd90102818258202ea2a17af76f599edcfadda7ae02a75f62919721f0a5be34a31e1da453816ce4000ed9010281581c0f5b22e57feeb5b4fd1d501b007a427c56a76884d4978fafef979d9c0f0012d90102828258205b1e68c62df7e5f22865c66a0a2ab64b75ce1a943c3d192da302b82d4076827900825820a742d235148475f8ea60251d47026492ee6ca0219192de42c2dc62d899ecb2ff00a200d90102818258200a0b0bddc14de4b88bd3e9cc7d29886ce1bb637b81dbcc3a87d6992822dd1eab5840bbe32c4beec440e5605fa2fdcec451f931cc6f377d8d28d25a8b72f8ce824cc5bb24e62e670b4a7443042cf2d86a35bd727cb4ba255917347e6e84d89f4c4a0b0582840001d87980821a001e84801a77359400840002d87980821a001e84801a77359400f5f6
+    > TX HASH: b878fe23a71a1192e486db20c180b42d3e85c737df3c0051caf6497d4543e323
+
+## Disburse
+This operation allows to send a specific amount of treasury funds to a specific address.
+
+```js
+export type TreasuryDisburseParams = {
+ am: BigInt;
+ collateralinput: String;
+ outputaddress: String;
+ person: String;		// the treasury admin
+ registryref: String;
+ treasuryref: String;
+ treasuryscript: String;
+ until: BigInt;
+};
+```
+Limitations:
+- Since we only work with ADA in the treasury script, we cannot execute the disburse after expiration operation.
+
+Example:
+
+    > CBOR: 84a900d9010282825820b878fe23a71a1192e486db20c180b42d3e85c737df3c0051caf6497d4543e323008258202ea2a17af76f599edcfadda7ae02a75f62919721f0a5be34a31e1da453816ce4000183a2005839000f5b22e57feeb5b4fd1d501b007a427c56a76884d4978fafef979d9cc7f72242dd9ff8069e7123e67bebaaaff3c75ebb108c5aba7aa0580c011a000f4240a2005839305adab84ea3599040306c30065dbefa1a67976bddf5ebeb17e755472e5adab84ea3599040306c30065dbefa1a67976bddf5ebeb17e755472e011a05e69ec0a2005839000f5b22e57feeb5b4fd1d501b007a427c56a76884d4978fafef979d9cc7f72242dd9ff8069e7123e67bebaaaff3c75ebb108c5aba7aa0580c011a00374447021a001506f9031a0530c6a40b58201147f07c0a077e40e4ebc870e074a1a81d34092c878b984894e8c3b8323510590dd90102818258202ea2a17af76f599edcfadda7ae02a75f62919721f0a5be34a31e1da453816ce4000ed9010281581c0f5b22e57feeb5b4fd1d501b007a427c56a76884d4978fafef979d9c0f0012d90102828258205b1e68c62df7e5f22865c66a0a2ab64b75ce1a943c3d192da302b82d4076827900825820a742d235148475f8ea60251d47026492ee6ca0219192de42c2dc62d899ecb2ff00a200d90102818258200a0b0bddc14de4b88bd3e9cc7d29886ce1bb637b81dbcc3a87d6992822dd1eab5840d9b1d8938199423f4d9d9dd1e810d24a0c2f2d60bc50c30077f2e0be255a43bbef9983b5ead63a1a43d093a3952940d60a20375ddc522156f3220a84828b30010581840001d87c81a140a1401a000f4240821a001e84801a77359400f5f6
+    > TX HASH: 4f8f2ae2938bac1f5490c486dffeb48ac89286a00c01e192163d19f4faec15e2
+
+## Sweep
+This operation donates remaining ADA to the Treasury Reserve.
+
+```js
+export type TreasurySweepParams = {
+ collateralinput: String;
+ person: String;
+ registryref: String;
+ since: BigInt;
+ sweepamount: BigInt;
+ treasuryinput: String;
+ treasuryref: String;
+ treasuryscript: String;
+};
+```
+Limitations:
+- Since we cannot access the value of an input when specifying the datum, the total amount remaining in the treasury utxo has to be calculated beforehand.
+
+Example:
+
+    > CBOR: 84a900d9010282825820fe51b6bbd8a6dbc5692dc2a4840ab9dd1a44ebf654cf01a412816836b671bf0d00825820c99eaa1b1a96def9bb17d18acebca5698e778e18014ee76ba0e65307b7b8a44b050181a2005839000f5b22e57feeb5b4fd1d501b007a427c56a76884d4978fafef979d9cc7f72242dd9ff8069e7123e67bebaaaff3c75ebb108c5aba7aa0580c011a003761d7021a0014e969081a0539d74b0b582043e26b279dcb0bc50bf03d40ac9b204ebf209023f5f2d2d80de06e2ab6321ab50dd9010281825820c99eaa1b1a96def9bb17d18acebca5698e778e18014ee76ba0e65307b7b8a44b050f0012d90102828258209616015a72bb68e11166f5564066287c2550882d565d2471b4f0a308193469f3008258202e606ae3d01d0d00f78cfc12df86d8943eb59676b32d49dee9cc3399ce28b17d00161a002dc6c0a200d90102818258200a0b0bddc14de4b88bd3e9cc7d29886ce1bb637b81dbcc3a87d6992822dd1eab5840c897746842fbd4debeb9a872105396bc188cd16e275f43167f336b1ad024662a21f2b15d880bf9f2d26612b874cd298dbabf6799e3c7977c7c7e99230b46ef060581840001d87a80821a001e84801a77359400f5f6
+    > TX HASH: e2b07e9b2077a3fc38d021b1576daee6295b6c1210ed7935a6eb618685a38f0a
+
+# Vendor operations
+## Withdraw
+This operation transfers funds from a specific vendor utxo to a vendor party.
+```js
+export type VendorWithdrawParams = {
+ collateralinput: String;
+ person: String;			// vendor
+ registryref: String;
+ since: BigInt;
+ vendor: String;
+ vendorref: String;
+ vendorscript: String;
+ vendorutxo: String;
+};
+```
+Example:
+
+    > CBOR: 84a900d9010282825820f02f6562fd55207c65932f53fca5144d3aff985e28b9bb060506a9310afde6ca00825820c99eaa1b1a96def9bb17d18acebca5698e778e18014ee76ba0e65307b7b8a44b040182a2005839000f5b22e57feeb5b4fd1d501b007a427c56a76884d4978fafef979d9cc7f72242dd9ff8069e7123e67bebaaaff3c75ebb108c5aba7aa0580c011a004c4b40a2005839000f5b22e57feeb5b4fd1d501b007a427c56a76884d4978fafef979d9cc7f72242dd9ff8069e7123e67bebaaaff3c75ebb108c5aba7aa0580c011a2e44282f021a0014f9e9081a053356440b5820b8cc9570260c8eb3e3ac1533a6011428d9984c36545986c7da8418a0c0bf0b8c0dd9010281825820c99eaa1b1a96def9bb17d18acebca5698e778e18014ee76ba0e65307b7b8a44b030ed9010281581c0f5b22e57feeb5b4fd1d501b007a427c56a76884d4978fafef979d9c0f0012d90102828258205b1e68c62df7e5f22865c66a0a2ab64b75ce1a943c3d192da302b82d4076827900825820e3d3e57e84842eb2b092ba3f42d341cd1f2d90502770a4f8bcf669a78aa22bf300a200d90102818258200a0b0bddc14de4b88bd3e9cc7d29886ce1bb637b81dbcc3a87d6992822dd1eab58403392cbc062daaf8422dd0b47924698e0e25b8dcef73d77b6abb10477ab3f9425da7360a1c07943ea9321902239aff48d2d2341bc6dc6f92b76ff7ca56230e20c0581840001d87980821a001e84801a77359400f5f6
+    > TX HASH: 3bf57843ea53b565dbf7c93ae5ce6b2cae5cb42fb95676072604ae3cad5878e3
+
+## Adjudicate
+This operation changes the status of the payout from a specific vendor utxo.
+```js
+export type VendorAdjudicateParams = {
+ amountdatum: BigInt;
+ collateralinput: String;
+ maturationdatum: BigInt;
+ pausedinput: Bool;
+ person: String;			// the vendor admin
+ registryref: String;
+ since: BigInt;
+ until: BigInt;
+ vendorref: String;
+ vendorscript: String;
+ vendorutxo: String;
+};
+```
+Limitations:
+- Given that the access to datum information that has list type is not possible yet, the previous information about the value (the ada amount) and the maturation in the vendor utxo datum had to be obtained beforehand.
+- Since custom type inputs cannot be sent to the transaction, the redeemer and datum type had to be changed at this point, replacing the Status type with a boolean type.
+
+Example:
+
+    > CBOR: 84aa00d901028282582075cd9de96793baa3178b43efc1b64bee3c190be669f55824f2282a1eecf540c2008258203bf57843ea53b565dbf7c93ae5ce6b2cae5cb42fb95676072604ae3cad5878e3000182a300583930ec5e71524ba66885f9188aa68e15548e6ef8080d28082cc006385c28ec5e71524ba66885f9188aa68e15548e6ef8080d28082cc006385c28011a004c4b40028201d818583dd87982d87981581c0f5b22e57feeb5b4fd1d501b007a427c56a76884d4978fafef979d9c81d879831b00000198ed530a2aa140a1401a004c4b40d87a80a2005839000f5b22e57feeb5b4fd1d501b007a427c56a76884d4978fafef979d9cc7f72242dd9ff8069e7123e67bebaaaff3c75ebb108c5aba7aa0580c011a003743ef021a00150751031a0534bca0081a0534ae540b582061b92d06f5e6326bae3c5673805cc13ebd718388875297aa6d64465f1fa2366c0dd9010281825820c99eaa1b1a96def9bb17d18acebca5698e778e18014ee76ba0e65307b7b8a44b030ed9010281581c0f5b22e57feeb5b4fd1d501b007a427c56a76884d4978fafef979d9c0f0012d90102828258205b1e68c62df7e5f22865c66a0a2ab64b75ce1a943c3d192da302b82d4076827900825820e3d3e57e84842eb2b092ba3f42d341cd1f2d90502770a4f8bcf669a78aa22bf300a200d90102818258200a0b0bddc14de4b88bd3e9cc7d29886ce1bb637b81dbcc3a87d6992822dd1eab5840e0ad28a8e35eda53063d130907106aa5ef3fad44b67206de146d44289860831c4e213c21bc4d1e455b90de3098c3d534394358ee6dd1b1c4e18ee30df52ddf090581840001d87a8181d87a80821a001e84801a77359400f5f6
+    > TX HASH: e4002fab2e021bf66ed1adeca9d136becdc7b8b40d28891f71fccb365139efaf
+## Modify
+This operation only returns to the treasury a certain amount from the vendor utxo if the payout has not matured yet.
+```js
+export type VendorModifyParams = {
+ am: BigInt;
+ collateralinput: String;
+ maturationdatum: BigInt;
+ pauseddatum: Bool;
+ person: String;		// the vendor admin
+ registryref: String;
+ remainingamount: BigInt;
+ since: BigInt;
+ treasuryscript: String;
+ until: BigInt;
+ vendor: String;
+ vendorref: String;
+ vendorscript: String;
+ vendorutxo: String;
+};
+```
+Limitations:
+- Given that the access to datum information that has list type is not possible yet, the information about the datum in the vendor utxo had to be obtained beforehand.
+- Also the remaining amount to complete in the datum had to be calculated and passed as an argument to the tx3 tx.
+- Since the tx template cannot be modified in amount of inputs and outputs, and the modify operation has lots of possible actions, we decided to represent one possible course of action with this tx3 tx.
+- Since in our configuration the treasury admin and the vendor are the same person, if we include the vendor and the vendor admin (in this case the person input) parties in the tx3 signers field the final tx will have a duplicate entry in the extra signatories field and it would fail. Because of that, we only included the vendor admin party.
+
+Example:
+
+    > CBOR: 84aa00d9010282825820906ae45cdcbe3f472935348491ec7b41e968a320b124fad6709d93ed39e47545008258205a496332a3505decbad6aa01791a9e6e863de695d27470f3e2207c7a651da645010183a300583930ec5e71524ba66885f9188aa68e15548e6ef8080d28082cc006385c28ec5e71524ba66885f9188aa68e15548e6ef8080d28082cc006385c28011a001e8480028201d818583dd87982d87981581c0f5b22e57feeb5b4fd1d501b007a427c56a76884d4978fafef979d9c81d879831b00000199cc0f9f80a140a1401a001e8480d87980a2005839305adab84ea3599040306c30065dbefa1a67976bddf5ebeb17e755472e5adab84ea3599040306c30065dbefa1a67976bddf5ebeb17e755472e011a000f4240a2005839000f5b22e57feeb5b4fd1d501b007a427c56a76884d4978fafef979d9cc7f72242dd9ff8069e7123e67bebaaaff3c75ebb108c5aba7aa0580c011aaa80e96f021a00151225031a0539ed4b081a0539deff0b5820ab6b4b756bc05e46c1c9dd7ac2f53a82acfd37fa05347d7ee7b20801234c1ec80dd9010281825820767e6bead8787f010daccd99e159bee8d65f27577b889903f6bcdf12aea497d1010ed9010281581c0f5b22e57feeb5b4fd1d501b007a427c56a76884d4978fafef979d9c0f0012d90102828258205b1e68c62df7e5f22865c66a0a2ab64b75ce1a943c3d192da302b82d4076827900825820e3d3e57e84842eb2b092ba3f42d341cd1f2d90502770a4f8bcf669a78aa22bf300a200d90102818258200a0b0bddc14de4b88bd3e9cc7d29886ce1bb637b81dbcc3a87d6992822dd1eab584018bea402c2f614ffc91feaee3079afc9f458669ac422e187b63c77b278e004e9909a19799b027ee066702d11000eab60b305e7b717d0b7e4091e7f4c2a5f480a0581840001d87b80821a001e84801a77359400f5f6
+    > TX HASH: f70112279e35e098dec44191f55193d2ef9864b9bb02e9c2f1e9b5c2377f954d
+## Sweep
+This operation returns the remaining funds in a specific vendor utxo to the treasury contract if the expiration time has passed.
+```js
+export type VendorSweepParams = {
+ collateralinput: String;
+ person: String;
+ registryref: String;
+ since: BigInt;
+ treasuryscript: String;
+ until: BigInt;
+ vendorref: String;
+ vendorscript: String;
+ vendorutxo: String;
+};
+```
+Example:
+
+    > CBOR: 84a900d901028282582050b1cb93f25b68ead12fa45083cca7e5be08c1f7bbc63487401defd28bdb352c0082582050b1cb93f25b68ead12fa45083cca7e5be08c1f7bbc63487401defd28bdb352c010182a20058393020889fe5ec11f3eaa5c73e1f215ac358182fee584fe5514235b9895420889fe5ec11f3eaa5c73e1f215ac358182fee584fe5514235b98954011a001e8480a2005839000f5b22e57feeb5b4fd1d501b007a427c56a76884d4978fafef979d9cc7f72242dd9ff8069e7123e67bebaaaff3c75ebb108c5aba7aa0580c011a2e25a8ab021a0014f4ed031a05360fad081a053601610b58203f34370a8ec66a3d9b69f6b2b9334bc7b1211a4d468569a35246aea0731117ac0dd9010281825820c99eaa1b1a96def9bb17d18acebca5698e778e18014ee76ba0e65307b7b8a44b050f0012d90102828258209616015a72bb68e11166f5564066287c2550882d565d2471b4f0a308193469f300825820ac5d7598b2dbf8c62b1887bad4c001e90089aa321cc630686fb7935d570afed600a200d90102818258200a0b0bddc14de4b88bd3e9cc7d29886ce1bb637b81dbcc3a87d6992822dd1eab5840078ef0ddeca9f99d796d58a2f30b428d7afbbd2855c3f666007a1362ae03fae0d8c8c0313558425334898e934a960525dd7ef685f63495b3437c7fd05f5f8f0b0581840000d87c80821a001e84801a77359400f5f6
+    > TX HASH: 9e87140bc15e03b7db945fe15b0ca5c08e1e1bd9bb5a07cf447255cfb3e6fdc4
+
+## Malformed
+This operation returns funds from a specific vendor utxo with a malformed datum, to the treasury contract.
+```js
+export type VendorMalformedParams = {
+ collateralinput: String;
+ person: String;
+ registryref: String;
+ treasuryscript: String;
+ vendorref: String;
+ vendorscript: String;
+ vendorutxo: String;
+};
+```
+Example:
+
+    > CBOR: 84a700d90102828258205a496332a3505decbad6aa01791a9e6e863de695d27470f3e2207c7a651da64500825820e4002fab2e021bf66ed1adeca9d136becdc7b8b40d28891f71fccb365139efaf010182a20058393020889fe5ec11f3eaa5c73e1f215ac358182fee584fe5514235b9895420889fe5ec11f3eaa5c73e1f215ac358182fee584fe5514235b98954011a002dc6c0a2005839000f5b22e57feeb5b4fd1d501b007a427c56a76884d4978fafef979d9cc7f72242dd9ff8069e7123e67bebaaaff3c75ebb108c5aba7aa0580c011a00225112021a0014f2dd0b582024f411de421380a0f1fb091909271157effce16e3e3125e9237b62cb729a318b0dd9010281825820c99eaa1b1a96def9bb17d18acebca5698e778e18014ee76ba0e65307b7b8a44b050f0012d90102828258209616015a72bb68e11166f5564066287c2550882d565d2471b4f0a308193469f300825820ac5d7598b2dbf8c62b1887bad4c001e90089aa321cc630686fb7935d570afed600a200d90102818258200a0b0bddc14de4b88bd3e9cc7d29886ce1bb637b81dbcc3a87d6992822dd1eab5840d19509d9f248f6285b690846e361b1f1fe66507fe5955a5ffc9ae8e7ab097b5d7b45d6887076f3d4a67655efa58879d188fae499210fca589d91883f99c95d0d0581840000d87d80821a001e84801a77359400f5f6
+    > TX HASH: fe51b6bbd8a6dbc5692dc2a4840ab9dd1a44ebf654cf01a412816836b671bf0d
+
