@@ -1,0 +1,1404 @@
+diff --git a/crates/tx3-cardano/src/compile/mod.rs b/crates/tx3-cardano/src/compile/mod.rs
+index ad55eb7..54ac950 100644
+--- a/crates/tx3-cardano/src/compile/mod.rs
++++ b/crates/tx3-cardano/src/compile/mod.rs
+@@ -78,7 +78,9 @@ fn compile_data_expr(ir: &ir::Expression) -> Result<primitives::PlutusData, Erro
+         ir::Expression::Bool(x) => Ok(x.as_data()),
+         ir::Expression::String(x) => Ok(x.as_str().as_data()),
+         ir::Expression::Struct(x) => compile_struct(x),
++        ir::Expression::Map(x) => x.try_as_data(),
+         ir::Expression::Address(x) => Ok(x.as_data()),
++        ir::Expression::List(x) => x.try_as_data(),
+         _ => Err(Error::CoerceError(
+             format!("{ir:?}"),
+             "DataExpr".to_string(),
+@@ -614,7 +616,7 @@ fn compile_withdrawal_redeemers(
+     let redeemers = tx
+         .adhoc
+         .iter()
+-        .filter(|x| x.name.as_str() == "withdraw")
++        .filter(|x| x.name.as_str() == "withdrawal")
+         .map(|adhoc| compile_single_withdrawal_redeemer(adhoc, compiled_body, network))
+         .filter_map(|x| x.transpose())
+         .collect::<Result<Vec<_>, _>>()?;
+@@ -766,7 +768,7 @@ fn infer_plutus_version(witness_set: &primitives::WitnessSet) -> PlutusVersion {
+     } else {
+         // TODO: should we error here?
+         // Defaulting to Plutus V2 for now
+-        1
++        2
+     }
+ }
+ 
+diff --git a/crates/tx3-cardano/src/compile/plutus_data.rs b/crates/tx3-cardano/src/compile/plutus_data.rs
+index 3bf7479..3d67b47 100644
+--- a/crates/tx3-cardano/src/compile/plutus_data.rs
++++ b/crates/tx3-cardano/src/compile/plutus_data.rs
+@@ -1,4 +1,5 @@
+ pub use pallas::codec::utils::Int;
++use pallas::codec::utils::KeyValuePairs;
+ pub use pallas::ledger::primitives::{BigInt, BoundedBytes, Constr, MaybeIndefArray, PlutusData};
+ use tx3_lang::ir;
+ 
+@@ -99,6 +100,17 @@ impl TryIntoData for Vec<ir::Expression> {
+     }
+ }
+ 
++impl TryIntoData for Vec<(ir::Expression, ir::Expression)> {
++    fn try_as_data(&self) -> Result<PlutusData, super::Error> {
++        let items = self
++            .iter()
++            .map(|(k, v)| Ok((k.try_as_data()?, v.try_as_data()?)))
++            .collect::<Result<Vec<_>, super::Error>>()?;
++
++        Ok(PlutusData::Map(KeyValuePairs::Def(items)))
++    }
++}
++
+ impl TryIntoData for ir::StructExpr {
+     fn try_as_data(&self) -> Result<PlutusData, super::Error> {
+         let fields = self
+@@ -135,6 +147,7 @@ impl TryIntoData for ir::Expression {
+             ir::Expression::Address(x) => Ok(x.as_data()),
+             ir::Expression::Hash(x) => Ok(x.as_data()),
+             ir::Expression::List(x) => x.try_as_data(),
++            ir::Expression::Map(x) => x.try_as_data(),
+             x => Err(super::Error::CoerceError(
+                 format!("{x:?}"),
+                 "PlutusData".to_string(),
+diff --git a/crates/tx3-cardano/src/lib.rs b/crates/tx3-cardano/src/lib.rs
+index d8128b9..820470c 100644
+--- a/crates/tx3-cardano/src/lib.rs
++++ b/crates/tx3-cardano/src/lib.rs
+@@ -31,7 +31,7 @@ pub const EXECUTION_UNITS: primitives::ExUnits = primitives::ExUnits {
+     steps: 2000000000,
+ };
+ 
+-const DEFAULT_EXTRA_FEES: u64 = 200_000;
++const DEFAULT_EXTRA_FEES: u64 = 1_200_000;
+ const MIN_UTXO_BYTES: i128 = 197;
+ 
+ #[derive(Debug, Clone, Default)]
+diff --git a/crates/tx3-lang/src/analyzing.rs b/crates/tx3-lang/src/analyzing.rs
+index 28695d1..46e60d1 100644
+--- a/crates/tx3-lang/src/analyzing.rs
++++ b/crates/tx3-lang/src/analyzing.rs
+@@ -540,11 +540,32 @@ impl Analyzable for ListConstructor {
+     }
+ }
+ 
++impl Analyzable for MapField {
++    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
++        self.key.analyze(parent.clone()) + self.value.analyze(parent.clone())
++    }
++
++    fn is_resolved(&self) -> bool {
++        self.key.is_resolved() && self.value.is_resolved()
++    }
++}
++
++impl Analyzable for MapConstructor {
++    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
++        self.fields.analyze(parent)
++    }
++
++    fn is_resolved(&self) -> bool {
++        self.fields.is_resolved()
++    }
++}
++
+ impl Analyzable for DataExpr {
+     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
+         match self {
+             DataExpr::StructConstructor(x) => x.analyze(parent),
+             DataExpr::ListConstructor(x) => x.analyze(parent),
++            DataExpr::MapConstructor(x) => x.analyze(parent),
+             DataExpr::Identifier(x) => x.analyze(parent),
+             DataExpr::AddOp(x) => x.analyze(parent),
+             DataExpr::SubOp(x) => x.analyze(parent),
+@@ -561,6 +582,7 @@ impl Analyzable for DataExpr {
+         match self {
+             DataExpr::StructConstructor(x) => x.is_resolved(),
+             DataExpr::ListConstructor(x) => x.is_resolved(),
++            DataExpr::MapConstructor(x) => x.is_resolved(),
+             DataExpr::Identifier(x) => x.is_resolved(),
+             DataExpr::AddOp(x) => x.is_resolved(),
+             DataExpr::SubOp(x) => x.is_resolved(),
+diff --git a/crates/tx3-lang/src/applying.rs b/crates/tx3-lang/src/applying.rs
+index fc8e77c..2c2f431 100644
+--- a/crates/tx3-lang/src/applying.rs
++++ b/crates/tx3-lang/src/applying.rs
+@@ -1,6 +1,10 @@
+ use std::collections::{BTreeMap, HashMap, HashSet};
+ 
+-use crate::{backend, ir, ArgValue, CanonicalAssets, Utxo};
++use crate::{
++    backend,
++    ir::{self, Expression},
++    ArgValue, CanonicalAssets, Utxo,
++};
+ 
+ #[derive(Debug, thiserror::Error)]
+ pub enum Error {
+@@ -52,6 +56,9 @@ impl Indexable for ir::Expression {
+         match self {
+             ir::Expression::None => None,
+             ir::Expression::List(x) => x.get(index).cloned(),
++            ir::Expression::Map(x) => x
++                .get(index)
++                .map(|(k, v)| ir::Expression::Tuple(Box::new((k.clone(), v.clone())))),
+             ir::Expression::Tuple(x) => match index {
+                 0 => Some(x.0.clone()),
+                 1 => Some(x.1.clone()),
+@@ -244,6 +251,7 @@ impl Coerceable for ir::Expression {
+                 .and_then(|x| x.datum)
+                 .unwrap_or(ir::Expression::None)),
+             ir::Expression::List(x) => Ok(ir::Expression::List(x)),
++            ir::Expression::Map(x) => Ok(ir::Expression::Map(x)),
+             ir::Expression::Tuple(x) => Ok(ir::Expression::Tuple(x)),
+             ir::Expression::Struct(x) => Ok(ir::Expression::Struct(x)),
+             ir::Expression::Bytes(x) => Ok(ir::Expression::Bytes(x)),
+@@ -548,6 +556,11 @@ impl Composite for ir::AssetExpr {
+             amount: f(self.amount)?,
+         })
+     }
++    fn reduce_self(self) -> Result<Self, Error> {
++        let canonical: CanonicalAssets = self.into();
++        let asset: Vec<ir::AssetExpr> = canonical.into();
++        Ok(asset.get(0).unwrap().clone())
++    }
+ }
+ 
+ impl Composite for ir::Coerce {
+@@ -644,7 +657,6 @@ impl From<ir::AssetExpr> for CanonicalAssets {
+ impl From<Vec<ir::AssetExpr>> for CanonicalAssets {
+     fn from(assets: Vec<ir::AssetExpr>) -> Self {
+         let mut result = CanonicalAssets::empty();
+-
+         for asset in assets {
+             let asset = asset.into();
+             result = result + asset;
+@@ -662,7 +674,13 @@ impl From<CanonicalAssets> for Vec<ir::AssetExpr> {
+             result.push(ir::AssetExpr {
+                 policy: class
+                     .policy()
+-                    .map(|x| ir::Expression::Bytes(x.to_vec()))
++                    .map(|x| {
++                        if x.len() == 0 {
++                            ir::Expression::None
++                        } else {
++                            ir::Expression::Bytes(x.to_vec())
++                        }
++                    })
+                     .unwrap_or(ir::Expression::None),
+                 asset_name: class
+                     .name()
+@@ -671,7 +689,6 @@ impl From<CanonicalAssets> for Vec<ir::AssetExpr> {
+                 amount: ir::Expression::Number(amount),
+             });
+         }
+-
+         result
+     }
+ }
+@@ -680,7 +697,13 @@ impl ir::AssetExpr {
+     fn expect_constant_policy(&self) -> Option<&[u8]> {
+         match &self.policy {
+             ir::Expression::None => None,
+-            ir::Expression::Bytes(x) => Some(x.as_slice()),
++            ir::Expression::Bytes(x) => {
++                if x.len() == 0 {
++                    None
++                } else {
++                    Some(x.as_slice())
++                }
++            }
+             _ => None,
+         }
+     }
+@@ -688,7 +711,13 @@ impl ir::AssetExpr {
+     fn expect_constant_name(&self) -> Option<&[u8]> {
+         match &self.asset_name {
+             ir::Expression::None => None,
+-            ir::Expression::Bytes(x) => Some(x.as_slice()),
++            ir::Expression::Bytes(x) => {
++                if x.len() == 0 {
++                    None
++                } else {
++                    Some(x.as_slice())
++                }
++            }
+             ir::Expression::String(x) => Some(x.as_bytes()),
+             _ => None,
+         }
+@@ -833,6 +862,16 @@ impl Apply for ir::Expression {
+                 x.0.apply_args(args)?,
+                 x.1.apply_args(args)?,
+             )))),
++            Self::Map(x) => Ok(Self::Map(
++                x.into_iter()
++                    .map(|(k, v)| {
++                        Ok::<(Expression, Expression), Error>((
++                            k.apply_args(args)?,
++                            v.apply_args(args)?,
++                        ))
++                    })
++                    .collect::<Result<_, _>>()?,
++            )),
+             Self::Struct(x) => Ok(Self::Struct(x.apply_args(args)?)),
+             Self::Assets(x) => Ok(Self::Assets(
+                 x.into_iter()
+@@ -867,6 +906,16 @@ impl Apply for ir::Expression {
+                     .map(|x| x.apply_inputs(args))
+                     .collect::<Result<_, _>>()?,
+             )),
++            Self::Map(x) => Ok(Self::Map(
++                x.into_iter()
++                    .map(|(k, v)| {
++                        Ok::<(Expression, Expression), Error>((
++                            k.apply_inputs(args)?,
++                            v.apply_inputs(args)?,
++                        ))
++                    })
++                    .collect::<Result<_, _>>()?,
++            )),
+             Self::Tuple(x) => Ok(Self::Tuple(Box::new((
+                 x.0.apply_inputs(args)?,
+                 x.1.apply_inputs(args)?,
+@@ -905,6 +954,16 @@ impl Apply for ir::Expression {
+                     .map(|x| x.apply_fees(fees))
+                     .collect::<Result<_, _>>()?,
+             )),
++            Self::Map(x) => Ok(Self::Map(
++                x.into_iter()
++                    .map(|(k, v)| {
++                        Ok::<(Expression, Expression), Error>((
++                            k.apply_fees(fees)?,
++                            v.apply_fees(fees)?,
++                        ))
++                    })
++                    .collect::<Result<_, _>>()?,
++            )),
+             Self::Tuple(x) => Ok(Self::Tuple(Box::new((
+                 x.0.apply_fees(fees)?,
+                 x.1.apply_fees(fees)?,
+@@ -939,6 +998,7 @@ impl Apply for ir::Expression {
+     fn is_constant(&self) -> bool {
+         match self {
+             Self::List(x) => x.iter().all(|x| x.is_constant()),
++            Self::Map(x) => x.iter().all(|(k, v)| k.is_constant() && v.is_constant()),
+             Self::Tuple(x) => x.0.is_constant() && x.1.is_constant(),
+             Self::Struct(x) => x.is_constant(),
+             Self::Assets(x) => x.iter().all(|x| x.is_constant()),
+@@ -966,6 +1026,10 @@ impl Apply for ir::Expression {
+     fn params(&self) -> BTreeMap<String, ir::Type> {
+         match self {
+             Self::List(x) => x.iter().flat_map(|x| x.params()).collect(),
++            Self::Map(x) => x
++                .iter()
++                .flat_map(|(k, v)| [k.params(), v.params()].into_iter().flatten())
++                .collect(),
+             Self::Tuple(x) => [x.0.params(), x.1.params()].into_iter().flatten().collect(),
+             Self::Struct(x) => x.params(),
+             Self::Assets(x) => x.iter().flat_map(|x| x.params()).collect(),
+@@ -993,6 +1057,10 @@ impl Apply for ir::Expression {
+     fn queries(&self) -> BTreeMap<String, ir::InputQuery> {
+         match self {
+             Self::List(x) => x.iter().flat_map(|x| x.queries()).collect(),
++            Self::Map(x) => x
++                .iter()
++                .flat_map(|(k, v)| [k.queries(), v.queries()].into_iter().flatten())
++                .collect(),
+             Self::Tuple(x) => [x.0.queries(), x.1.queries()]
+                 .into_iter()
+                 .flatten()
+@@ -1028,6 +1096,11 @@ impl Apply for ir::Expression {
+                     .map(|x| x.reduce())
+                     .collect::<Result<_, _>>()?,
+             )),
++            ir::Expression::Map(x) => Ok(Self::Map(
++                x.into_iter()
++                    .map(|(k, v)| Ok::<(Expression, Expression), Error>((k.reduce()?, v.reduce()?)))
++                    .collect::<Result<_, _>>()?,
++            )),
+             ir::Expression::Tuple(x) => Ok(Self::Tuple(Box::new((x.0.reduce()?, x.1.reduce()?)))),
+             ir::Expression::Struct(x) => Ok(Self::Struct(x.reduce()?)),
+             ir::Expression::Assets(x) => Ok(Self::Assets(
+diff --git a/crates/tx3-lang/src/ast.rs b/crates/tx3-lang/src/ast.rs
+index f19c553..1281558 100644
+--- a/crates/tx3-lang/src/ast.rs
++++ b/crates/tx3-lang/src/ast.rs
+@@ -610,6 +610,37 @@ impl ListConstructor {
+     }
+ }
+ 
++#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
++pub struct MapField {
++    pub key: DataExpr,
++    pub value: DataExpr,
++    pub span: Span,
++}
++
++impl MapField {
++    pub fn target_type(&self) -> Option<Type> {
++        self.key.target_type()
++    }
++}
++
++#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
++pub struct MapConstructor {
++    pub fields: Vec<MapField>,
++    pub span: Span,
++}
++
++impl MapConstructor {
++    pub fn target_type(&self) -> Option<Type> {
++        if let Some(first_field) = self.fields.first() {
++            let key_type = first_field.key.target_type()?;
++            let value_type = first_field.value.target_type()?;
++            Some(Type::Map(Box::new(key_type), Box::new(value_type)))
++        } else {
++            None
++        }
++    }
++}
++
+ #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+ pub struct UtxoRef {
+     pub txid: Vec<u8>,
+@@ -695,6 +726,7 @@ pub enum DataExpr {
+     HexString(HexStringLiteral),
+     StructConstructor(StructConstructor),
+     ListConstructor(ListConstructor),
++    MapConstructor(MapConstructor),
+     StaticAssetConstructor(StaticAssetConstructor),
+     AnyAssetConstructor(AnyAssetConstructor),
+     Identifier(Identifier),
+@@ -726,6 +758,7 @@ impl DataExpr {
+             DataExpr::HexString(_) => Some(Type::Bytes),
+             DataExpr::StructConstructor(x) => x.target_type(),
+             DataExpr::ListConstructor(x) => x.target_type(),
++            DataExpr::MapConstructor(x) => x.target_type(),
+             DataExpr::AddOp(x) => x.target_type(),
+             DataExpr::SubOp(x) => x.target_type(),
+             DataExpr::ConcatOp(x) => x.target_type(),
+@@ -767,6 +800,7 @@ pub enum Type {
+     UtxoRef,
+     AnyAsset,
+     List(Box<Type>),
++    Map(Box<Type>, Box<Type>),
+     Custom(Identifier),
+ }
+ 
+@@ -783,6 +817,7 @@ impl std::fmt::Display for Type {
+             Type::AnyAsset => write!(f, "AnyAsset"),
+             Type::Utxo => write!(f, "Utxo"),
+             Type::List(inner) => write!(f, "List<{inner}>"),
++            Type::Map(key, value) => write!(f, "Map<{}, {}>", key, value),
+             Type::Custom(id) => write!(f, "{}", id.value),
+         }
+     }
+diff --git a/crates/tx3-lang/src/ir.rs b/crates/tx3-lang/src/ir.rs
+index ba1991e..c35f134 100644
+--- a/crates/tx3-lang/src/ir.rs
++++ b/crates/tx3-lang/src/ir.rs
+@@ -181,6 +181,7 @@ pub enum Type {
+     UtxoRef,
+     AnyAsset,
+     List,
++    Map,
+     Custom(String),
+ }
+ 
+@@ -196,6 +197,7 @@ pub enum Param {
+ pub enum Expression {
+     None,
+     List(Vec<Expression>),
++    Map(Vec<(Expression, Expression)>),
+     Tuple(Box<(Expression, Expression)>),
+     Struct(StructExpr),
+     Bytes(Vec<u8>),
+@@ -262,6 +264,7 @@ impl Expression {
+     pub fn as_assets(&self) -> Option<&[AssetExpr]> {
+         match self {
+             Self::Assets(assets) => Some(assets),
++            Self::None => Some(&[]),
+             _ => None,
+         }
+     }
+@@ -491,6 +494,7 @@ impl Node for Expression {
+         // first we visit the nested expressions
+         let visited = match self {
+             Expression::List(x) => Expression::List(x.apply(visitor)?),
++            Expression::Map(x) => Expression::Map(x.apply(visitor)?),
+             Expression::Tuple(x) => Expression::Tuple(x.apply(visitor)?),
+             Expression::Struct(x) => Expression::Struct(x.apply(visitor)?),
+             Expression::Assets(x) => Expression::Assets(x.apply(visitor)?),
+diff --git a/crates/tx3-lang/src/lowering.rs b/crates/tx3-lang/src/lowering.rs
+index ba4357e..821e0ba 100644
+--- a/crates/tx3-lang/src/lowering.rs
++++ b/crates/tx3-lang/src/lowering.rs
+@@ -3,6 +3,8 @@
+ //! This module takes an AST and performs lowering on it. It converts the AST
+ //! into the intermediate representation (IR) of the Tx3 language.
+ 
++use std::ops::Deref;
++
+ use crate::ast;
+ use crate::ir;
+ use crate::UtxoRef;
+@@ -330,6 +332,7 @@ impl IntoLower for ast::Type {
+             ast::Type::UtxoRef => Ok(ir::Type::UtxoRef),
+             ast::Type::AnyAsset => Ok(ir::Type::AnyAsset),
+             ast::Type::List(_) => Ok(ir::Type::List),
++            ast::Type::Map(_, _) => Ok(ir::Type::Map),
+             ast::Type::Custom(x) => Ok(ir::Type::Custom(x.value.clone())),
+         }
+     }
+@@ -424,6 +427,24 @@ impl IntoLower for ast::ListConstructor {
+     }
+ }
+ 
++impl IntoLower for ast::MapConstructor {
++    type Output = ir::Expression;
++
++    fn into_lower(&self, ctx: &Context) -> Result<Self::Output, Error> {
++        let pairs = self
++            .fields
++            .iter()
++            .map(|field| {
++                let key = field.key.into_lower(ctx)?;
++                let value = field.value.into_lower(ctx)?;
++                Ok((key, value))
++            })
++            .collect::<Result<Vec<_>, _>>()?;
++
++        Ok(ir::Expression::Map(pairs))
++    }
++}
++
+ impl IntoLower for ast::DataExpr {
+     type Output = ir::Expression;
+ 
+@@ -436,6 +457,7 @@ impl IntoLower for ast::DataExpr {
+             ast::DataExpr::HexString(x) => ir::Expression::Bytes(hex_decode(&x.value)?),
+             ast::DataExpr::StructConstructor(x) => ir::Expression::Struct(x.into_lower(ctx)?),
+             ast::DataExpr::ListConstructor(x) => ir::Expression::List(x.into_lower(ctx)?),
++            ast::DataExpr::MapConstructor(x) => x.into_lower(ctx)?,
+             ast::DataExpr::StaticAssetConstructor(x) => x.into_lower(ctx)?,
+             ast::DataExpr::AnyAssetConstructor(x) => x.into_lower(ctx)?,
+             ast::DataExpr::Unit => ir::Expression::Struct(ir::StructExpr::unit()),
+@@ -478,8 +500,24 @@ impl IntoLower for ast::AnyAssetConstructor {
+     type Output = ir::Expression;
+ 
+     fn into_lower(&self, ctx: &Context) -> Result<Self::Output, Error> {
+-        let policy = self.policy.into_lower(ctx)?;
+-        let asset_name = self.asset_name.into_lower(ctx)?;
++        let policy = if let ast::DataExpr::String(policy) = self.policy.deref() {
++            if policy.value.len() == 0 {
++                ir::Expression::None
++            } else {
++                self.policy.into_lower(ctx)?
++            }
++        } else {
++            self.policy.into_lower(ctx)?
++        };
++        let asset_name = if let ast::DataExpr::String(asset_name) = self.asset_name.deref() {
++            if asset_name.value.len() == 0 {
++                ir::Expression::None
++            } else {
++                self.asset_name.into_lower(ctx)?
++            }
++        } else {
++            self.asset_name.into_lower(ctx)?
++        };
+         let amount = self.amount.into_lower(ctx)?;
+ 
+         Ok(ir::Expression::Assets(vec![ir::AssetExpr {
+@@ -901,9 +939,11 @@ mod tests {
+ 
+     test_lowering!(cardano_witness);
+ 
++    test_lowering!(map);
+     test_lowering!(burn);
+ 
+     test_lowering!(min_utxo);
+ 
+     test_lowering!(donation);
++    test_lowering!(map);
+ }
+diff --git a/crates/tx3-lang/src/parsing.rs b/crates/tx3-lang/src/parsing.rs
+index 3970ac8..abb286a 100644
+--- a/crates/tx3-lang/src/parsing.rs
++++ b/crates/tx3-lang/src/parsing.rs
+@@ -1052,6 +1052,41 @@ impl AstNode for ListConstructor {
+     }
+ }
+ 
++impl AstNode for MapField {
++    const RULE: Rule = Rule::map_field;
++
++    fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
++        let span = pair.as_span().into();
++        let mut inner = pair.into_inner();
++
++        let key = DataExpr::parse(inner.next().unwrap())?;
++        let value = DataExpr::parse(inner.next().unwrap())?;
++
++        Ok(MapField { key, value, span })
++    }
++
++    fn span(&self) -> &Span {
++        &self.span
++    }
++}
++
++impl AstNode for MapConstructor {
++    const RULE: Rule = Rule::map_constructor;
++
++    fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
++        let span = pair.as_span().into();
++        let inner = pair.into_inner();
++
++        let fields = inner.map(MapField::parse).collect::<Result<Vec<_>, _>>()?;
++
++        Ok(MapConstructor { fields, span })
++    }
++
++    fn span(&self) -> &Span {
++        &self.span
++    }
++}
++
+ impl DataExpr {
+     fn number_parse(pair: Pair<Rule>) -> Result<Self, Error> {
+         Ok(DataExpr::Number(pair.as_str().parse().unwrap()))
+@@ -1073,6 +1108,10 @@ impl DataExpr {
+         Ok(DataExpr::ListConstructor(ListConstructor::parse(pair)?))
+     }
+ 
++    fn map_constructor_parse(pair: Pair<Rule>) -> Result<Self, Error> {
++        Ok(DataExpr::MapConstructor(MapConstructor::parse(pair)?))
++    }
++
+     fn utxo_ref_parse(pair: Pair<Rule>) -> Result<Self, Error> {
+         Ok(DataExpr::UtxoRef(UtxoRef::parse(pair)?))
+     }
+@@ -1159,6 +1198,7 @@ impl AstNode for DataExpr {
+                 Rule::hex_string => Ok(DataExpr::HexString(HexStringLiteral::parse(x)?)),
+                 Rule::struct_constructor => DataExpr::struct_constructor_parse(x),
+                 Rule::list_constructor => DataExpr::list_constructor_parse(x),
++                Rule::map_constructor => DataExpr::map_constructor_parse(x),
+                 Rule::unit => Ok(DataExpr::Unit),
+                 Rule::identifier => DataExpr::identifier_parse(x),
+                 Rule::utxo_ref => DataExpr::utxo_ref_parse(x),
+@@ -1195,6 +1235,7 @@ impl AstNode for DataExpr {
+             DataExpr::HexString(x) => x.span(),
+             DataExpr::StructConstructor(x) => x.span(),
+             DataExpr::ListConstructor(x) => x.span(),
++            DataExpr::MapConstructor(x) => x.span(),
+             DataExpr::StaticAssetConstructor(x) => x.span(),
+             DataExpr::AnyAssetConstructor(x) => x.span(),
+             DataExpr::Identifier(x) => x.span(),
+@@ -1229,6 +1270,12 @@ impl AstNode for Type {
+                 let inner = inner.into_inner().next().unwrap();
+                 Ok(Type::List(Box::new(Type::parse(inner)?)))
+             }
++            Rule::map_type => {
++                let mut inner = inner.into_inner();
++                let key_type = Type::parse(inner.next().unwrap())?;
++                let value_type = Type::parse(inner.next().unwrap())?;
++                Ok(Type::Map(Box::new(key_type), Box::new(value_type)))
++            }
+             Rule::custom_type => Ok(Type::Custom(Identifier::new(inner.as_str().to_owned()))),
+             x => unreachable!("Unexpected rule in type: {:?}", x),
+         }
+@@ -1457,6 +1504,22 @@ mod tests {
+         };
+     }
+ 
++    input_to_ast_check!(
++        ConcatOp,
++        "basic",
++        r#"concat("hello", "world")"#,
++        ConcatOp {
++            lhs: Box::new(DataExpr::String(StringLiteral {
++                value: "hello".to_string(),
++                span: Span::DUMMY,
++            })),
++            rhs: Box::new(ast::DataExpr::String(ast::StringLiteral {
++                value: "world".to_string(),
++                span: ast::Span::DUMMY,
++            })),
++            span: ast::Span::DUMMY,
++        }
++    );
+     input_to_ast_check!(Type, "int", "Int", Type::Int);
+ 
+     input_to_ast_check!(Type, "bool", "Bool", Type::Bool);
+@@ -2432,7 +2495,9 @@ mod tests {
+ 
+     test_parsing!(cardano_witness);
+ 
++    test_parsing!(map);
+     test_parsing!(burn);
+ 
+     test_parsing!(donation);
++    test_parsing!(map);
+ }
+diff --git a/crates/tx3-lang/src/tx3.pest b/crates/tx3-lang/src/tx3.pest
+index 7d1acd9..c36a2a4 100644
+--- a/crates/tx3-lang/src/tx3.pest
++++ b/crates/tx3-lang/src/tx3.pest
+@@ -24,10 +24,12 @@ primitive_type = {
+ 
+ custom_type = { identifier }
+ list_type = { "List<" ~ type ~ ">" }
++map_type = { "Map<" ~ type ~ "," ~ type ~ ">"}
+ 
+ type = {
+     primitive_type |
+     list_type |
++    map_type |
+     custom_type
+ }
+ 
+@@ -134,7 +136,7 @@ data_expr = { data_prefix* ~ data_primary ~ data_postfix* ~ (data_infix ~ data_p
+ 
+     data_prefix = _{ data_negate }
+         data_negate = { "!" }
+-    
++
+     data_postfix = _{ data_property }
+         data_property = { "." ~ identifier }
+ 
+@@ -148,7 +150,9 @@ data_expr = { data_prefix* ~ data_primary ~ data_postfix* ~ (data_infix ~ data_p
+         min_utxo |
+         struct_constructor |
+         list_constructor |
++        map_constructor |
+         concat_constructor |
++        map_constructor |
+         any_asset_constructor |
+         static_asset_constructor |
+         identifier |
+@@ -188,6 +192,14 @@ list_constructor = {
+     "[" ~ (data_expr ~ ",")* ~ data_expr? ~ "]"
+ }
+ 
++map_field = {
++    data_expr ~ ":" ~ data_expr
++}
++
++map_constructor = {
++    "{" ~  (map_field ~ ",")+ ~ "}"
++}
++
+ // input block
+ 
+ input_many = { "*" }
+@@ -360,7 +372,7 @@ cardano_block = {
+         cardano_vote_delegation_certificate |
+         cardano_withdrawal_block |
+         cardano_plutus_witness_block |
+-        cardano_native_witness_block | 
++        cardano_native_witness_block |
+         cardano_treasury_donation_block
+     )
+ }
+diff --git a/examples/map.ast b/examples/map.ast
+new file mode 100644
+index 0000000..c3a6da4
+--- /dev/null
++++ b/examples/map.ast
+@@ -0,0 +1,444 @@
++{
++  "env": null,
++  "txs": [
++    {
++      "name": {
++        "value": "transfer",
++        "span": {
++          "dummy": false,
++          "start": 71,
++          "end": 79
++        }
++      },
++      "parameters": {
++        "parameters": [
++          {
++            "name": {
++              "value": "quantity",
++              "span": {
++                "dummy": false,
++                "start": 85,
++                "end": 93
++              }
++            },
++            "type": "Int"
++          }
++        ],
++        "span": {
++          "dummy": false,
++          "start": 79,
++          "end": 100
++        }
++      },
++      "locals": null,
++      "references": [],
++      "inputs": [
++        {
++          "name": "source",
++          "many": false,
++          "fields": [
++            {
++              "From": {
++                "Identifier": {
++                  "value": "Sender",
++                  "span": {
++                    "dummy": false,
++                    "start": 136,
++                    "end": 142
++                  }
++                }
++              }
++            },
++            {
++              "MinAmount": {
++                "StaticAssetConstructor": {
++                  "type": {
++                    "value": "Ada",
++                    "span": {
++                      "dummy": false,
++                      "start": 164,
++                      "end": 167
++                    }
++                  },
++                  "amount": {
++                    "Identifier": {
++                      "value": "quantity",
++                      "span": {
++                        "dummy": false,
++                        "start": 168,
++                        "end": 176
++                      }
++                    }
++                  },
++                  "span": {
++                    "dummy": false,
++                    "start": 164,
++                    "end": 177
++                  }
++                }
++              }
++            }
++          ],
++          "span": {
++            "dummy": false,
++            "start": 107,
++            "end": 184
++          }
++        }
++      ],
++      "outputs": [
++        {
++          "name": null,
++          "fields": [
++            {
++              "To": {
++                "Identifier": {
++                  "value": "Receiver",
++                  "span": {
++                    "dummy": false,
++                    "start": 211,
++                    "end": 219
++                  }
++                }
++              }
++            },
++            {
++              "Amount": {
++                "StaticAssetConstructor": {
++                  "type": {
++                    "value": "Ada",
++                    "span": {
++                      "dummy": false,
++                      "start": 237,
++                      "end": 240
++                    }
++                  },
++                  "amount": {
++                    "Identifier": {
++                      "value": "quantity",
++                      "span": {
++                        "dummy": false,
++                        "start": 241,
++                        "end": 249
++                      }
++                    }
++                  },
++                  "span": {
++                    "dummy": false,
++                    "start": 237,
++                    "end": 250
++                  }
++                }
++              }
++            }
++          ],
++          "span": {
++            "dummy": false,
++            "start": 190,
++            "end": 257
++          }
++        },
++        {
++          "name": null,
++          "fields": [
++            {
++              "To": {
++                "Identifier": {
++                  "value": "Sender",
++                  "span": {
++                    "dummy": false,
++                    "start": 284,
++                    "end": 290
++                  }
++                }
++              }
++            },
++            {
++              "Amount": {
++                "SubOp": {
++                  "lhs": {
++                    "SubOp": {
++                      "lhs": {
++                        "Identifier": {
++                          "value": "source",
++                          "span": {
++                            "dummy": false,
++                            "start": 308,
++                            "end": 314
++                          }
++                        }
++                      },
++                      "rhs": {
++                        "StaticAssetConstructor": {
++                          "type": {
++                            "value": "Ada",
++                            "span": {
++                              "dummy": false,
++                              "start": 317,
++                              "end": 320
++                            }
++                          },
++                          "amount": {
++                            "Identifier": {
++                              "value": "quantity",
++                              "span": {
++                                "dummy": false,
++                                "start": 321,
++                                "end": 329
++                              }
++                            }
++                          },
++                          "span": {
++                            "dummy": false,
++                            "start": 317,
++                            "end": 330
++                          }
++                        }
++                      },
++                      "span": {
++                        "dummy": false,
++                        "start": 315,
++                        "end": 316
++                      }
++                    }
++                  },
++                  "rhs": {
++                    "Identifier": {
++                      "value": "fees",
++                      "span": {
++                        "dummy": false,
++                        "start": 333,
++                        "end": 337
++                      }
++                    }
++                  },
++                  "span": {
++                    "dummy": false,
++                    "start": 331,
++                    "end": 332
++                  }
++                }
++              }
++            },
++            {
++              "Datum": {
++                "StructConstructor": {
++                  "type": {
++                    "value": "Datum",
++                    "span": {
++                      "dummy": false,
++                      "start": 354,
++                      "end": 359
++                    }
++                  },
++                  "case": {
++                    "name": {
++                      "value": "Default",
++                      "span": {
++                        "dummy": true,
++                        "start": 0,
++                        "end": 0
++                      }
++                    },
++                    "fields": [
++                      {
++                        "name": {
++                          "value": "A",
++                          "span": {
++                            "dummy": false,
++                            "start": 372,
++                            "end": 373
++                          }
++                        },
++                        "value": {
++                          "MapConstructor": {
++                            "fields": [
++                              {
++                                "key": {
++                                  "Number": 1
++                                },
++                                "value": {
++                                  "Identifier": {
++                                    "value": "quantity",
++                                    "span": {
++                                      "dummy": false,
++                                      "start": 378,
++                                      "end": 386
++                                    }
++                                  }
++                                },
++                                "span": {
++                                  "dummy": false,
++                                  "start": 376,
++                                  "end": 386
++                                }
++                              },
++                              {
++                                "key": {
++                                  "Number": 2
++                                },
++                                "value": {
++                                  "Identifier": {
++                                    "value": "quantity",
++                                    "span": {
++                                      "dummy": false,
++                                      "start": 390,
++                                      "end": 398
++                                    }
++                                  }
++                                },
++                                "span": {
++                                  "dummy": false,
++                                  "start": 388,
++                                  "end": 398
++                                }
++                              }
++                            ],
++                            "span": {
++                              "dummy": false,
++                              "start": 375,
++                              "end": 400
++                            }
++                          }
++                        },
++                        "span": {
++                          "dummy": false,
++                          "start": 372,
++                          "end": 400
++                        }
++                      }
++                    ],
++                    "spread": null,
++                    "span": {
++                      "dummy": false,
++                      "start": 360,
++                      "end": 411
++                    }
++                  },
++                  "span": {
++                    "dummy": false,
++                    "start": 354,
++                    "end": 411
++                  }
++                }
++              }
++            }
++          ],
++          "span": {
++            "dummy": false,
++            "start": 263,
++            "end": 418
++          }
++        }
++      ],
++      "validity": null,
++      "mints": [],
++      "burns": [],
++      "signers": null,
++      "adhoc": [],
++      "span": {
++        "dummy": false,
++        "start": 68,
++        "end": 420
++      },
++      "collateral": [],
++      "metadata": null
++    }
++  ],
++  "types": [
++    {
++      "name": {
++        "value": "Datum",
++        "span": {
++          "dummy": false,
++          "start": 5,
++          "end": 10
++        }
++      },
++      "cases": [
++        {
++          "name": {
++            "value": "Default",
++            "span": {
++              "dummy": true,
++              "start": 0,
++              "end": 0
++            }
++          },
++          "fields": [
++            {
++              "name": {
++                "value": "A",
++                "span": {
++                  "dummy": false,
++                  "start": 15,
++                  "end": 16
++                }
++              },
++              "type": {
++                "Map": [
++                  "Int",
++                  "Int"
++                ]
++              },
++              "span": {
++                "dummy": false,
++                "start": 15,
++                "end": 31
++              }
++            }
++          ],
++          "span": {
++            "dummy": false,
++            "start": 0,
++            "end": 34
++          }
++        }
++      ],
++      "span": {
++        "dummy": false,
++        "start": 0,
++        "end": 34
++      }
++    }
++  ],
++  "assets": [],
++  "parties": [
++    {
++      "name": {
++        "value": "Sender",
++        "span": {
++          "dummy": false,
++          "start": 42,
++          "end": 48
++        }
++      },
++      "span": {
++        "dummy": false,
++        "start": 36,
++        "end": 49
++      }
++    },
++    {
++      "name": {
++        "value": "Receiver",
++        "span": {
++          "dummy": false,
++          "start": 57,
++          "end": 65
++        }
++      },
++      "span": {
++        "dummy": false,
++        "start": 51,
++        "end": 66
++      }
++    }
++  ],
++  "policies": [],
++  "span": {
++    "dummy": false,
++    "start": 0,
++    "end": 420
++  }
++}
+\ No newline at end of file
+diff --git a/examples/map.transfer.tir b/examples/map.transfer.tir
+new file mode 100644
+index 0000000..75c2a5e
+--- /dev/null
++++ b/examples/map.transfer.tir
+@@ -0,0 +1,202 @@
++{
++  "fees": {
++    "EvalParam": "ExpectFees"
++  },
++  "references": [],
++  "inputs": [
++    {
++      "name": "source",
++      "utxos": {
++        "EvalParam": {
++          "ExpectInput": [
++            "source",
++            {
++              "address": {
++                "EvalParam": {
++                  "ExpectValue": [
++                    "sender",
++                    "Address"
++                  ]
++                }
++              },
++              "min_amount": {
++                "Assets": [
++                  {
++                    "policy": "None",
++                    "asset_name": "None",
++                    "amount": {
++                      "EvalParam": {
++                        "ExpectValue": [
++                          "quantity",
++                          "Int"
++                        ]
++                      }
++                    }
++                  }
++                ]
++              },
++              "ref": "None",
++              "many": false,
++              "collateral": false
++            }
++          ]
++        }
++      },
++      "redeemer": "None"
++    }
++  ],
++  "outputs": [
++    {
++      "address": {
++        "EvalParam": {
++          "ExpectValue": [
++            "receiver",
++            "Address"
++          ]
++        }
++      },
++      "datum": "None",
++      "amount": {
++        "Assets": [
++          {
++            "policy": "None",
++            "asset_name": "None",
++            "amount": {
++              "EvalParam": {
++                "ExpectValue": [
++                  "quantity",
++                  "Int"
++                ]
++              }
++            }
++          }
++        ]
++      }
++    },
++    {
++      "address": {
++        "EvalParam": {
++          "ExpectValue": [
++            "sender",
++            "Address"
++          ]
++        }
++      },
++      "datum": {
++        "Struct": {
++          "constructor": 0,
++          "fields": [
++            {
++              "Map": [
++                [
++                  {
++                    "Number": 1
++                  },
++                  {
++                    "EvalParam": {
++                      "ExpectValue": [
++                        "quantity",
++                        "Int"
++                      ]
++                    }
++                  }
++                ],
++                [
++                  {
++                    "Number": 2
++                  },
++                  {
++                    "EvalParam": {
++                      "ExpectValue": [
++                        "quantity",
++                        "Int"
++                      ]
++                    }
++                  }
++                ]
++              ]
++            }
++          ]
++        }
++      },
++      "amount": {
++        "EvalBuiltIn": {
++          "Sub": [
++            {
++              "EvalBuiltIn": {
++                "Sub": [
++                  {
++                    "EvalCoerce": {
++                      "IntoAssets": {
++                        "EvalParam": {
++                          "ExpectInput": [
++                            "source",
++                            {
++                              "address": {
++                                "EvalParam": {
++                                  "ExpectValue": [
++                                    "sender",
++                                    "Address"
++                                  ]
++                                }
++                              },
++                              "min_amount": {
++                                "Assets": [
++                                  {
++                                    "policy": "None",
++                                    "asset_name": "None",
++                                    "amount": {
++                                      "EvalParam": {
++                                        "ExpectValue": [
++                                          "quantity",
++                                          "Int"
++                                        ]
++                                      }
++                                    }
++                                  }
++                                ]
++                              },
++                              "ref": "None",
++                              "many": false,
++                              "collateral": false
++                            }
++                          ]
++                        }
++                      }
++                    }
++                  },
++                  {
++                    "Assets": [
++                      {
++                        "policy": "None",
++                        "asset_name": "None",
++                        "amount": {
++                          "EvalParam": {
++                            "ExpectValue": [
++                              "quantity",
++                              "Int"
++                            ]
++                          }
++                        }
++                      }
++                    ]
++                  }
++                ]
++              }
++            },
++            {
++              "EvalParam": "ExpectFees"
++            }
++          ]
++        }
++      }
++    }
++  ],
++  "validity": null,
++  "mints": [],
++  "burns": [],
++  "adhoc": [],
++  "collateral": [],
++  "signers": null,
++  "metadata": []
++}
+\ No newline at end of file
+diff --git a/examples/map.tx3 b/examples/map.tx3
+new file mode 100644
+index 0000000..7bf898f
+--- /dev/null
++++ b/examples/map.tx3
+@@ -0,0 +1,29 @@
++type Datum {
++  A: Map<Int, Int>,
++}
++
++party Sender;
++
++party Receiver;
++
++tx transfer(
++    quantity: Int
++) {
++    input source {
++        from: Sender,
++        min_amount: Ada(quantity),
++    }
++
++    output {
++        to: Receiver,
++        amount: Ada(quantity),
++    }
++
++    output {
++        to: Sender,
++        amount: source - Ada(quantity) - fees,
++        datum: Datum {
++          A: {1:quantity, 2:quantity,},
++        },
++    }
++}
+\ No newline at end of file

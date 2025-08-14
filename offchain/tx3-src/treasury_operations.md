@@ -1,3 +1,16 @@
+In this document, we outline the treasury contract operations implemented using tx3.
+For each operation, we provide:
+- A description of its behavior.
+- The required parameters.
+- Any limitations implied by its description.
+- An example of a submitted transaction (including its CBOR format and hash).
+
+Some operations have a second iteration. In such cases, a specific version of tx3 must be used. To apply this version, you need to be on the ```218-feat-cardano-treasury-donation-field``` branch and apply the provided ```tx3.diff``` file. So on your tx3 repository run the following:
+```sh
+git checkout 1c93bdaebfdc94e3506c0489ba28756a1864631c
+git apply [root-to-treasury-contracts]/offchain/tx3-src/tx3.diff
+```
+
 # Treasury operations
 ## Withdraw
 This operation withdraws funds from the Treasury Reserve a certain amount of ADA. The operation couldn’t be executed since the script didn't have any funds in its staking account. Adding funds would require to stake to a pool (which the contract cannot do) or create a governance proposal and have it approved.
