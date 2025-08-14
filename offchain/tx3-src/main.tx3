@@ -72,11 +72,15 @@ tx treasuryWithdraw(
   }
 }
 
+
+// Only one payout can be added, and the payout only has one type of token involved
 tx treasuryFund(
   vendorKeyHash: Bytes,
   registryRef: UtxoRef,
   treasuryRef: UtxoRef,
   collateralInput: UtxoRef,
+  policyInput: Bytes,
+  tokenName: Bytes,
   am: Int,
   mat: Int,
   until: Int,
@@ -91,28 +95,27 @@ tx treasuryFund(
 
   input current {
     from: TreasuryScript,
-    min_amount: Ada(am) + min_utxo(treasury),
+    min_amount: AnyAsset(policyInput, tokenName, am) ,
     redeemer: TreasuryRedeemer::Fund {
-      amount: { "": { "": am,},},
+      amount: { policyInput: { tokenName: am,},},
     },
   }
 
   input owner {
     from: Person,
-    min_amount: min_utxo(person) + fees,
+    min_amount: min_utxo(person) + fees + min_utxo(treasury) + min_utxo(vendor),
   }
 
-  output {
+  output vendor {
     to: VendorScript,
-    // If AnyAsset works to represent ADA we could generalize every operation
-    amount: Ada(am),
+    amount: AnyAsset(policyInput, tokenName, am) + min_utxo(vendor),
     datum: VendorDatum {
       vendor: MultisigScript {
         key_hash: vendorKeyHash,
       },
       payouts: [ Payout {
         maturation: mat,
-        value: { "": { "": am,},},
+        value: { policyInput: { tokenName: am,},},
         paused: false,
       }],
     },
@@ -120,12 +123,12 @@ tx treasuryFund(
 
   output treasury {
     to: TreasuryScript,
-    amount: current - Ada(am),
+    amount: current - AnyAsset(policyInput, tokenName, am) + min_utxo(treasury),
   }
 
   output person {
     to: Person,
-    amount: owner - fees,
+    amount: owner - fees - min_utxo(treasury) - min_utxo(vendor),
   }
 
   collateral {
@@ -146,8 +149,9 @@ tx treasuryFragment(
   registryRef: UtxoRef,
   treasuryRef: UtxoRef,
   treasuryInput: UtxoRef,
-  am1: Int,
-  am2: Int,
+  am: Int,
+  policyInput: Bytes,
+  tokenName: Bytes,
   collateralInput: UtxoRef,
   until: Int,
 ) {
@@ -162,28 +166,28 @@ tx treasuryFragment(
   input current {
     from: TreasuryScript,
     ref: treasuryInput,
-    min_amount: Ada(am1 + am2),
+    min_amount: AnyAsset(policyInput, tokenName, am),
     redeemer: TreasuryRedeemer::Reorganize {},
   }
 
   input owner {
     from: Person,
-    min_amount: min_utxo(person) + fees,
+    min_amount: min_utxo(person) + fees + min_utxo(treasury1) + min_utxo(treasury2),
   }
 
   output treasury1 {
     to: TreasuryScript,
-    amount: Ada(am1),
+    amount: AnyAsset(policyInput, tokenName, am) + min_utxo(treasury1),
   }
 
   output treasury2 {
     to: TreasuryScript,
-    amount: Ada(am2),
+    amount: current - AnyAsset(policyInput, tokenName, am) + min_utxo(treasury2),
   }
 
   output person {
     to: Person,
-    amount: owner - fees,
+    amount: owner - fees - min_utxo(treasury1) - min_utxo(treasury2),
   }
 
   collateral {
@@ -262,6 +266,8 @@ tx treasuryDisburse(
   treasuryRef: UtxoRef,
   collateralInput: UtxoRef,
   outputAddress: Bytes,
+  policyInput: Bytes,
+  tokenName: Bytes,
   am: Int,
   until: Int,
 ) {
@@ -275,30 +281,30 @@ tx treasuryDisburse(
 
   input current {
     from: TreasuryScript,
-    min_amount: Ada(am) + min_utxo(treasury),
+    min_amount: AnyAsset(policyInput, tokenName, am),
     redeemer: TreasuryRedeemer::Disburse {
-      amount: { "": { "": am, },},
+      amount: { policyInput: { tokenName: am, },},
     },
   }
 
   input owner {
     from: Person,
-    min_amount: min_utxo(person) + fees,
+    min_amount: min_utxo(person) + fees + min_utxo(out)  + min_utxo(treasury),
   }
 
-  output {
+  output out {
     to: outputAddress,
-    amount: Ada(am),
+    amount: AnyAsset(policyInput, tokenName, am) + min_utxo(out),
   }
 
   output treasury {
     to: TreasuryScript,
-    amount: current - Ada(am),
+    amount: current - AnyAsset(policyInput, tokenName, am),
   }
 
   output person {
     to: Person,
-    amount: owner - fees,
+    amount: owner - fees - min_utxo(out),
   }
 
   collateral {
@@ -314,8 +320,6 @@ tx treasuryDisburse(
   }
 }
 
-
-// This operation considers that only adas are in the treasury
 tx treasurySweep(
   registryRef: UtxoRef,
   treasuryRef: UtxoRef,
@@ -340,12 +344,17 @@ tx treasurySweep(
 
   input owner {
     from: Person,
-    min_amount: min_utxo(person) + fees,
+    min_amount: min_utxo(person) + fees + min_utxo(treasury),
+  }
+
+  output treasury {
+    to: TreasuryScript,
+    amount: current - Ada(sweepAmount) + min_utxo(treasury),
   }
 
   output person {
     to: Person,
-    amount: owner - fees,
+    amount: owner - fees - min_utxo(treasury),
   }
 
   cardano::treasury_donation {
@@ -425,6 +434,8 @@ tx vendorAdjudicate(
   until: Int,
   pausedInput: Bool,
   maturationDatum: Int,
+  policyDatum: Bytes,
+  nameDatum: Bytes,
   amountDatum: Int,
 ) {
   reference registry {
@@ -458,7 +469,7 @@ tx vendorAdjudicate(
         // If we can access the datum, we could use something like
         // current.payouts.0.maturation and current.payouts.0.value
         maturation: maturationDatum,
-        value: { "": { "": amountDatum, },},
+        value: { policyDatum: { nameDatum: amountDatum, },},
         paused: pausedInput,
       }],
     },
@@ -485,7 +496,7 @@ tx vendorAdjudicate(
   }
 }
 
-// This operation only returns to the treasury a certain amount from the vendor utxo
+// This operation only returns to the treasury a certain amount of a specific token from the vendor utxo
 tx vendorModify(
   registryRef: UtxoRef,
   vendorRef: UtxoRef,
@@ -493,6 +504,8 @@ tx vendorModify(
   am: Int,
   // These parameters could be erased if
   // access to datum information of list type is possible
+  policyInput: Bytes,
+  tokenName: Bytes,
   pausedDatum: Bool,
   maturationDatum: Int,
   remainingAmount: Int,
@@ -511,40 +524,40 @@ tx vendorModify(
   input current {
     from: VendorScript,
     ref: vendorUtxo,
-    min_amount: Ada(am),
+    min_amount: AnyAsset(policyInput, tokenName, am),
     redeemer: VendorRedeemer::Modify {},
     datum_is: VendorDatum,
   }
 
   input owner {
     from: Person,
-    min_amount: min_utxo(person) + fees,
+    min_amount: min_utxo(person) + fees + min_utxo(treasury ),
   }
 
   output {
     to: VendorScript,
-    amount: current - Ada(am),
+    amount: current - AnyAsset(policyInput, tokenName, am),
     datum: VendorDatum {
       vendor: current.vendor,
       payouts: [ Payout {
         maturation: maturationDatum,
-        // Remaining amount = current - Ada(am)
-        value: { "": { "": remainingAmount, },},
+        // Remaining amount = current - AnyAsset(policyInput, tokenName, am)
+        value: { policyInput: { tokenName: remainingAmount, },},
         paused: pausedDatum,
       }],
     },
   }
 
 
-  output {
+  output treasury {
     to: TreasuryScript,
-    amount: Ada(am),
+    amount: AnyAsset(policyInput, tokenName, am) + min_utxo(treasury),
   }
 
 
   output person {
     to: Person,
-    amount: owner - fees,
+    amount: owner - fees - min_utxo(treasury),
   }
 
 
@@ -630,7 +643,6 @@ tx vendorMalformed(
     from: VendorScript,
     ref: vendorUtxo,
     redeemer: VendorRedeemer::Malformed {},
-    datum_is: VendorDatum,
   }
 
   input owner {

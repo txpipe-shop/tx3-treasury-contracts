@@ -12,6 +12,8 @@ const tx = await treasuryDisburse({
   user,
   treasuryScriptRef,
   outputAddress: Address.fromBech32(user).toBytes(),
-  amount: 1000000,
+  amount: 5,
+  policy: "921e27e15e2552a40515564ba10a26ecb1fe1a34ac6ccb58c1ce1320",
+  tokenName: "41474958", // AGIX
 });
 console.log("Treasury disburse tx: ", tx);

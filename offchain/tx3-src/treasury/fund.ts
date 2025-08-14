@@ -12,6 +12,8 @@ interface ITreasuryFund {
   vendorKeyHash: string;
   treasuryScriptRef?: string;
   maturation?: number;
+  policy?: string;
+  tokenName?: string;
   amount?: number;
 }
 
@@ -21,6 +23,8 @@ export const treasuryFund = async ({
   vendorKeyHash,
   treasuryScriptRef,
   maturation = Date.now() + 1000 * 60 * 60 * 24 * 30, // Default maturation set to 30 days
+  policy = "",
+  tokenName = "",
   amount = 5000000, // Default amount set to 5 ADA
 }: ITreasuryFund) => {
   const { configs, scripts } = await getConfigs(blaze);
@@ -75,6 +79,8 @@ export const treasuryFund = async ({
     collateralinput: { type: "String", value: UtxoToRef(collateralUtxo) },
     registryref: { type: "String", value: UtxoToRef(registryInput) },
     person: { type: "String", value: Address.fromBech32(user).toBytes() },
+    policyinput: { type: "Bytes", value: Buffer.from(policy, "hex") },
+    tokenname: { type: "Bytes", value: Buffer.from(tokenName, "hex") },
     am: { type: "Int", value: BigInt(amount) },
     mat: { type: "Int", value: BigInt(maturation) },
     until: {

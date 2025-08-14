@@ -9,8 +9,8 @@ import {
 import { parse } from "@blaze-cardano/data";
 import { Blaze, Provider, Wallet } from "@blaze-cardano/sdk";
 import { loadVendorScript } from "src/shared";
-import { protocol } from "tx3-src/gen/typescript/protocol";
-import { toPreviewBlockSlot } from "tx3-src/utils/numbers";
+import { protocol } from "tx3-src/gen/typescript/protocol.js";
+import { toPreviewBlockSlot } from "tx3-src/utils/numbers.js";
 import { getConfigs } from "tx3-src/utils/shared";
 import { getCollateralUtxo, UtxoToRef } from "tx3-src/utils/utxo";
 import { VendorDatum } from "../../src/generated-types/contracts.js";
@@ -64,19 +64,29 @@ export const vendorAdjudicate = async ({
     }
   }
 
-  const [treasuryInput] = await blaze.provider.resolveUnspentOutputs([
+  const [vendorInput] = await blaze.provider.resolveUnspentOutputs([
     TransactionInput.fromCore({
       txId: TransactionId(vendorUtxo.split("#")[0]),
       index: parseInt(vendorUtxo.split("#")[1]),
     }),
   ]);
-  const datum = treasuryInput.toCore()[1].datum;
+  const datum = vendorInput.toCore()[1].datum;
 
   const maturationDatum = BigInt(
     parse(VendorDatum, PlutusData.fromCore(datum!)).payouts[0].maturation,
   );
+  const policyInput = Object.keys(
+    parse(VendorDatum, PlutusData.fromCore(datum!)).payouts[0].value,
+  )[0];
+  const tokenName = Object.keys(
+    parse(VendorDatum, PlutusData.fromCore(datum!)).payouts[0].value[
+      policyInput
+    ],
+  )[0];
   const amountDatum = BigInt(
-    parse(VendorDatum, PlutusData.fromCore(datum!)).payouts[0].value[""][""],
+    parse(VendorDatum, PlutusData.fromCore(datum!)).payouts[0].value[
+      policyInput
+    ][tokenName],
   );
 
   const { tx } = await protocol.vendorAdjudicateTx({
@@ -102,6 +112,8 @@ export const vendorAdjudicate = async ({
     },
     pausedinput: { type: "Bool", value: paused },
     maturationdatum: { type: "Int", value: maturationDatum },
+    policydatum: { type: "Bytes", value: Buffer.from(policyInput, "hex") },
+    namedatum: { type: "Bytes", value: Buffer.from(tokenName, "hex") },
     amountdatum: { type: "Int", value: amountDatum },
   });
   return tx;

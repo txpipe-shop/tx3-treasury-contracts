@@ -13,9 +13,10 @@ const tx1 = await treasuryReorganize({
   // Fragment example
   reorganizeParams: {
     utxoToReorganize:
-      "165147a6f60f11e7f65f59b018b4d0b50e5ed06d5bc0561394f26889292e2b2b#0",
-    amount1: 250,
-    amount2: 750,
+      "dc132cec7d336a14370c08810dec219effba63a3d0560e7b9a5c7a44416e1a07#1",
+    amount: 5,
+    policy: "921e27e15e2552a40515564ba10a26ecb1fe1a34ac6ccb58c1ce1320",
+    tokenName: "41474958", // AGIX
   },
   treasuryScriptRef,
 });

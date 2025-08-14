@@ -11,6 +11,8 @@ interface ITreasuryDisburse {
   user: string;
   treasuryScriptRef?: string;
   outputAddress: string;
+  policy?: string;
+  tokenName?: string;
   amount?: number; // Default amount set to 1 ADA
 }
 
@@ -19,6 +21,8 @@ export const treasuryDisburse = async ({
   user,
   treasuryScriptRef,
   outputAddress,
+  policy = "",
+  tokenName = "",
   amount = 1000000, // Default amount set to 1 ADA
 }: ITreasuryDisburse) => {
   const { configs, scripts } = await getConfigs(blaze);
@@ -63,6 +67,8 @@ export const treasuryDisburse = async ({
     treasuryref: { type: "String", value: scriptRef },
     collateralinput: { type: "String", value: UtxoToRef(collateralUtxo) },
     outputaddress: { type: "String", value: outputAddress },
+    policyinput: { type: "Bytes", value: Buffer.from(policy, "hex") },
+    tokenname: { type: "Bytes", value: Buffer.from(tokenName, "hex") },
     am: { type: "Int", value: BigInt(amount) },
     until: {
       type: "Int",

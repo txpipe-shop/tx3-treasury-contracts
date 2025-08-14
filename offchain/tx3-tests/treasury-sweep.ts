@@ -8,7 +8,7 @@ const tx = await treasurySweep({
   blaze,
   user,
   treasuryToSweep:
-    "f18a457f3843faae83ba44bda63e3f1b4c3ccb27d4c67aa5f8a2cc29c9464fd6#0",
+    "c88b7bd835510183043865ff28681715cda30fd00aaa63088cb2c44d0284fc3c#0",
   treasuryScriptRef:
     "2e606ae3d01d0d00f78cfc12df86d8943eb59676b32d49dee9cc3399ce28b17d#0",
 });

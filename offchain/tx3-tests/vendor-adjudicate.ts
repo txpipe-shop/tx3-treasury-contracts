@@ -7,13 +7,13 @@ const vendor =
 const scriptRef =
   "e3d3e57e84842eb2b092ba3f42d341cd1f2d90502770a4f8bcf669a78aa22bf3#0";
 const vendorUtxo =
-  "75cd9de96793baa3178b43efc1b64bee3c190be669f55824f2282a1eecf540c2#0";
+  "1d725f6d41507b596f6c2326c2a1e1b174e25c207951ce11b0c1a426fda9b239#0";
 const tx = await vendorAdjudicate({
   blaze,
   vendor,
   user: vendor,
   vendorUtxo,
   vendorScriptRef: scriptRef,
-  paused: true,
+  paused: false,
 });
 console.log("Vendor adjudicate tx: ", tx);

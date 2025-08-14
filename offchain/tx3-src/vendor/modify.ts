@@ -69,20 +69,31 @@ export const vendorModify = async ({
     }
   }
 
-  const [treasuryInput] = await blaze.provider.resolveUnspentOutputs([
+  const [vendorInput] = await blaze.provider.resolveUnspentOutputs([
     TransactionInput.fromCore({
       txId: TransactionId(vendorUtxo.split("#")[0]),
       index: parseInt(vendorUtxo.split("#")[1]),
     }),
   ]);
-  const datum = treasuryInput.toCore()[1].datum;
+  const datum = vendorInput.toCore()[1].datum;
 
   const maturationDatum = BigInt(
     parse(VendorDatum, PlutusData.fromCore(datum!)).payouts[0].maturation,
   );
+
+  const policyInput = Object.keys(
+    parse(VendorDatum, PlutusData.fromCore(datum!)).payouts[0].value,
+  )[0];
+  const tokenName = Object.keys(
+    parse(VendorDatum, PlutusData.fromCore(datum!)).payouts[0].value[
+      policyInput
+    ],
+  )[0];
+
   const remainingAmount = BigInt(
-    parse(VendorDatum, PlutusData.fromCore(datum!)).payouts[0].value[""][""] -
-      amount,
+    parse(VendorDatum, PlutusData.fromCore(datum!)).payouts[0].value[
+      policyInput
+    ][tokenName] - amount,
   );
 
   const pausedDatum =
@@ -109,6 +120,8 @@ export const vendorModify = async ({
     registryref: { type: "String", value: UtxoToRef(registryInput) },
     vendorref: { type: "String", value: scriptRef },
     vendorutxo: { type: "String", value: vendorUtxo },
+    policyinput: { type: "Bytes", value: Buffer.from(policyInput, "hex") },
+    tokenname: { type: "Bytes", value: Buffer.from(tokenName, "hex") },
     am: { type: "Int", value: amount },
     maturationdatum: { type: "Int", value: maturationDatum },
     pauseddatum: { type: "Bool", value: pausedDatum },
